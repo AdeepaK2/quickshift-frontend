@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
-import UsersContent from "@/components/admin/UsersContent";
-import JobContent from "@/components/admin/JobContent";
+import UndergraduateContent from "@/components/admin/UndergraduatesContent";
+import EmployerContent from "@/components/admin/EmployerContent";
+import JobContent from "@/components/admin/GigContent";
 import AnalyticsContent from "@/components/admin/AnalyticsContent";
 import SettingContent from "@/components/admin/SettingContent";
 
@@ -39,9 +40,11 @@ export default function AdminLayout() {
             </div>
           </div>
         );
-      case "users":
-        return <UsersContent />;
-      case "jobs":
+      case "undergraduate":
+        return <UndergraduateContent />;
+      case "employer":
+        return <EmployerContent />;
+      case "gigs":
         return <JobContent />;
       case "analytics":
         return <AnalyticsContent />;

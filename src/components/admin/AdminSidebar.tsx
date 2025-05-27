@@ -20,13 +20,18 @@ const navItems = [
     icon: LayoutDashboard,
   },
   {
-    id: "users",
-    label: "Users",
+    id: "undergraduate",
+    label: "Undergraduates",
     icon: Users,
   },
   {
-    id: "jobs",
-    label: "Jobs",
+    id: "employer",
+    label: "Employers",
+    icon: Users,
+  },
+  {
+    id: "gigs",
+    label: "Gigs",
     icon: Briefcase,
   },
   {
