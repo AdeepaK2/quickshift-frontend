@@ -1,16 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { FaBriefcase, FaUser, FaHistory, FaStar, FaSearch } from 'react-icons/fa';
+import { FaBriefcase, FaUser, FaHistory, FaStar, FaSearch, FaMoneyBillWave } from 'react-icons/fa';
 
 // Components
 import JobList from './components/JobList';
 import JobDetails from './components/JobDetails';
 import MyApplications from './components/MyApplications';
 import Profile from './components/Profile';
-import EmployerRatings from './components/EmployerRatings';
+import MyGigs from './components/MyGigs';
+import MyPayments from './components/MyPayments';
 
-type TabType = 'jobs' | 'applications' | 'profile' | 'ratings';
+type TabType = 'jobs' | 'applications' | 'gigs' | 'payments' | 'profile';
 
 export default function UndergraduatePage() {
   const [activeTab, setActiveTab] = useState<TabType>('jobs');
@@ -19,8 +20,9 @@ export default function UndergraduatePage() {
   const tabs = [
     { id: 'jobs', label: 'Browse Jobs', icon: FaSearch },
     { id: 'applications', label: 'My Applications', icon: FaHistory },
+    { id: 'gigs', label: 'My Gigs', icon: FaBriefcase },
+    { id: 'payments', label: 'My Payments', icon: FaMoneyBillWave },
     { id: 'profile', label: 'Profile', icon: FaUser },
-    { id: 'ratings', label: 'Employer Ratings', icon: FaStar },
   ];
 
   const renderContent = () => {
@@ -33,10 +35,12 @@ export default function UndergraduatePage() {
         );
       case 'applications':
         return <MyApplications />;
+      case 'gigs':
+        return <MyGigs />;
+      case 'payments':
+        return <MyPayments />;
       case 'profile':
         return <Profile />;
-      case 'ratings':
-        return <EmployerRatings />;
       default:
         return <JobList onSelectJob={setSelectedJob} />;
     }
