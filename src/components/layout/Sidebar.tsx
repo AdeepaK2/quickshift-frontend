@@ -126,7 +126,6 @@ export default function Sidebar() {
                       Main Menu
                     </h3>
                   </div>
-                  <span className="text-xs text-gray-400 font-medium">{navigation.filter(item => item.category === 'main').length}</span>
                 </div>
               </div>
               
@@ -215,13 +214,6 @@ export default function Sidebar() {
                       Account
                     </h3>
                   </div>
-                  <motion.div 
-                    whileHover={{ rotate: 180 }}
-                    transition={{ duration: 0.3 }}
-                    className="w-4 h-4 rounded-full bg-gray-100 flex items-center justify-center"
-                  >
-                    <span className="text-xs text-gray-400 font-medium">{navigation.filter(item => item.category === 'account').length}</span>
-                  </motion.div>
                 </div>
               </div>
               
