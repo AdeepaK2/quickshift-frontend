@@ -114,8 +114,8 @@ export default function JobForm() {
         {/* Enhanced Progress Tracker - Desktop */}
         <div className="hidden sm:block bg-gradient-to-r from-gray-50 to-gray-100 px-8 py-6 border-b border-gray-200">
           <div className="flex justify-between relative">
-            {/* Connecting line behind all steps */}
-            <div className="absolute top-5 left-8 right-8 h-1 bg-gray-200 -z-0"></div>
+            {/* Remove the static background line that causes overlap */}
+            {/* <div className="absolute top-5 left-8 right-8 h-1 bg-gray-200 -z-0"></div> */}
             
             {sections.map((section, index) => (
               <motion.div
@@ -172,38 +172,9 @@ export default function JobForm() {
                   )}
                 </div>
                 
-                {/* Improved Progress Line connecting to next step */}
-                {index < sections.length - 1 && (
-                  <div 
-                    className="absolute h-1.5 rounded-full overflow-hidden"
-                    style={{
-                      top: "21px",
-                      left: "55px",
-                      right: "-55px",
-                      zIndex: 5,
-                      background: "linear-gradient(to right, rgba(243, 244, 246, 0.5) 0%, rgba(229, 231, 235, 1) 100%)",
-                      boxShadow: "inset 0 1px 2px rgba(0,0,0,0.1)"
-                    }}
-                  >
-                    <motion.div 
-                      className="h-full rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ 
-                        width: currentSection > index ? "100%" : 0 
-                      }}
-                      style={{
-                        background: "linear-gradient(to right, #3b82f6, #2563eb)",
-                        boxShadow: currentSection > index ? "0 0 8px rgba(59, 130, 246, 0.5)" : "none",
-                        position: "absolute",
-                        top: 0,
-                        left: 0
-                      }}
-                      transition={{ duration: 0.6, ease: "easeInOut" }}
-                    />
-                  </div>
-                )}
                 
-                {/* Step title with animated color change */}
+                
+                {/* Step title with enhanced progress indicator */}
                 <motion.div 
                   animate={{ 
                     color: currentSection >= index ? "#2563eb" : "#6b7280",
@@ -213,12 +184,36 @@ export default function JobForm() {
                 >
                   <p className="text-sm font-medium whitespace-nowrap">{section.title}</p>
                   {currentSection === index && (
-                    <motion.div
-                      initial={{ width: 0, opacity: 0 }}
-                      animate={{ width: '100%', opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                      className="h-0.5 bg-blue-500 mt-1 rounded-full"
-                    />
+                    <div className="relative mt-1.5">
+                      {/* Glow effect under the progress line */}
+                      <motion.div
+                        initial={{ width: 0, opacity: 0 }}
+                        animate={{ width: '70%', opacity: 0.5 }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                        className="absolute h-1 bg-blue-300 blur-sm rounded-full left-1/2 -translate-x-1/2"
+                      />
+                      
+                      {/* Main progress line with gradient */}
+                      <motion.div
+                        initial={{ width: 0, opacity: 0, x: '-50%' }}
+                        animate={{ width: '100%', opacity: 1, x: '-50%' }}
+                        transition={{ duration: 0.4, delay: 0.1 }}
+                        className="absolute h-0.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600 rounded-full left-1/2"
+                        style={{ boxShadow: '0 1px 2px rgba(59, 130, 246, 0.3)' }}
+                      />
+                      
+                      {/* Animated dot that moves across the line */}
+                      <motion.div
+                        initial={{ left: '0%', opacity: 0 }}
+                        animate={{ left: '100%', opacity: [0, 1, 0] }}
+                        transition={{ duration: 1.5, ease: "easeInOut", delay: 0.2, repeat: 0 }}
+                        className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-sm z-10"
+                        style={{ boxShadow: '0 0 5px rgba(59, 130, 246, 0.8)' }}
+                      />
+                      
+                      {/* Static spacer for height */}
+                      <div className="h-1.5"></div>
+                    </div>
                   )}
                 </motion.div>
               </motion.div>
