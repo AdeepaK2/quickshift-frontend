@@ -349,12 +349,13 @@ export default function EmployerContent() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
+                {" "}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Company Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Email
-                </th>{" "}
+                </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Phone Number
                 </th>
@@ -412,9 +413,8 @@ export default function EmployerContent() {
                       >
                         {employer.accountVerified ? "Verified" : "Not Verified"}
                       </Badge>
-                    </td>
+                    </td>{" "}
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {" "}
                       <div className="flex items-center">
                         <Star className="h-4 w-4 text-yellow-400 mr-1" />
                         <span>{employer.averageRating.toFixed(1)}</span>

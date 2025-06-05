@@ -380,13 +380,13 @@ export default function UsersContent() {
               <tr className="bg-gray-50 text-left">
                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Profile
-                </th>
+                </th>{" "}
                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Full Name
                 </th>
                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Email
-                </th>{" "}
+                </th>
                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   University
                 </th>
@@ -429,13 +429,13 @@ export default function UsersContent() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {user.email}
-                    </td>
+                    </td>{" "}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {user.university}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       Year {user.yearOfStudy}
-                    </td>{" "}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge
                         variant={user.studentIdVerified ? "success" : "warning"}
