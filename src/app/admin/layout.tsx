@@ -18,11 +18,19 @@ export default function AdminLayout() {
       case "undergraduate":
         return <UndergraduateContent />;
       case "employer":
-        return <EmployerContent />;
+        return (
+          <div className="p-4 md:p-8">
+            <EmployerContent />
+          </div>
+        );
       case "gigs":
         return <JobContent />;
       case "settings":
-        return <SettingContent />;
+        return (
+          <div className="p-4 md:p-8">
+            <SettingContent />
+          </div>
+        );
       default:
         return <DashboardContent />;
     }
