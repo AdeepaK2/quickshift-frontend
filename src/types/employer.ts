@@ -42,3 +42,20 @@ export interface EmployerProfile {
   industry: string;
   companySize: string;
 }
+
+export interface EmployerProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  position: string;
+  companyName: string;
+  companyEmail: string;
+  website: string;
+  description: string;
+  address: string;
+  contactPerson: string;
+  industry: string;
+  companySize: string;
+  profilePicture: string | null; // New property added
+}
