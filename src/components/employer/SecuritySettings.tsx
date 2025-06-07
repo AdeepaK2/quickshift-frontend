@@ -7,9 +7,9 @@ import {
   LockClosedIcon,
   FingerPrintIcon
 } from '@heroicons/react/24/outline';
-import Card from '@/components/ui/Card';
+import Card from '@/components/ui/card';
 import Switch from '@/components/ui/Switch';
-import Select from '@/components/ui/Select';
+import {Select} from '@/components/ui/custom-select';
 
 interface SecuritySettingsProps {
   settings: Settings;
@@ -241,7 +241,7 @@ export default function SecuritySettings({ settings, onUpdate }: SecuritySetting
             <div className="max-w-xs">
               <Select
                 value={settings.sessionTimeout.toString()}
-                onChange={(value) => onUpdate({ sessionTimeout: parseInt(value) })}
+                onChange={(value: string) => onUpdate({ sessionTimeout: parseInt(value) })}
                 options={timeoutOptions}
                 className="bg-white border-2 border-gray-300 focus:border-orange-500"
               />
@@ -321,7 +321,7 @@ export default function SecuritySettings({ settings, onUpdate }: SecuritySetting
         className="flex justify-end pt-4"
       >
         <motion.button
-          whileHover={{ scale: 1.05, boxShadow: "0 10px 15px -3px rgba(220, 38, 38, 0.2)" }}
+          whileHover={{ scale: 1.05, boxShadow: "0 10px 15px -5px rgba(220, 38, 38, 0.2)" }}
           whileTap={{ scale: 0.98 }}
           className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium rounded-lg shadow-md"
         >
