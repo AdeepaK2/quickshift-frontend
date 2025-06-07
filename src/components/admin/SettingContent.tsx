@@ -355,7 +355,6 @@ export default function SettingContent() {
 
       {/* Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-4 justify-end">
-        {" "}
         <button
           onClick={() => {
             if (
