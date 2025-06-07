@@ -292,7 +292,7 @@ export default function UsersContent() {
           <h2 className="text-lg font-semibold flex items-center">
             <Filter className="mr-2 h-5 w-5" />
             Filters
-          </h2>{" "}
+          </h2>
           <div className="relative w-full md:w-64">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
