@@ -20,8 +20,8 @@ import {
   AlertTriangle,
   Check,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -30,7 +30,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/components/ui/Select";
 import {
   Dialog,
   DialogContent,
@@ -271,10 +271,11 @@ export default function EmployerContent() {
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         {/* Search Bar */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Employers</h2>
+          <h2 className="text-xl font-semibold">Employers</h2>{" "}
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <Input
+              label="Search Employers"
               type="text"
               placeholder="Search by company name or email..."
               className="pl-10"
@@ -347,9 +348,9 @@ export default function EmployerContent() {
         {/* Employers Table */}
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
+            {" "}
             <thead className="bg-gray-50">
               <tr>
-                {" "}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Company Name
                 </th>
@@ -406,6 +407,7 @@ export default function EmployerContent() {
                       {employer.location}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      {" "}
                       <Badge
                         variant={
                           employer.accountVerified ? "success" : "warning"
@@ -413,7 +415,7 @@ export default function EmployerContent() {
                       >
                         {employer.accountVerified ? "Verified" : "Not Verified"}
                       </Badge>
-                    </td>{" "}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center">
                         <Star className="h-4 w-4 text-yellow-400 mr-1" />
@@ -422,12 +424,12 @@ export default function EmployerContent() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
+                        {" "}
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleViewEmployer(employer)}
                         >
-                          {" "}
                           <Eye className="h-4 w-4 mr-1" />
                           View
                         </Button>
@@ -445,7 +447,6 @@ export default function EmployerContent() {
                             className="cursor-pointer hover:bg-red-100 bg-red-50 text-red-800 border border-red-200 px-3 py-1"
                             onClick={() => handleSuspendEmployer(employer.id)}
                           >
-                            {" "}
                             <AlertTriangle className="h-4 w-4 mr-1 inline text-red-600" />
                             Suspend
                           </Badge>
@@ -594,9 +595,9 @@ export default function EmployerContent() {
                         <span>
                           Created: {formatDateTime(selectedEmployer.createdAt)}
                         </span>
-                      </div>
+                      </div>{" "}
                       <div className="flex items-center">
-                        <Calendar className="h-4 w-4 text-gray-500 mr-2" />{" "}
+                        <Calendar className="h-4 w-4 text-gray-500 mr-2" />
                         <span>
                           Updated: {formatDateTime(selectedEmployer.updatedAt)}
                         </span>
