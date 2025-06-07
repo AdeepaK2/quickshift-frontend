@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Job } from '@/types/employer';
-import {Card} from '@/components/ui/card';
+import Card from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import { CalendarIcon, UsersIcon, MapPinIcon, BriefcaseIcon } from '@heroicons/react/20/solid';
 

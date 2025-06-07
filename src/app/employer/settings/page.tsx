@@ -5,7 +5,7 @@ import AppearanceSettings from '@/components/employer/AppearanceSettings';
 import NotificationSettings from '@/components/employer/NotificationSettings';
 import AccountSettings from '@/components/employer/AccountSettings';
 import SecuritySettings from '@/components/employer/SecuritySettings';
-import {Card} from '@/components/ui/card';
+import Card from '@/components/ui/card';
 import { Settings } from '@/types/settings';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { CogIcon, BellIcon, PaintBrushIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';

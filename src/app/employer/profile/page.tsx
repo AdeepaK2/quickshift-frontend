@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import ProfileForm from '@/components/employer/ProfileForm';
-import {Card} from '@/components/ui/card';
+import Card from '@/components/ui/card';
 import {Button} from '@/components/ui/button';
 import { EmployerProfile } from '@/types/employer';
 import { motion } from 'framer-motion';
