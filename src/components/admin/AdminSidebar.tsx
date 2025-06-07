@@ -6,7 +6,6 @@ import {
   LayoutDashboard,
   Users,
   Briefcase,
-  BarChart,
   Settings,
   LogOut,
   Copyright,
@@ -33,11 +32,6 @@ const navItems = [
     id: "gigs",
     label: "Gigs",
     icon: Briefcase,
-  },
-  {
-    id: "analytics",
-    label: "Analytics",
-    icon: BarChart,
   },
   {
     id: "settings",
