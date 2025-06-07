@@ -10,7 +10,9 @@ interface SelectContextType {
   setOpen: (open: boolean) => void;
 }
 
-const SelectContext = React.createContext<SelectContextType | undefined>(undefined);
+const SelectContext = React.createContext<SelectContextType | undefined>(
+  undefined
+);
 
 interface SelectProps {
   value: string;
@@ -23,9 +25,7 @@ export function Select({ value, onValueChange, children }: SelectProps) {
 
   return (
     <SelectContext.Provider value={{ value, onValueChange, open, setOpen }}>
-      <div className="relative">
-        {children}
-      </div>
+      <div className="relative">{children}</div>
     </SelectContext.Provider>
   );
 }
@@ -35,7 +35,10 @@ interface SelectTriggerProps {
   className?: string;
 }
 
-export function SelectTrigger({ children, className = "" }: SelectTriggerProps) {
+export function SelectTrigger({
+  children,
+  className = "",
+}: SelectTriggerProps) {
   const context = React.useContext(SelectContext);
   if (!context) throw new Error("SelectTrigger must be used within a Select");
 
@@ -64,11 +67,7 @@ export function SelectValue({ placeholder, className = "" }: SelectValueProps) {
 
   const { value } = context;
 
-  return (
-    <span className={className}>
-      {value || placeholder}
-    </span>
-  );
+  return <span className={className}>{value || placeholder}</span>;
 }
 
 interface SelectContentProps {
@@ -76,7 +75,10 @@ interface SelectContentProps {
   className?: string;
 }
 
-export function SelectContent({ children, className = "" }: SelectContentProps) {
+export function SelectContent({
+  children,
+  className = "",
+}: SelectContentProps) {
   const context = React.useContext(SelectContext);
   if (!context) throw new Error("SelectContent must be used within a Select");
 
@@ -86,11 +88,10 @@ export function SelectContent({ children, className = "" }: SelectContentProps) 
 
   return (
     <>
-      <div 
-        className="fixed inset-0 z-50" 
-        onClick={() => setOpen(false)}
-      />
-      <div className={`absolute top-full z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none ${className}`}>
+      <div className="fixed inset-0 z-50" onClick={() => setOpen(false)} />
+      <div
+        className={`absolute top-full z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-200 bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none ${className}`}
+      >
         {children}
       </div>
     </>
@@ -103,7 +104,11 @@ interface SelectItemProps {
   className?: string;
 }
 
-export function SelectItem({ value, children, className = "" }: SelectItemProps) {
+export function SelectItem({
+  value,
+  children,
+  className = "",
+}: SelectItemProps) {
   const context = React.useContext(SelectContext);
   if (!context) throw new Error("SelectItem must be used within a Select");
 
@@ -139,7 +144,12 @@ interface LegacySelectProps {
   className?: string;
 }
 
-export default function LegacySelect({ value, onChange, options, className = '' }: LegacySelectProps) {
+export default function LegacySelect({
+  value,
+  onChange,
+  options,
+  className = "",
+}: LegacySelectProps) {
   return (
     <select
       value={value}
