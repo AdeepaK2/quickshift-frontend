@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Job } from '@/types/employer';
 import Card from '@/components/ui/card';
-import {Button} from '@/components/ui/button';
+import Button from '@/components/ui/button';
 import { CalendarIcon, UsersIcon, MapPinIcon, BriefcaseIcon } from '@heroicons/react/20/solid';
 
 interface JobCardProps {
@@ -64,7 +64,7 @@ export default function JobCard({ job, onDelete, onClose }: JobCardProps) {
         <div className="flex flex-col gap-2 sm:flex-row md:flex-col md:min-w-[140px]">
           <Link href={`/employer/jobs/${job.id}/applicants`} className="w-full">
             <Button 
-              variant="default" 
+              variant="primary" 
               size="sm" 
               className="w-full shadow-sm hover:shadow transition-all"
             >
