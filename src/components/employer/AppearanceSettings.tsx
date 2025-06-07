@@ -9,8 +9,8 @@ import {
   ComputerDesktopIcon,
   LanguageIcon
 } from '@heroicons/react/24/outline';
-import Card from '@/components/ui/Card';
-import Select from '@/components/ui/Select';
+import {Card} from '@/components/ui/card';
+import {Select} from '@/components/ui/custom-select';
 
 interface AppearanceSettingsProps {
   settings: Settings;
@@ -232,7 +232,7 @@ export default function AppearanceSettings({ settings, onUpdate }: AppearanceSet
             <div className="mb-2">
               <Select
                 value={settings.language}
-                onChange={(value) => onUpdate({ language: value })}
+                onChange={(value: string) => onUpdate({ language: value })}
                 options={languageOptions}
                 className="bg-white border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
               />

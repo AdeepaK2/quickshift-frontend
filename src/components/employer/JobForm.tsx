@@ -2,9 +2,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import Card from '@/components/ui/Card';
+import {Button} from '@/components/ui/button';
+import {Input} from '@/components/ui/input';
+import {Card} from '@/components/ui/card';
 import { 
   BriefcaseIcon, 
   MapPinIcon, 
@@ -303,8 +303,10 @@ export default function JobForm() {
             </motion.h3>
 
             <motion.div variants={itemVariants} className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Job Title
+              </label>
               <Input
-                label="Job Title"
                 name="title"
                 value={formData.title}
                 onChange={handleChange}
