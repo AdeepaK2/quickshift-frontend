@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
-import CustomSelect from "@/components/ui/Select"; // Renamed to avoid conflict
+import CustomSelect from "@/components/ui/select"; // Renamed to avoid conflict
 
 // Define types for our employer data
 type Employer = {
