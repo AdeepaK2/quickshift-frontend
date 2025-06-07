@@ -18,26 +18,9 @@ import {
   Clock,
   UserCheck,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
+import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
+import CustomSelect from "@/components/ui/select"; // Renamed to avoid conflict
 
 // Define types for our user data
 type User = {
@@ -60,6 +43,90 @@ type User = {
   lastLogin: string;
   bio: string;
 };
+
+// Badge component (if not available from shadcn/ui)
+const Badge = ({ 
+  children, 
+  variant = "default", 
+  className = "" 
+}: { 
+  children: React.ReactNode; 
+  variant?: "default" | "success" | "warning" | "destructive";
+  className?: string;
+}) => {
+  const variants = {
+    default: "bg-gray-100 text-gray-800",
+    success: "bg-green-100 text-green-800",
+    warning: "bg-yellow-100 text-yellow-800",
+    destructive: "bg-red-100 text-red-800",
+  };
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]} ${className}`}>
+      {children}
+    </span>
+  );
+};
+
+// Avatar component (if not available from shadcn/ui)
+const Avatar = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full ${className}`}>
+    {children}
+  </div>
+);
+
+const AvatarImage = ({ src, alt }: { src: string; alt: string }) => (
+  <img className="aspect-square h-full w-full object-cover" src={src} alt={alt} />
+);
+
+const AvatarFallback = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`flex h-full w-full items-center justify-center rounded-full bg-muted ${className}`}>
+    {children}
+  </div>
+);
+
+// Sheet component (simplified version)
+const Sheet = ({ 
+  open, 
+  onOpenChange, 
+  children 
+}: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void; 
+  children: React.ReactNode; 
+}) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="fixed inset-0 bg-black/50" onClick={() => onOpenChange(false)} />
+      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white shadow-lg z-50 overflow-y-auto">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const SheetContent = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`p-6 ${className}`}>{children}</div>
+);
+
+const SheetHeader = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`mb-6 ${className}`}>{children}</div>
+);
+
+const SheetTitle = ({ children }: { children: React.ReactNode }) => (
+  <h2 className="text-lg font-semibold">{children}</h2>
+);
+
+const SheetDescription = ({ children }: { children: React.ReactNode }) => (
+  <p className="text-sm text-gray-600 mt-2">{children}</p>
+);
+
+// Separator component
+const Separator = ({ className = "" }: { className?: string }) => (
+  <hr className={`border-gray-200 ${className}`} />
+);
 
 // Mock data for users
 const mockUsers: User[] = [
@@ -293,10 +360,10 @@ export default function UsersContent() {
             <Filter className="mr-2 h-5 w-5" />
             Filters
           </h2>
-
           <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
+              label="Search Users"
               placeholder="Search users..."
               className="pl-10"
               value={searchQuery}
@@ -309,65 +376,42 @@ export default function UsersContent() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">University</label>
-            <Select
+            <CustomSelect
               value={universityFilter}
-              onValueChange={(value) => setUniversityFilter(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select University" />
-              </SelectTrigger>
-              <SelectContent>
-                {universities.map((university) => (
-                  <SelectItem key={university} value={university}>
-                    {university}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value) => setUniversityFilter(value)}
+              options={universities.map(uni => ({ value: uni, label: uni }))}
+            />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Year of Study</label>
-            <Select
+            <CustomSelect
               value={yearFilter?.toString() || "all"}
-              onValueChange={(value) =>
+              onChange={(value) =>
                 setYearFilter(value === "all" ? null : parseInt(value))
               }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Year" />
-              </SelectTrigger>{" "}
-              <SelectContent>
-                <SelectItem value="all">All Years</SelectItem>
-                {yearsOfStudy.map((year) => (
-                  <SelectItem key={year} value={year.toString()}>
-                    Year {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={[
+                { value: "all", label: "All Years" },
+                ...yearsOfStudy.map(year => ({ value: year.toString(), label: `Year ${year}` }))
+              ]}
+            />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Verification Status</label>
-            <Select
+            <CustomSelect
               value={verificationFilter || "all"}
-              onValueChange={(value) =>
+              onChange={(value) =>
                 setVerificationFilter(value === "all" ? null : value)
               }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Status" />
-              </SelectTrigger>{" "}
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                {verificationStatuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={[
+                { value: "all", label: "All Statuses" },
+                ...verificationStatuses.map(status => ({ 
+                  value: status, 
+                  label: status.charAt(0).toUpperCase() + status.slice(1) 
+                }))
+              ]}
+            />
           </div>
         </div>
       </div>
@@ -380,7 +424,7 @@ export default function UsersContent() {
               <tr className="bg-gray-50 text-left">
                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Profile
-                </th>{" "}
+                </th>
                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Full Name
                 </th>
@@ -429,7 +473,7 @@ export default function UsersContent() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {user.email}
-                    </td>{" "}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {user.university}
                     </td>
@@ -516,7 +560,7 @@ export default function UsersContent() {
                     <h3 className="text-xl font-semibold">
                       {selectedUser.fullName}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-gray-500">
                       {selectedUser.email}
                     </p>
                     <div className="mt-1 flex items-center space-x-2">
