@@ -20,26 +20,9 @@ import {
   AlertTriangle,
   Check,
 } from "lucide-react";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
+import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
+import CustomSelect from "@/components/ui/Select"; // Renamed to avoid conflict
 
 // Define types for our employer data
 type Employer = {
@@ -58,6 +41,95 @@ type Employer = {
   createdAt: string;
   updatedAt: string;
 };
+
+// Badge component (if not available from shadcn/ui)
+const Badge = ({ 
+  children, 
+  variant = "default", 
+  className = "",
+  onClick 
+}: { 
+  children: React.ReactNode; 
+  variant?: "default" | "success" | "warning" | "destructive";
+  className?: string;
+  onClick?: () => void;
+}) => {
+  const variants = {
+    default: "bg-gray-100 text-gray-800",
+    success: "bg-green-100 text-green-800",
+    warning: "bg-yellow-100 text-yellow-800",
+    destructive: "bg-red-100 text-red-800",
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]} ${className}`}
+      onClick={onClick}
+    >
+      {children}
+    </span>
+  );
+};
+
+// Avatar component (if not available from shadcn/ui)
+const Avatar = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full ${className}`}>
+    {children}
+  </div>
+);
+
+const AvatarImage = ({ src, alt }: { src: string; alt: string }) => (
+  <img className="aspect-square h-full w-full object-cover" src={src} alt={alt} />
+);
+
+const AvatarFallback = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`flex h-full w-full items-center justify-center rounded-full bg-muted ${className}`}>
+    {children}
+  </div>
+);
+
+// Dialog component (simplified version)
+const Dialog = ({ 
+  open, 
+  onOpenChange, 
+  children 
+}: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void; 
+  children: React.ReactNode; 
+}) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="fixed inset-0 bg-black/50" onClick={() => onOpenChange(false)} />
+      <div className="relative z-50 bg-white rounded-lg shadow-lg max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const DialogContent = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <div className={`p-6 ${className}`}>{children}</div>
+);
+
+const DialogHeader = ({ children }: { children: React.ReactNode }) => (
+  <div className="mb-4">{children}</div>
+);
+
+const DialogTitle = ({ children }: { children: React.ReactNode }) => (
+  <h2 className="text-lg font-semibold">{children}</h2>
+);
+
+const DialogDescription = ({ children }: { children: React.ReactNode }) => (
+  <p className="text-sm text-gray-600 mt-2">{children}</p>
+);
+
+// Separator component
+const Separator = ({ className = "" }: { className?: string }) => (
+  <hr className={`border-gray-200 ${className}`} />
+);
 
 // Mock data for employers
 const mockEmployers: Employer[] = [
@@ -271,7 +343,7 @@ export default function EmployerContent() {
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         {/* Search Bar */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Employers</h2>{" "}
+          <h2 className="text-xl font-semibold">Employers</h2>
           <div className="relative w-full max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             <Input
@@ -289,59 +361,29 @@ export default function EmployerContent() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="space-y-2">
             <label className="text-sm font-medium">Location</label>
-            <Select
+            <CustomSelect
               value={locationFilter}
-              onValueChange={(value) => setLocationFilter(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Location" />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.map((location) => (
-                  <SelectItem key={location} value={location}>
-                    {location}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value) => setLocationFilter(value)}
+              options={locations.map(loc => ({ value: loc, label: loc }))}
+            />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Verification Status</label>
-            <Select
+            <CustomSelect
               value={verificationFilter}
-              onValueChange={(value) => setVerificationFilter(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {verificationStatuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value) => setVerificationFilter(value)}
+              options={verificationStatuses.map(status => ({ value: status, label: status }))}
+            />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Rating</label>
-            <Select
+            <CustomSelect
               value={ratingFilter}
-              onValueChange={(value) => setRatingFilter(value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Rating Range" />
-              </SelectTrigger>
-              <SelectContent>
-                {ratingRanges.map((range) => (
-                  <SelectItem key={range.value} value={range.value}>
-                    {range.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value) => setRatingFilter(value)}
+              options={ratingRanges.map(range => ({ value: range.value, label: range.label }))}
+            />
           </div>
         </div>
 
@@ -406,7 +448,6 @@ export default function EmployerContent() {
                       {employer.location}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {" "}
                       <Badge
                         variant={
                           employer.accountVerified ? "success" : "warning"
@@ -423,7 +464,6 @@ export default function EmployerContent() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
-                        {" "}
                         <Button
                           variant="outline"
                           size="sm"
@@ -499,7 +539,7 @@ export default function EmployerContent() {
                   <h3 className="text-xl font-semibold">
                     {selectedEmployer.companyName}
                   </h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-gray-500">
                     {selectedEmployer.email}
                   </p>
                   <div className="mt-1 flex items-center space-x-2">
@@ -594,7 +634,7 @@ export default function EmployerContent() {
                         <span>
                           Created: {formatDateTime(selectedEmployer.createdAt)}
                         </span>
-                      </div>{" "}
+                      </div>
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 text-gray-500 mr-2" />
                         <span>

@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Job } from '@/types/employer';
 import JobCard from '@/components/employer/JobCard';
-import {Button} from '@/components/ui/button';
+import Button from "@/components/ui/button";
 import { 
   BriefcaseIcon, 
   PlusIcon, 
@@ -294,7 +294,7 @@ export default function JobsPage() {
         transition={{ duration: 0.4, delay: 0.1 }}
         className="mb-8"
       >
-        <div className="bg-white rounded-xl shadow-md border border-gray-100 p-5 backdrop-blur-sm bg-white/95">
+        <div className="rounded-xl shadow-md border border-gray-100 p-5 backdrop-blur-sm bg-white/95">
           <div className="flex flex-col sm:flex-row gap-6">
             {/* Status Filter Tabs */}
             <div className="flex-grow">
