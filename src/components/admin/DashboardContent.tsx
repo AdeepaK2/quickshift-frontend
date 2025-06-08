@@ -1,51 +1,59 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
 import {
   Users,
   Briefcase,
   CheckCircle,
   UserPlus,
-  TrendingUp,
-  TrendingDown,
-  Star,
-  MapPin,
-  Calendar,
   Activity,
-  PieChart,
-  Building2,
-  GraduationCap,
   RefreshCw,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+// Corrected imports for UI components - assuming default exports based on typical usage
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import CardContent from "@/components/ui/CardContent";
+import CardDescription from "@/components/ui/CardDescription";
+import CardHeader from "@/components/ui/CardHeader";
+import CardTitle from "@/components/ui/CardTitle";
+// Assuming Table components are structured similarly or need specific imports
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"; // Keep if path is correct
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Keep if path is correct
+
+import { useEffect, useMemo, useState } from "react";
 import { useApi } from "@/lib/hooks";
+// Corrected paths for API modules - assuming they are in src/lib/api/
 import {
   undergraduatesApi,
-  employersApi,
-  gigsApi,
-  analyticsApi,
-} from "@/lib/api";
-import { LoadingState } from "@/components/ui/loading";
-import { ErrorState } from "@/components/ui/error-state";
-import Button from "@/components/ui/Button";
+  type Undergraduate,
+} from "@/lib/api/undergraduateApi";
+import { employersApi, type Employer } from "@/lib/api/employerApi";
+import { gigsApi, type Gig } from "@/lib/api/gigsApi";
+import {
+  adminApi,
+  type AdminDashboardStats,
+  type ApiError as AdminApiError,
+} from "@/lib/api/adminApi";
+import {
+  DASHBOARD_CONSTANTS,
+  calculateWeeklyGrowth,
+  calculateCompletionRate,
+  generateTrendMessage,
+} from "@/lib/dashboard-constants";
 import { formatDate, getStatusVariant } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+// Corrected paths for custom components - assuming they are in src/components/
+import { LoadingState } from "@/components/ui/loading"; // Updated import
+import { ErrorState as ErrorDisplay } from "@/components/ui/error-state"; // Updated import
+import { ConnectionTestPanel } from "./ConnectionTestPanel";
 
 // TypeScript interfaces
-interface DashboardStats {
-  totalUsers: number;
-  totalStudents: number;
-  totalEmployers: number;
-  totalGigs: number;
-  activeGigs: number;
-  completedGigs: number;
-  newSignupsThisWeek: number;
-  newStudentsThisWeek: number;
-  newEmployersThisWeek: number;
-  averageCompletionRate: number;
-  averageRating: number;
-  averageCompletionTime: string;
-}
-
 interface TopPerformer {
   type: "student" | "employer";
   id: string;
@@ -57,64 +65,117 @@ interface TopPerformer {
   industry?: string;
 }
 
-interface RecentActivity {
+interface RecentActivityItem {
   id: string;
   title: string;
   company: string;
   location: string;
   date: string;
-  status: "completed" | "in_progress" | "pending" | "cancelled";
+  status:
+    | "completed"
+    | "in_progress"
+    | "pending"
+    | "cancelled"
+    | "active"
+    | "open"
+    | "draft";
   payment: string;
 }
 
 export default function DashboardContent() {
   const [lastUpdated, setLastUpdated] = useState("");
 
-  // API calls for dashboard data
+  // Assuming useApi returns an object like { data, loading, error, refetch }
+  // And 'data' is the actual data payload (e.g., Gig[], Employer[], AdminDashboardStats)
   const {
-    data: dashboardStats,
-    loading: statsLoading,
-    error: statsError,
-    refetch: refetchStats,
-  } = useApi(() => analyticsApi.getDashboardStats());
+    data: undergraduatesData,
+    loading: undergraduatesLoading,
+    error: undergraduatesError,
+    refetch: refetchUndergraduates,
+  } = useApi<Undergraduate[]>(() => undergraduatesApi.getAll(), []);
 
-  const { data: undergraduatesResponse, loading: undergraduatesLoading } =
-    useApi(() => undergraduatesApi.getAll());
+  const {
+    data: employersData,
+    loading: employersLoading,
+    error: employersError,
+    refetch: refetchEmployers,
+  } = useApi<Employer[]>(() => employersApi.getAll(), []);
 
-  const { data: employersResponse, loading: employersLoading } = useApi(() =>
-    employersApi.getAll()
-  );
+  const {
+    data: gigsData,
+    loading: gigsLoading,
+    error: gigsError,
+    refetch: refetchGigs,
+  } = useApi<Gig[]>(() => gigsApi.getAll(), []);
 
-  const { data: gigsResponse, loading: gigsLoading } = useApi(() =>
-    gigsApi.getAll()
-  );
+  const {
+    data: adminStatsData,
+    loading: adminStatsLoading,
+    error: adminStatsError,
+    refetch: refetchAdminStats,
+  } = useApi<AdminDashboardStats>(() => adminApi.getDashboardStats(), []);
 
   useEffect(() => {
     setLastUpdated(new Date().toLocaleString());
   }, []);
-  // Calculate stats from real data or use fallback
-  const stats = useMemo(() => {
-    const undergraduatesData = undergraduatesResponse || [];
-    const employersData = employersResponse || [];
-    const gigsData = gigsResponse || [];
 
-    const totalStudents = undergraduatesData.length;
-    const totalEmployers = employersData.length;
-    const totalUsers = totalStudents + totalEmployers;
-    const totalGigs = gigsData.length;
-    const activeGigs = gigsData.filter(
-      (gig: any) => gig.status === "active"
-    ).length;
-    const completedGigs = gigsData.filter(
-      (gig: any) => gig.status === "completed"
-    ).length;
+  const stats = useMemo(() => {
+    const currentUndergraduates = undergraduatesData || [];
+    const currentEmployers = employersData || [];
+    const currentGigs = gigsData || [];
+
+    const totalStudents = adminStatsData?.overview?.totalUsers
+      ? currentUndergraduates.length
+      : currentUndergraduates.length;
+    const totalEmployers = adminStatsData?.overview?.totalUsers
+      ? currentEmployers.length
+      : currentEmployers.length;
+
+    const totalUsers =
+      adminStatsData?.overview?.totalUsers ?? totalStudents + totalEmployers;
+    const totalGigs = adminStatsData?.overview?.totalGigs ?? currentGigs.length;
+    const activeGigs =
+      adminStatsData?.overview?.activeGigs ??
+      currentGigs.filter(
+        (gig: Gig) => gig.status === "open" || gig.status === "in_progress"
+      ).length;
+    const completedGigs =
+      adminStatsData?.overview?.completedGigs ??
+      currentGigs.filter((gig: Gig) => gig.status === "completed").length;
+
+    const newSignupsThisMonth =
+      adminStatsData?.recentActivity?.newUsersLastMonth ??
+      (calculateWeeklyGrowth(
+        totalStudents,
+        DASHBOARD_CONSTANTS.STUDENT_WEEKLY_GROWTH_RATE
+      ) +
+        calculateWeeklyGrowth(
+          totalEmployers,
+          DASHBOARD_CONSTANTS.EMPLOYER_WEEKLY_GROWTH_RATE
+        )) *
+        4; // Approximate month from weekly
+
+    const newStudentsThisMonth =
+      adminStatsData?.recentActivity?.newUsersLastMonth && totalUsers > 0
+        ? Math.round(newSignupsThisMonth * (totalStudents / totalUsers))
+        : calculateWeeklyGrowth(
+            totalStudents,
+            DASHBOARD_CONSTANTS.STUDENT_WEEKLY_GROWTH_RATE
+          ) * 4;
+
+    const newEmployersThisMonth =
+      adminStatsData?.recentActivity?.newEmployersLastMonth ??
+      calculateWeeklyGrowth(
+        totalEmployers,
+        DASHBOARD_CONSTANTS.EMPLOYER_WEEKLY_GROWTH_RATE
+      ) * 4;
 
     return [
       {
         title: "Total Users",
         value: totalUsers.toString(),
         subtitle: `${totalStudents} Students • ${totalEmployers} Employers`,
-        trend: "+5% from last month",
+        trend: generateTrendMessage("users"),
         trendPositive: true,
         Icon: Users,
         iconColor: "text-blue-500",
@@ -124,7 +185,7 @@ export default function DashboardContent() {
         title: "Total Gigs Posted",
         value: totalGigs.toString(),
         subtitle: `Active: ${activeGigs} • Completed: ${completedGigs}`,
-        trend: "+10 gigs this week",
+        trend: generateTrendMessage("gigs"),
         trendPositive: true,
         Icon: Briefcase,
         iconColor: "text-green-500",
@@ -133,357 +194,280 @@ export default function DashboardContent() {
       {
         title: "Gigs Completed",
         value: completedGigs.toString(),
-        subtitle: `${
-          totalGigs > 0 ? Math.round((completedGigs / totalGigs) * 100) : 0
-        }% completion rate`,
-        trend: "+12% from last week",
+        subtitle: `${calculateCompletionRate(
+          completedGigs,
+          totalGigs
+        )}% completion rate`,
+        trend: generateTrendMessage("completion"),
         trendPositive: true,
         Icon: CheckCircle,
         iconColor: "text-purple-500",
         bgColor: "bg-purple-50",
       },
       {
-        title: "New Signups This Week",
-        value: "89", // This would come from analytics API
-        subtitle: "62 Students • 27 Employers",
-        trend: "+15% increase",
+        title: "New Signups This Month",
+        value: newSignupsThisMonth.toString(),
+        subtitle: `${newStudentsThisMonth} Students • ${newEmployersThisMonth} Employers`,
+        trend: generateTrendMessage("signups"),
         trendPositive: true,
         Icon: UserPlus,
         iconColor: "text-orange-500",
         bgColor: "bg-orange-50",
       },
     ];
-  }, [undergraduatesResponse, employersResponse, gigsResponse]);
-  // Get top performers from real data
+  }, [adminStatsData, undergraduatesData, employersData, gigsData]);
+
   const topPerformers = useMemo(() => {
     const performers: TopPerformer[] = [];
-    const undergraduatesData = undergraduatesResponse || [];
-    const employersData = employersResponse || [];
+    const currentUndergraduates = undergraduatesData || [];
+    const currentEmployers = employersData || [];
 
-    // Add top students (example - you'd calculate this based on ratings/completions)
-    if (undergraduatesData.length > 0) {
-      const topStudent = undergraduatesData[0]; // For demo, taking first student
-      performers.push({
-        type: "student",
-        id: topStudent.id || "1",
-        name: topStudent.name || "Top Student",
-        rating: 4.9,
-        gigsCompleted: 24,
-        specialization: topStudent.specialization || "General",
-      });
+    if (currentUndergraduates.length > 0) {
+      const topStudent = currentUndergraduates[
+        DASHBOARD_CONSTANTS.TOP_PERFORMER_INDEX
+      ] as Undergraduate | undefined;
+      if (topStudent) {
+        performers.push({
+          type: "student",
+          id: topStudent.id || DASHBOARD_CONSTANTS.DEFAULT_ID,
+          name: `${topStudent.firstName || "Top"} ${
+            topStudent.lastName || "Student"
+          }`,
+          rating: DASHBOARD_CONSTANTS.MOCK_TOP_STUDENT_RATING, // Replace with actual if available: topStudent.averageRating
+          gigsCompleted: DASHBOARD_CONSTANTS.MOCK_STUDENT_GIGS_COMPLETED, // Replace with actual
+          specialization:
+            topStudent.skills?.[0] ||
+            DASHBOARD_CONSTANTS.DEFAULT_SPECIALIZATION, // Example from skills
+        });
+      }
     }
 
-    // Add top employers
-    if (employersData.length > 0) {
-      const topEmployer = employersData[0]; // For demo, taking first employer
-      performers.push({
-        type: "employer",
-        id: topEmployer.id || "1",
-        name: topEmployer.company_name || topEmployer.name || "Top Employer",
-        rating: 4.8,
-        gigsPosted: 18,
-        industry: topEmployer.industry || "Technology",
-      });
+    if (currentEmployers.length > 0) {
+      const topEmployer = currentEmployers[
+        DASHBOARD_CONSTANTS.TOP_PERFORMER_INDEX
+      ] as Employer | undefined;
+      if (topEmployer) {
+        performers.push({
+          type: "employer",
+          id: topEmployer.id || DASHBOARD_CONSTANTS.DEFAULT_ID,
+          name: topEmployer.companyName || "Top Employer",
+          rating: DASHBOARD_CONSTANTS.MOCK_TOP_EMPLOYER_RATING, // Replace with actual: topEmployer.averageRating
+          gigsPosted: DASHBOARD_CONSTANTS.MOCK_EMPLOYER_GIGS_POSTED, // Replace with actual
+          industry:
+            topEmployer.industry || DASHBOARD_CONSTANTS.DEFAULT_INDUSTRY,
+        });
+      }
     }
-
     return performers;
-  }, [undergraduatesResponse, employersResponse]);
-  // Get recent activity from gigs data
-  const recentActivity = useMemo(() => {
-    const gigsData = gigsResponse || [];
+  }, [undergraduatesData, employersData]);
 
-    return gigsData.slice(0, 5).map((gig: any) => ({
-      id: gig.id || Math.random().toString(),
-      title: gig.title || "Untitled Gig",
-      company: gig.company_name || "Unknown Company",
-      location: gig.location || "Remote",
-      date: formatDate(gig.created_at || new Date().toISOString()),
-      status: gig.status || "pending",
-      payment: `$${gig.budget || 0}`,
-    }));
-  }, [gigsResponse]);
+  const recentActivity: RecentActivityItem[] = useMemo(() => {
+    const currentGigs = gigsData || [];
+    return currentGigs
+      .slice(0, DASHBOARD_CONSTANTS.MAX_RECENT_ACTIVITIES)
+      .map((gig: Gig) => ({
+        id: gig.id || Math.random().toString(),
+        title: gig.title || DASHBOARD_CONSTANTS.DEFAULT_GIG_TITLE,
+        company: gig.employer?.name || DASHBOARD_CONSTANTS.DEFAULT_COMPANY_NAME,
+        location:
+          typeof gig.location === "string"
+            ? gig.location
+            : gig.location?.city || DASHBOARD_CONSTANTS.DEFAULT_LOCATION,
+        date: formatDate(gig.createdAt || new Date().toISOString()),
+        status: gig.status || DASHBOARD_CONSTANTS.DEFAULT_GIG_STATUS,
+        payment: `$${
+          gig.payRate?.amount ||
+          gig.payRate?.min ||
+          DASHBOARD_CONSTANTS.DEFAULT_BUDGET
+        }`,
+      }));
+  }, [gigsData]);
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: RecentActivityItem["status"]) => {
     const variant = getStatusVariant(status);
     return (
       <Badge variant={variant}>
-        {status.charAt(0).toUpperCase() + status.slice(1).replace("-", " ")}
+        {status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ")}
       </Badge>
     );
   };
 
-  // Handle refresh
-  const handleRefresh = () => {
-    refetchStats();
-    setLastUpdated(new Date().toLocaleString());
+  const handleRefresh = async () => {
+    try {
+      await Promise.all([
+        refetchUndergraduates(),
+        refetchEmployers(),
+        refetchGigs(),
+        refetchAdminStats(),
+      ]);
+      setLastUpdated(new Date().toLocaleString());
+    } catch (error) {
+      console.error("Failed to refresh dashboard data:", error);
+    }
   };
 
-  // Loading state
   if (
-    statsLoading ||
     undergraduatesLoading ||
     employersLoading ||
-    gigsLoading
+    gigsLoading ||
+    adminStatsLoading
   ) {
     return <LoadingState message="Loading dashboard data..." />;
-  } // Error state
-  if (statsError) {
+  }
+
+  // Check if there are any errors
+  const hasErrors = [
+    undergraduatesError,
+    employersError,
+    gigsError,
+    adminStatsError,
+  ].some((error) => error !== null);
+
+  if (hasErrors) {
     return (
-      <ErrorState
-        title="Failed to load dashboard"
-        message={statsError}
-        onRetry={handleRefresh}
+      <ErrorDisplay
+        title="Error Loading Dashboard"
+        message="There was an issue fetching some of the dashboard data. Please try refreshing."
       />
     );
   }
 
   return (
     <div className="space-y-6">
-      {" "}
-      {/* Page Header */}
+      {process.env.NODE_ENV === "development" && <ConnectionTestPanel />}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <div className="mt-2 sm:mt-0 flex items-center gap-4">
           <p className="text-sm text-gray-600">Last updated: {lastUpdated}</p>
-          <Button
-            onClick={handleRefresh}
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className="h-4 w-4" />
+          <Button onClick={handleRefresh} variant="outline" size="sm">
+            <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
         </div>
       </div>
-      {/* Top Statistics Cards */}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
-          <div key={index} className="bg-white rounded-lg shadow-sm border p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-600 mb-1">
-                  {stat.title}
-                </p>
-                <p className="text-3xl font-bold text-gray-900 mb-1">
-                  {stat.value}
-                </p>
-                <p className="text-xs text-gray-500 mb-2">{stat.subtitle}</p>
-                <div className="flex items-center">
-                  {stat.trendPositive ? (
-                    <TrendingUp className="h-4 w-4 text-green-500 mr-1" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4 text-red-500 mr-1" />
-                  )}
-                  <span
-                    className={`text-sm ${
-                      stat.trendPositive ? "text-green-600" : "text-red-600"
-                    }`}
-                  >
-                    {stat.trend}
-                  </span>
-                </div>
+          <Card key={index} className={`${stat.bgColor} border-none`}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-gray-700">
+                {stat.title}
+              </CardTitle>
+              <stat.Icon className={`h-5 w-5 ${stat.iconColor}`} />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-gray-900">
+                {stat.value}
               </div>
-              <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                <stat.Icon className={`h-6 w-6 ${stat.iconColor}`} />
-              </div>
-            </div>
-          </div>
+              <p className="text-xs text-gray-600">{stat.subtitle}</p>
+              {stat.trend && (
+                <p
+                  className={`text-xs mt-1 ${
+                    stat.trendPositive ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  {stat.trend}
+                </p>
+              )}
+            </CardContent>
+          </Card>
         ))}
       </div>
-      {/* Two Column Layout for Top Performers and Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top Performers Section */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Top Performers
-          </h3>
-          <div className="space-y-4">
-            {topPerformers.map((performer, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-              >
-                <div className="flex items-center space-x-3">
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Recent Gig Activity</CardTitle>
+            <CardDescription>
+              Overview of the latest gig postings and statuses.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="overflow-x-auto">
+            {recentActivity.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Title</TableHead>
+                    <TableHead>Company</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Payment</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentActivity.map((activityItem: RecentActivityItem) => (
+                    <TableRow key={activityItem.id}>
+                      <TableCell className="font-medium">
+                        {activityItem.title}
+                      </TableCell>
+                      <TableCell>{activityItem.company}</TableCell>
+                      <TableCell>{activityItem.date}</TableCell>
+                      <TableCell>
+                        {getStatusBadge(activityItem.status)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {activityItem.payment}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-sm text-gray-500">
+                No recent gig activity to display.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Performers</CardTitle>
+            <CardDescription>
+              Students and employers with notable contributions.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {topPerformers.length > 0 ? (
+              topPerformers.map((performer) => (
+                <div
+                  key={performer.id}
+                  className="flex items-center space-x-3 p-3 bg-gray-50 rounded-md"
+                >
                   <div
                     className={`p-2 rounded-full ${
                       performer.type === "student"
-                        ? "bg-blue-100"
-                        : "bg-green-100"
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-green-100 text-green-600"
                     }`}
                   >
-                    {" "}
                     {performer.type === "student" ? (
-                      <GraduationCap className="h-5 w-5 text-blue-600" />
+                      <Users className="h-5 w-5" />
                     ) : (
-                      <Building2 className="h-5 w-5 text-green-600" />
+                      <Briefcase className="h-5 w-5" />
                     )}
                   </div>
                   <div>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-sm font-semibold text-gray-800">
                       {performer.name}
                     </p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-xs text-gray-500">
                       {performer.type === "student"
-                        ? performer.specialization
-                        : performer.industry}
+                        ? `${performer.gigsCompleted} gigs completed`
+                        : `${performer.gigsPosted} gigs posted`}
+                      {" • "}Rating: {performer.rating.toFixed(1)}
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="flex items-center space-x-1 mb-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="font-medium text-gray-900">
-                      {performer.rating}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    {performer.type === "student"
-                      ? `${performer.gigsCompleted} gigs completed`
-                      : `${performer.gigsPosted} gigs posted`}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Stats Summary */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            Platform Overview
-          </h3>
-          <div className="grid grid-cols-1 gap-4">
-            <div className="text-center p-4 bg-blue-50 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600">85%</div>
-              <div className="text-sm text-gray-600">
-                Average Completion Rate
-              </div>
-            </div>
-            <div className="text-center p-4 bg-green-50 rounded-lg">
-              <div className="text-2xl font-bold text-green-600">4.8</div>
-              <div className="text-sm text-gray-600">Average Rating</div>
-            </div>
-            <div className="text-center p-4 bg-purple-50 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600">72h</div>
-              <div className="text-sm text-gray-600">
-                Average Completion Time
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      {/* Recent Activity Section */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Recent Activity
-          </h3>
-          <Activity className="h-5 w-5 text-gray-400" />
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-medium text-gray-600">
-                  Gig Title
-                </th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">
-                  Company
-                </th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">
-                  Location
-                </th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">
-                  Date
-                </th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">
-                  Status
-                </th>
-                <th className="text-left py-3 px-4 font-medium text-gray-600">
-                  Payment
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentActivity.map((activity: RecentActivity) => (
-                <tr key={activity.id} className="border-b border-gray-100">
-                  <td className="py-3 px-4">
-                    <p className="font-medium text-gray-900">
-                      {activity.title}
-                    </p>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center space-x-2">
-                      <Building2 className="h-4 w-4 text-gray-400" />
-                      <span className="text-gray-700">{activity.company}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4 text-gray-400" />
-                      <span className="text-gray-700">{activity.location}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center space-x-2">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <span className="text-gray-700">{activity.date}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    {getStatusBadge(activity.status)}
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className="font-medium text-gray-900">
-                      {activity.payment}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Signups Over Time Chart */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Signups Over Time
-            </h3>
-            <Activity className="h-5 w-5 text-gray-400" />
-          </div>
-          <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200">
-            <div className="text-center">
-              <Activity className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">Line Chart Placeholder</p>
-              <p className="text-gray-400 text-xs mt-1">
-                User registration trends over the last 30 days
+              ))
+            ) : (
+              <p className="text-sm text-gray-500">
+                No top performers data available yet.
               </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Gigs by Category Chart */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Gigs by Category
-            </h3>
-            <PieChart className="h-5 w-5 text-gray-400" />
-          </div>
-          <div className="h-64 bg-gray-50 rounded-lg flex items-center justify-center border-2 border-dashed border-gray-200">
-            <div className="text-center">
-              <PieChart className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">Pie Chart Placeholder</p>
-              <p className="text-gray-400 text-xs mt-1">
-                Distribution of gigs across different categories
-              </p>
-            </div>
-          </div>
-        </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

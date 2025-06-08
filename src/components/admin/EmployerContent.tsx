@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import toast, { Toaster } from "react-hot-toast";
 import {
   Search,
   Eye,
@@ -179,16 +180,6 @@ const LoadingState = ({ message }: { message: string }) => (
   </div>
 );
 
-// Locations for the filter
-const locations = [
-  "All Locations",
-  "New York, USA",
-  "London, UK",
-  "Los Angeles, USA",
-  "Berlin, Germany",
-  "Boston, USA",
-];
-
 // Verification statuses for the filter
 const verificationStatuses = ["All", "Verified", "Not Verified"];
 
@@ -223,7 +214,17 @@ export default function EmployerContent() {
   const { mutate: verifyEmployer, loading: verifyLoading } = useMutation();
   const { mutate: suspendEmployer, loading: suspendLoading } = useMutation();
 
-  const employers = employersData || []; // Extract unique locations for filter dropdown
+  const employers = employersData || [];
+
+  // Debug: Log the API response to console for development
+  useEffect(() => {
+    if (employersData) {
+      console.log("Employers API Response:", employersData);
+    }
+    if (error) {
+      console.error("Employers API Error:", error);
+    }
+  }, [employersData, error]); // Extract unique locations for filter dropdown
   const availableLocations = useMemo(() => {
     const locations = new Set(
       employers
@@ -288,30 +289,45 @@ export default function EmployerContent() {
   const debouncedSearch = debounce(
     (value: string) => setSearchQuery(value),
     300
-  );
-  // Function to handle employer verification
+  ); // Function to handle employer verification
   const handleVerifyEmployer = async (employerId: string) => {
-    const result = await verifyEmployer(employersApi.verify, employerId);
-    if (result) {
-      refetch(); // Refresh the data
-      if (selectedEmployer && selectedEmployer._id === employerId) {
-        setSelectedEmployer({
-          ...selectedEmployer,
-          verified: true,
-          isVerified: true,
-        });
+    try {
+      const result = await verifyEmployer(employersApi.verify, employerId);
+      if (result) {
+        toast.success("Employer verified successfully!");
+        refetch(); // Refresh the data
+        if (selectedEmployer && selectedEmployer._id === employerId) {
+          setSelectedEmployer({
+            ...selectedEmployer,
+            verified: true,
+            isVerified: true,
+          });
+        }
+      } else {
+        toast.error("Failed to verify employer. Please try again.");
       }
+    } catch (error) {
+      console.error("Failed to verify employer:", error);
+      toast.error("Failed to verify employer. Please try again.");
     }
   };
 
   // Function to handle employer suspension
   const handleSuspendEmployer = async (employerId: string) => {
-    const result = await suspendEmployer(employersApi.suspend, employerId);
-    if (result) {
-      refetch(); // Refresh the data
-      if (selectedEmployer && selectedEmployer._id === employerId) {
-        setSelectedEmployer({ ...selectedEmployer, verified: false });
+    try {
+      const result = await suspendEmployer(employersApi.suspend, employerId);
+      if (result) {
+        toast.success("Employer suspended successfully!");
+        refetch(); // Refresh the data
+        if (selectedEmployer && selectedEmployer._id === employerId) {
+          setSelectedEmployer({ ...selectedEmployer, verified: false });
+        }
+      } else {
+        toast.error("Failed to suspend employer. Please try again.");
       }
+    } catch (error) {
+      console.error("Failed to suspend employer:", error);
+      toast.error("Failed to suspend employer. Please try again.");
     }
   };
 
@@ -332,17 +348,25 @@ export default function EmployerContent() {
   if (loading) {
     return <LoadingState message="Loading employers..." />;
   }
-
   if (error) {
+    const isConnectionError =
+      error.includes("Failed to fetch") ||
+      error.includes("Network Error") ||
+      error.includes("Backend API failed");
+    const errorMessage = isConnectionError
+      ? `Unable to connect to backend API. Please ensure the backend server is running at ${
+          process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
+        }`
+      : error;
+
     return (
       <ErrorState
         title="Failed to load employers"
-        message={error}
+        message={errorMessage}
         onRetry={refetch}
       />
     );
   }
-
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Employer Management</h1>
@@ -535,7 +559,6 @@ export default function EmployerContent() {
                 Detailed information about {selectedEmployer.companyName}
               </DialogDescription>
             </DialogHeader>
-
             <div className="mt-4">
               {/* Company Profile Header */}{" "}
               <div className="flex items-center space-x-4 mb-6">
@@ -690,10 +713,34 @@ export default function EmployerContent() {
                   </Button>
                 )}
               </div>
-            </div>
+            </div>{" "}
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Toast notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: "#363636",
+            color: "#fff",
+          },
+          success: {
+            duration: 3000,
+            style: {
+              background: "#10b981",
+            },
+          },
+          error: {
+            duration: 4000,
+            style: {
+              background: "#ef4444",
+            },
+          },
+        }}
+      />
     </div>
   );
 }

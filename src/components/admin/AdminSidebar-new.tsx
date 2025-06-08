@@ -55,11 +55,17 @@ export default function AdminSidebar({
   const router = useRouter();
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
-
   const handleLogout = () => {
-    // TODO: Implement proper logout logic
     if (confirm("Are you sure you want to logout?")) {
+      // Clear authentication data
       localStorage.removeItem("authToken");
+      localStorage.removeItem("adminSession");
+      localStorage.removeItem("userType");
+
+      // Clear any session storage
+      sessionStorage.clear();
+
+      // Redirect to login page
       router.push("/login");
     }
   };

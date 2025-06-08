@@ -71,8 +71,10 @@ export function isValidPhone(phone: string): boolean {
  * Get status badge variant based on status
  */
 export function getStatusVariant(
-  status: string
+  status: string | undefined
 ): "default" | "success" | "warning" | "destructive" {
+  if (!status) return "default";
+
   switch (status.toLowerCase()) {
     case "verified":
     case "active":
@@ -105,4 +107,23 @@ export function debounce<T extends (...args: any[]) => any>(
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
+}
+
+/**
+ * Capitalize first letter of each word
+ */
+export function capitalizeText(text: string): string {
+  if (!text) return "";
+  return text
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+}
+
+/**
+ * Format status text for display
+ */
+export function formatStatusText(status: string | undefined): string {
+  if (!status) return "Unknown";
+  return capitalizeText(status.replace(/[-_]/g, " "));
 }

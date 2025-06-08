@@ -8,7 +8,11 @@ import EmployerContent from "@/components/admin/EmployerContent";
 import GigContent from "@/components/admin/GigContent";
 import SettingContent from "@/components/admin/SettingContent";
 
-export default function AdminLayout() {
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [activeTab, setActiveTab] = useState("dashboard");
 
   // Render the appropriate content based on the active tab
@@ -44,11 +48,13 @@ export default function AdminLayout() {
         return <DashboardContent />;
     }
   };
-
   return (
     <div className="flex min-h-screen">
       <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <main className="flex-1 p-6 ml-0 md:ml-64">{renderContent()}</main>
+      <main className="flex-1 p-6 ml-0 md:ml-64">
+        {children}
+        {renderContent()}
+      </main>
     </div>
   );
 }

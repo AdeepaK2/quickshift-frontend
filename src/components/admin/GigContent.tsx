@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
+import toast, { Toaster } from "react-hot-toast";
 import {
   Search,
   Filter,
@@ -46,72 +47,13 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useApi, useMutation } from "@/lib/hooks";
-import { gigsApi } from "@/lib/api";
+import { gigsApi, Gig, ApiError } from "@/lib/api/gigsApi";
 import { formatDate, getStatusVariant, debounce } from "@/lib/utils";
 import { LoadingState } from "@/components/ui/loading";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
 
-// TypeScript interfaces for Gig data
-interface TimeSlot {
-  date: string;
-  startTime: string;
-  endTime: string;
-  peopleNeeded: number;
-  peopleAssigned: number;
-}
-
-interface PayRate {
-  type: "hourly" | "fixed" | "daily";
-  min?: number;
-  max?: number;
-  amount?: number;
-  currency: string;
-}
-
-interface Location {
-  address: string;
-  city: string;
-  postalCode: string;
-}
-
-interface Employer {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface Applicant {
-  id: string;
-  name: string;
-  status: "pending" | "accepted" | "rejected";
-  appliedAt: string;
-}
-
-interface Gig {
-  id: string;
-  title: string;
-  employer: Employer;
-  category: string;
-  status: "draft" | "open" | "in_progress" | "completed" | "cancelled";
-  city: string;
-  totalPositions: number;
-  filledPositions: number;
-  applicationDeadline: string;
-  description: string;
-  payRate: PayRate;
-  timeSlots: TimeSlot[];
-  location: Location;
-  skills?: string[];
-  experience?: string;
-  dressCode?: string;
-  equipment?: string;
-  isAcceptingApplications: boolean;
-  applicants: Applicant[];
-  createdAt: string;
-  updatedAt: string;
-}
-
+// TypeScript interfaces for filtering
 interface FilterState {
   search: string;
   status: string;
@@ -136,178 +78,16 @@ const GIG_CATEGORIES = [
   "Other",
 ];
 
-// Mock data for development
-const mockGigs: Gig[] = [
-  {
-    id: "gig-001",
-    title: "Festival Event Staff",
-    employer: {
-      id: "emp-001",
-      name: "Events Toronto",
-      email: "hiring@eventstoronto.com",
-    },
-    category: "Event Staff",
-    status: "open",
-    city: "Toronto",
-    totalPositions: 15,
-    filledPositions: 5,
-    applicationDeadline: "2025-07-01",
-    description:
-      "Help with crowd management and customer service at our summer festival.",
-    payRate: { type: "hourly", min: 18, max: 22, currency: "$" },
-    timeSlots: [
-      {
-        date: "2025-07-01",
-        startTime: "08:00",
-        endTime: "16:00",
-        peopleNeeded: 8,
-        peopleAssigned: 3,
-      },
-      {
-        date: "2025-07-02",
-        startTime: "09:00",
-        endTime: "17:00",
-        peopleNeeded: 10,
-        peopleAssigned: 2,
-      },
-    ],
-    location: {
-      address: "123 Festival Ave",
-      city: "Toronto",
-      postalCode: "M5V 2H1",
-    },
-    skills: ["Customer Service", "Standing for long periods", "Communication"],
-    experience: "No prior experience required",
-    dressCode: "Black t-shirt and pants",
-    equipment: "Comfortable shoes",
-    isAcceptingApplications: true,
-    applicants: [
-      {
-        id: "app-001",
-        name: "John Doe",
-        status: "pending",
-        appliedAt: "2025-05-20T14:30:00Z",
-      },
-      {
-        id: "app-002",
-        name: "Jane Smith",
-        status: "accepted",
-        appliedAt: "2025-05-21T10:15:00Z",
-      },
-    ],
-    createdAt: "2025-05-15T09:00:00Z",
-    updatedAt: "2025-05-20T16:45:00Z",
-  },
-  {
-    id: "gig-002",
-    title: "Campus Tour Guide",
-    employer: {
-      id: "emp-002",
-      name: "University of Toronto",
-      email: "admissions@utoronto.ca",
-    },
-    category: "Campus Tours",
-    status: "draft",
-    city: "Toronto",
-    totalPositions: 5,
-    filledPositions: 0,
-    applicationDeadline: "2025-06-01",
-    description: "Leading tours for prospective students and their families.",
-    payRate: { type: "hourly", min: 20, max: 20, currency: "$" },
-    timeSlots: [
-      {
-        date: "2025-06-15",
-        startTime: "10:00",
-        endTime: "12:00",
-        peopleNeeded: 2,
-        peopleAssigned: 0,
-      },
-      {
-        date: "2025-06-16",
-        startTime: "10:00",
-        endTime: "12:00",
-        peopleNeeded: 3,
-        peopleAssigned: 0,
-      },
-    ],
-    location: {
-      address: "27 King's College Circle",
-      city: "Toronto",
-      postalCode: "M5S 1A1",
-    },
-    skills: ["Public Speaking", "Knowledge of campus", "Friendly demeanor"],
-    experience: "Must be a current student",
-    dressCode: "Business casual",
-    equipment: "None required",
-    isAcceptingApplications: false,
-    applicants: [],
-    createdAt: "2025-05-10T11:30:00Z",
-    updatedAt: "2025-05-10T11:30:00Z",
-  },
-  {
-    id: "gig-003",
-    title: "Warehouse Assistant",
-    employer: {
-      id: "emp-003",
-      name: "QuickShip Logistics",
-      email: "hr@quickship.com",
-    },
-    category: "Warehouse",
-    status: "completed",
-    city: "Mississauga",
-    totalPositions: 8,
-    filledPositions: 8,
-    applicationDeadline: "2025-04-15",
-    description:
-      "Assist with inventory management and package sorting in our distribution center.",
-    payRate: { type: "hourly", min: 17, max: 19, currency: "$" },
-    timeSlots: [
-      {
-        date: "2025-05-01",
-        startTime: "06:00",
-        endTime: "14:00",
-        peopleNeeded: 4,
-        peopleAssigned: 4,
-      },
-      {
-        date: "2025-05-02",
-        startTime: "06:00",
-        endTime: "14:00",
-        peopleNeeded: 4,
-        peopleAssigned: 4,
-      },
-    ],
-    location: {
-      address: "456 Industrial Blvd",
-      city: "Mississauga",
-      postalCode: "L5T 2R3",
-    },
-    skills: ["Physical stamina", "Attention to detail", "Teamwork"],
-    experience: "Previous warehouse experience preferred",
-    dressCode: "Safety gear provided, closed-toe shoes required",
-    equipment: "Steel-toe boots recommended",
-    isAcceptingApplications: false,
-    applicants: [
-      {
-        id: "app-003",
-        name: "Mike Johnson",
-        status: "accepted",
-        appliedAt: "2025-04-10T09:20:00Z",
-      },
-    ],
-    createdAt: "2025-04-01T08:00:00Z",
-    updatedAt: "2025-05-02T17:00:00Z",
-  },
-];
-
 export default function GigContent() {
-  // API hooks
+  // API hooks for data fetching
   const {
-    data: gigsData,
+    data: gigsResponse,
     loading: gigsLoading,
     error: gigsError,
     refetch,
   } = useApi(() => gigsApi.getAll());
+
+  // Mutation hooks for API operations
   const { mutate: updateGig, loading: updateLoading } = useMutation();
   const { mutate: deleteGig, loading: deleteLoading } = useMutation();
 
@@ -324,11 +104,25 @@ export default function GigContent() {
 
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
   const [gigToDelete, setGigToDelete] = useState<string | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false); // Extract gigs data - handle both direct array and wrapped response
+  const gigs: Gig[] = useMemo(() => {
+    if (!gigsResponse) return [];
 
-  // Use mock data if API fails or returns no data
-  const gigs = Array.isArray(gigsData) ? gigsData : mockGigs;
+    // If response has a data property, use it; otherwise assume direct array
+    if ((gigsResponse as any).data) {
+      return Array.isArray((gigsResponse as any).data)
+        ? (gigsResponse as any).data
+        : [];
+    }
 
+    // If response is directly an array
+    if (Array.isArray(gigsResponse)) {
+      return gigsResponse;
+    }
+
+    // Fallback to empty array
+    return [];
+  }, [gigsResponse]);
   // Debounced search function
   const debouncedSearch = useCallback(
     debounce((searchTerm: string) => {
@@ -336,21 +130,21 @@ export default function GigContent() {
     }, 300),
     []
   );
-
   // Filter gigs based on current filters
   const filteredGigs = useMemo(() => {
     return gigs.filter((gig: Gig) => {
       const matchesSearch =
         !filters.search ||
         gig.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-        gig.employer.name
-          .toLowerCase()
-          .includes(filters.search.toLowerCase()) ||
+        (gig.employer?.name &&
+          gig.employer.name
+            .toLowerCase()
+            .includes(filters.search.toLowerCase())) ||
         gig.description.toLowerCase().includes(filters.search.toLowerCase());
 
       const matchesStatus = !filters.status || gig.status === filters.status;
       const matchesEmployer =
-        !filters.employer || gig.employer.name === filters.employer;
+        !filters.employer || gig.employer?.name === filters.employer;
       const matchesCity = !filters.city || gig.city === filters.city;
       const matchesCategory =
         !filters.category || gig.category === filters.category;
@@ -373,14 +167,15 @@ export default function GigContent() {
       );
     });
   }, [gigs, filters]);
-
   // Extract unique values for filter dropdowns
   const uniqueEmployers = useMemo(
-    () => [...new Set(gigs.map((gig: Gig) => gig.employer.name))],
+    () => [
+      ...new Set(gigs.map((gig: Gig) => gig.employer?.name).filter(Boolean)),
+    ],
     [gigs]
   );
   const uniqueCities = useMemo(
-    () => [...new Set(gigs.map((gig: Gig) => gig.city))],
+    () => [...new Set(gigs.map((gig: Gig) => gig.city).filter(Boolean))],
     [gigs]
   );
 
@@ -399,31 +194,51 @@ export default function GigContent() {
       deadlineStart: "",
       deadlineEnd: "",
     });
-  };
+  }; // Handle status updates with proper error handling and toast feedback
   const handleStatusUpdate = async (gigId: string, newStatus: string) => {
     try {
+      const loadingToast = toast.loading("Updating gig status...");
+
       await updateGig(
-        (params: { id: string; data: Partial<Gig> }) =>
-          gigsApi.update(params.id, params.data),
-        { id: gigId, data: { status: newStatus as any } }
+        (params: { id: string; status: string }) =>
+          gigsApi.updateStatus(params.id, params.status),
+        { id: gigId, status: newStatus }
       );
+
+      toast.dismiss(loadingToast);
+      toast.success(`Gig status updated to ${newStatus}`);
+
+      // Refresh the data to show changes
       await refetch();
     } catch (error) {
-      console.error("Failed to update gig status:", error);
+      toast.error(
+        `Failed to update gig status: ${
+          error instanceof ApiError ? error.message : "Unknown error"
+        }`
+      );
     }
-  };
+  }; // Handle gig deletion with proper error handling and user feedback
   const handleDeleteGig = async () => {
     if (!gigToDelete) return;
 
     try {
-      await deleteGig((params: { id: string }) => gigsApi.delete(params.id), {
-        id: gigToDelete,
-      });
-      await refetch();
+      const loadingToast = toast.loading("Deleting gig...");
+
+      await deleteGig((params: string) => gigsApi.delete(params), gigToDelete);
+
+      toast.dismiss(loadingToast);
+      toast.success("Gig deleted successfully");
+
+      // Close dialog and refresh data
       setShowDeleteDialog(false);
       setGigToDelete(null);
+      await refetch();
     } catch (error) {
-      console.error("Failed to delete gig:", error);
+      toast.error(
+        `Failed to delete gig: ${
+          error instanceof ApiError ? error.message : "Unknown error"
+        }`
+      );
     }
   };
 
@@ -432,8 +247,18 @@ export default function GigContent() {
     setShowDeleteDialog(true);
   };
 
-  // Format pay rate for display
-  const formatPayRate = (payRate: PayRate) => {
+  const handleApprove = async (gigId: string) => {
+    await handleStatusUpdate(gigId, "open");
+  };
+
+  const handleReject = async (gigId: string) => {
+    await handleStatusUpdate(gigId, "cancelled");
+  }; // Format pay rate for display
+  const formatPayRate = (payRate: Gig["payRate"]) => {
+    if (!payRate) {
+      return "Pay rate not specified";
+    }
+
     if (payRate.type === "hourly" && payRate.min && payRate.max) {
       return `${payRate.currency}${payRate.min}-${payRate.max}/hr`;
     } else if (payRate.type === "fixed" && payRate.amount) {
@@ -443,12 +268,11 @@ export default function GigContent() {
     }
     return "Pay rate not specified";
   };
-
-  // Loading state
+  // Loading state with consistent UI pattern
   if (gigsLoading) {
     return <LoadingState message="Loading gigs..." />;
   }
-  // Error state
+  // Error state with retry functionality
   if (gigsError) {
     return (
       <ErrorState
@@ -458,8 +282,84 @@ export default function GigContent() {
             ? gigsError
             : "An error occurred while loading gigs."
         }
-        onRetry={refetch}
+        onRetry={async () => {
+          try {
+            toast.loading("Retrying...", { id: "retry" });
+            await refetch();
+            toast.success("Gigs loaded successfully", { id: "retry" });
+          } catch (error) {
+            toast.error("Failed to load gigs", { id: "retry" });
+          }
+        }}
       />
+    );
+  }
+
+  // Empty state when no gigs are available
+  if (!gigsLoading && gigs.length === 0) {
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Gig Management</h1>
+            <p className="text-gray-600">
+              Manage and monitor all gigs posted by employers
+            </p>
+          </div>
+          <Button
+            onClick={async () => {
+              try {
+                toast.loading("Refreshing gigs...", { id: "refresh" });
+                await refetch();
+                toast.success("Gigs refreshed successfully", { id: "refresh" });
+              } catch (error) {
+                toast.error("Failed to refresh gigs", { id: "refresh" });
+              }
+            }}
+            className="flex items-center gap-2"
+            disabled={gigsLoading}
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${gigsLoading ? "animate-spin" : ""}`}
+            />
+            Refresh
+          </Button>
+        </div>
+
+        <EmptyState
+          title="No gigs found"
+          description="No gigs have been posted yet. They will appear here once employers start posting gigs."
+          action={{
+            label: "Refresh",
+            onClick: refetch,
+          }}
+        />
+
+        {/* Toast Notifications */}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: "#363636",
+              color: "#fff",
+            },
+            success: {
+              duration: 3000,
+              style: {
+                background: "#10b981",
+              },
+            },
+            error: {
+              duration: 5000,
+              style: {
+                background: "#ef4444",
+              },
+            },
+          }}
+        />
+      </div>
     );
   }
 
@@ -472,9 +372,23 @@ export default function GigContent() {
           <p className="text-gray-600">
             Manage and monitor all gigs posted by employers
           </p>
-        </div>
-        <Button onClick={refetch} className="flex items-center gap-2">
-          <RefreshCw className="h-4 w-4" />
+        </div>{" "}
+        <Button
+          onClick={async () => {
+            try {
+              toast.loading("Refreshing gigs...", { id: "refresh" });
+              await refetch();
+              toast.success("Gigs refreshed successfully", { id: "refresh" });
+            } catch (error) {
+              toast.error("Failed to refresh gigs", { id: "refresh" });
+            }
+          }}
+          className="flex items-center gap-2"
+          disabled={gigsLoading}
+        >
+          <RefreshCw
+            className={`h-4 w-4 ${gigsLoading ? "animate-spin" : ""}`}
+          />
           Refresh
         </Button>
       </div>
@@ -678,12 +592,11 @@ export default function GigContent() {
                           Closed
                         </Badge>
                       )}
-                    </div>
-
+                    </div>{" "}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Building className="h-4 w-4" />
-                        {gig.employer.name}
+                        {gig.employer?.name || "N/A"}
                       </div>
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <MapPin className="h-4 w-4" />
@@ -706,11 +619,9 @@ export default function GigContent() {
                         Deadline: {formatDate(gig.applicationDeadline)}
                       </div>
                     </div>
-
                     <p className="text-sm text-gray-600 mb-4 line-clamp-2">
                       {gig.description}
                     </p>
-
                     <div className="flex items-center gap-2 text-xs text-gray-500">
                       <span>Created: {formatDate(gig.createdAt)}</span>
                       <span>•</span>
@@ -729,8 +640,8 @@ export default function GigContent() {
                           <Eye className="h-4 w-4" />
                         </Button>
                       </SheetTrigger>
-                    </Sheet>
-                    {/* Status Update */}{" "}
+                    </Sheet>{" "}
+                    {/* Status Update */}
                     <Select
                       value={gig.status}
                       onValueChange={(value) =>
@@ -749,6 +660,31 @@ export default function GigContent() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {/* Quick Actions for Draft Status */}
+                    {gig.status === "draft" && (
+                      <>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => handleApprove(gig.id)}
+                          disabled={updateLoading}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Approve
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleReject(gig.id)}
+                          disabled={updateLoading}
+                          className="text-red-600 border-red-300 hover:bg-red-50"
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Reject
+                        </Button>
+                      </>
+                    )}
                     {/* Delete */}
                     <Button
                       variant="outline"
@@ -811,49 +747,40 @@ export default function GigContent() {
                   </div>
                 </div>
               </div>
-
-              <Separator />
-
-              {/* Employer Info */}
+              <Separator /> {/* Employer Info */}
               <div className="space-y-4">
                 <h4 className="font-medium text-gray-900">Employer</h4>
                 <div className="space-y-2 text-sm">
                   <div>
                     <span className="text-gray-600">Name:</span>
                     <span className="ml-2 font-medium">
-                      {selectedGig.employer.name}
+                      {selectedGig.employer?.name || "N/A"}
                     </span>
                   </div>
                   <div>
                     <span className="text-gray-600">Email:</span>
                     <span className="ml-2 font-medium">
-                      {selectedGig.employer.email}
+                      {selectedGig.employer?.email || "N/A"}
                     </span>
                   </div>
                 </div>
               </div>
-
-              <Separator />
-
-              {/* Location */}
+              <Separator /> {/* Location */}
               <div className="space-y-4">
                 <h4 className="font-medium text-gray-900">Location</h4>
                 <div className="space-y-2 text-sm">
-                  <div>{selectedGig.location.address}</div>
+                  <div>{selectedGig.location?.address || "N/A"}</div>
                   <div>
-                    {selectedGig.location.city},{" "}
-                    {selectedGig.location.postalCode}
+                    {selectedGig.location?.city || "N/A"},{" "}
+                    {selectedGig.location?.postalCode || "N/A"}
                   </div>
                 </div>
               </div>
-
-              <Separator />
-
-              {/* Time Slots */}
+              <Separator /> {/* Time Slots */}
               <div className="space-y-4">
                 <h4 className="font-medium text-gray-900">Time Slots</h4>
                 <div className="space-y-3">
-                  {selectedGig.timeSlots.map((slot, index) => (
+                  {selectedGig.timeSlots?.map((slot, index) => (
                     <div
                       key={index}
                       className="bg-gray-50 p-3 rounded-md text-sm"
@@ -867,12 +794,14 @@ export default function GigContent() {
                         assigned
                       </div>
                     </div>
-                  ))}
+                  )) || (
+                    <div className="text-sm text-gray-500">
+                      No time slots available
+                    </div>
+                  )}
                 </div>
               </div>
-
               <Separator />
-
               {/* Description */}
               <div className="space-y-4">
                 <h4 className="font-medium text-gray-900">Description</h4>
@@ -880,7 +809,6 @@ export default function GigContent() {
                   {selectedGig.description}
                 </p>
               </div>
-
               {/* Requirements */}
               {(selectedGig.skills ||
                 selectedGig.experience ||
@@ -925,15 +853,12 @@ export default function GigContent() {
                   </div>
                 </>
               )}
-
-              <Separator />
-
-              {/* Applicants */}
+              <Separator /> {/* Applicants */}
               <div className="space-y-4">
                 <h4 className="font-medium text-gray-900">
-                  Applicants ({selectedGig.applicants.length})
+                  Applicants ({selectedGig.applicants?.length || 0})
                 </h4>
-                {selectedGig.applicants.length > 0 ? (
+                {selectedGig.applicants?.length > 0 ? (
                   <div className="space-y-3">
                     {selectedGig.applicants.map((applicant) => (
                       <div
@@ -981,10 +906,34 @@ export default function GigContent() {
               disabled={deleteLoading}
             >
               {deleteLoading ? "Deleting..." : "Delete"}
-            </Button>
+            </Button>{" "}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Toast Notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: "#363636",
+            color: "#fff",
+          },
+          success: {
+            duration: 3000,
+            style: {
+              background: "#10b981",
+            },
+          },
+          error: {
+            duration: 5000,
+            style: {
+              background: "#ef4444",
+            },
+          },
+        }}
+      />
     </div>
   );
 }

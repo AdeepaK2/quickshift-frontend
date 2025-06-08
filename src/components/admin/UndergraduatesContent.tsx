@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import toast from "react-hot-toast";
 import {
   Search,
   Filter,
@@ -40,35 +41,41 @@ import { Separator } from "@/components/ui/separator";
 
 import { useApi, useMutation } from "@/lib/hooks";
 import { undergraduatesApi } from "@/lib/api";
-import { formatDate, getStatusVariant, debounce } from "@/lib/utils";
+import {
+  formatDate,
+  getStatusVariant,
+  debounce,
+  formatStatusText,
+} from "@/lib/utils";
 import { LoadingState } from "@/components/ui/loading";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
+import { UNDERGRADUATE_CONSTANTS } from "@/lib/undergraduate-constants";
 
 // TypeScript interfaces for Undergraduate data
 interface Undergraduate {
   id: string;
   profilePicture?: string;
-  fullName: string;
-  email: string;
-  university: string;
+  fullName?: string;
+  email?: string;
+  university?: string;
   yearOfStudy: number;
   studentIdVerified: boolean;
-  phoneNumber: string;
-  faculty: string;
-  gender: "Male" | "Female" | "Other";
-  dateOfBirth: string;
-  address: string;
-  city: string;
-  postalCode: string;
-  accountStatus: "active" | "inactive" | "suspended";
-  verificationStatus: "verified" | "pending" | "rejected";
-  lastLogin: string;
+  phoneNumber?: string;
+  faculty?: string;
+  gender?: "Male" | "Female" | "Other";
+  dateOfBirth?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  accountStatus?: "active" | "inactive" | "suspended";
+  verificationStatus?: "verified" | "pending" | "rejected";
+  lastLogin?: string;
   bio?: string;
   gpa?: number;
   skillsAndInterests?: string[];
   documentsUploaded?: string[];
-  joinDate: string;
+  joinDate?: string;
 }
 
 interface FilterState {
@@ -79,44 +86,55 @@ interface FilterState {
   accountStatus: string | null;
 }
 
-// Constants for filter options
-const UNIVERSITIES = [
-  "All Universities",
-  "University of Technology",
-  "State University",
-  "National University",
-  "Technical Institute",
-];
-
-const YEARS_OF_STUDY = [1, 2, 3, 4, 5];
-
-const VERIFICATION_STATUSES = ["verified", "pending", "rejected"];
-
-const ACCOUNT_STATUSES = ["active", "inactive", "suspended"];
+// Constants for filter options - moved to constants file for better maintainability
+const {
+  YEARS_OF_STUDY,
+  VERIFICATION_STATUSES,
+  ACCOUNT_STATUSES,
+  LABELS,
+  TABLE_HEADERS,
+  ACTIONS,
+  SHEET_SECTIONS,
+  FIELD_LABELS,
+} = UNDERGRADUATE_CONSTANTS;
 
 export default function UndergraduatesContent() {
   const [selectedUndergraduate, setSelectedUndergraduate] =
     useState<Undergraduate | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-
   // Filter states
   const [filters, setFilters] = useState<FilterState>({
     search: "",
-    university: "All Universities",
+    university: LABELS.ALL_UNIVERSITIES,
     yearOfStudy: null,
     verificationStatus: null,
     accountStatus: null,
-  });
-  // API calls
+  }); // API calls
   const {
-    data: undergraduates = [],
+    data: undergraduatesResponse,
     loading,
     error,
     refetch,
   } = useApi(() => undergraduatesApi.getAll());
-
   const verifyUndergraduateMutation = useMutation();
   const suspendUndergraduateMutation = useMutation();
+  const activateUndergraduateMutation = useMutation();
+
+  // Extract undergraduates from API response
+  const undergraduates = undergraduatesResponse || [];
+
+  // Extract unique universities for filter dropdown
+  const availableUniversities = useMemo(() => {
+    const universities = new Set(
+      undergraduates
+        .map((undergraduate: Undergraduate) => undergraduate.university)
+        .filter(
+          (university: string | undefined): university is string =>
+            university !== undefined && university.trim() !== ""
+        )
+    );
+    return [LABELS.ALL_UNIVERSITIES, ...Array.from(universities)];
+  }, [undergraduates]);
 
   // Debounced search handler
   const debouncedSearch = useMemo(
@@ -135,16 +153,17 @@ export default function UndergraduatesContent() {
       if (filters.search) {
         const query = filters.search.toLowerCase();
         const matchesSearch =
-          undergraduate.fullName.toLowerCase().includes(query) ||
-          undergraduate.email.toLowerCase().includes(query) ||
-          undergraduate.university.toLowerCase().includes(query) ||
-          undergraduate.faculty.toLowerCase().includes(query);
+          undergraduate.fullName?.toLowerCase().includes(query) ||
+          undergraduate.email?.toLowerCase().includes(query) ||
+          undergraduate.university?.toLowerCase().includes(query) ||
+          undergraduate.faculty?.toLowerCase().includes(query);
 
         if (!matchesSearch) return false;
-      }
-
-      // University filter
-      if (filters.university && filters.university !== "All Universities") {
+      } // University filter
+      if (
+        filters.university &&
+        filters.university !== LABELS.ALL_UNIVERSITIES
+      ) {
         if (undergraduate.university !== filters.university) return false;
       }
 
@@ -173,24 +192,74 @@ export default function UndergraduatesContent() {
     setSelectedUndergraduate(undergraduate);
     setIsSheetOpen(true);
   };
-
   // Handle verification action
   const handleVerifyUndergraduate = async (id: string) => {
     try {
-      await verifyUndergraduateMutation.mutate(undergraduatesApi.verify, id);
-      refetch();
+      const result = await verifyUndergraduateMutation.mutate(
+        undergraduatesApi.verify,
+        id
+      );
+      if (result) {
+        toast.success("Undergraduate verified successfully!");
+        await refetch();
+        // Update selected undergraduate if it's currently viewed
+        if (selectedUndergraduate && selectedUndergraduate.id === id) {
+          setSelectedUndergraduate({
+            ...selectedUndergraduate,
+            verificationStatus: "verified",
+          });
+        }
+      }
     } catch (error) {
       console.error("Failed to verify undergraduate:", error);
+      toast.error("Failed to verify undergraduate. Please try again.");
     }
   };
-
   // Handle suspension action
   const handleSuspendUndergraduate = async (id: string) => {
     try {
-      await suspendUndergraduateMutation.mutate(undergraduatesApi.suspend, id);
-      refetch();
+      const result = await suspendUndergraduateMutation.mutate(
+        undergraduatesApi.suspend,
+        id
+      );
+      if (result) {
+        toast.success("Undergraduate suspended successfully!");
+        await refetch();
+        // Update selected undergraduate if it's currently viewed
+        if (selectedUndergraduate && selectedUndergraduate.id === id) {
+          setSelectedUndergraduate({
+            ...selectedUndergraduate,
+            accountStatus: "suspended",
+          });
+        }
+      }
     } catch (error) {
       console.error("Failed to suspend undergraduate:", error);
+      toast.error("Failed to suspend undergraduate. Please try again.");
+    }
+  };
+
+  // Handle activation action
+  const handleActivateUndergraduate = async (id: string) => {
+    try {
+      const result = await activateUndergraduateMutation.mutate(
+        undergraduatesApi.activate,
+        id
+      );
+      if (result) {
+        toast.success("Undergraduate activated successfully!");
+        await refetch();
+        // Update selected undergraduate if it's currently viewed
+        if (selectedUndergraduate && selectedUndergraduate.id === id) {
+          setSelectedUndergraduate({
+            ...selectedUndergraduate,
+            accountStatus: "active",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to activate undergraduate:", error);
+      toast.error("Failed to activate undergraduate. Please try again.");
     }
   };
 
@@ -208,13 +277,13 @@ export default function UndergraduatesContent() {
   if (loading) {
     return <LoadingState message="Loading undergraduate students..." />;
   }
-
   // Error state
   if (error) {
+    console.error("UndergraduatesContent API Error:", error);
     return (
       <ErrorState
         title="Failed to Load Undergraduates"
-        message="There was an error loading the undergraduate students data."
+        message={`There was an error loading the undergraduate students data: ${error}`}
         onRetry={refetch}
       />
     );
@@ -230,10 +299,10 @@ export default function UndergraduatesContent() {
             Filters
           </h2>
           <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />{" "}
             <Input
               label="Search Users"
-              placeholder="Search users..."
+              placeholder={LABELS.SEARCH_PLACEHOLDER}
               className="pl-10"
               onChange={(e) => handleSearchChange(e.target.value)}
             />
@@ -242,6 +311,7 @@ export default function UndergraduatesContent() {
 
         {/* Filter Options */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {" "}
           <div className="space-y-2">
             <label className="text-sm font-medium">University</label>
             <Select
@@ -252,7 +322,7 @@ export default function UndergraduatesContent() {
                 <SelectValue placeholder="Select University" />
               </SelectTrigger>
               <SelectContent>
-                {UNIVERSITIES.map((university) => (
+                {availableUniversities.map((university) => (
                   <SelectItem key={university} value={university}>
                     {university}
                   </SelectItem>
@@ -260,9 +330,8 @@ export default function UndergraduatesContent() {
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
-            <label className="text-sm font-medium">Year of Study</label>
+            <label className="text-sm font-medium">Year of Study</label>{" "}
             <Select
               value={filters.yearOfStudy?.toString() || "all"}
               onValueChange={(value) =>
@@ -274,9 +343,11 @@ export default function UndergraduatesContent() {
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select Year" />
-              </SelectTrigger>
+              </SelectTrigger>{" "}
               <SelectContent>
-                <SelectItem value="all">All Years</SelectItem>
+                <SelectItem value={LABELS.ALL_YEARS}>
+                  {LABELS.ALL_YEARS}
+                </SelectItem>
                 {YEARS_OF_STUDY.map((year) => (
                   <SelectItem key={year} value={year.toString()}>
                     Year {year}
@@ -285,7 +356,6 @@ export default function UndergraduatesContent() {
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
             <label className="text-sm font-medium">Verification Status</label>
             <Select
@@ -299,18 +369,17 @@ export default function UndergraduatesContent() {
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select Status" />
-              </SelectTrigger>
+              </SelectTrigger>{" "}
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="all">{LABELS.ALL_STATUSES}</SelectItem>
                 {VERIFICATION_STATUSES.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                    {formatStatusText(status)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-
           <div className="space-y-2">
             <label className="text-sm font-medium">Account Status</label>
             <Select
@@ -321,12 +390,12 @@ export default function UndergraduatesContent() {
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select Status" />
-              </SelectTrigger>
+              </SelectTrigger>{" "}
               <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="all">{LABELS.ALL_STATUSES}</SelectItem>
                 {ACCOUNT_STATUSES.map((status) => (
                   <SelectItem key={status} value={status}>
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                    {formatStatusText(status)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -337,15 +406,17 @@ export default function UndergraduatesContent() {
       {/* Results Summary */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-gray-600">
-          Showing {filteredUndergraduates.length} of{" "}
-          {undergraduates?.length || 0} undergraduates
+          {LABELS.SHOWING_RESULTS.replace(
+            "{count}",
+            filteredUndergraduates.length.toString()
+          ).replace("{total}", (undergraduates?.length || 0).toString())}
         </p>
       </div>{" "}
       {/* Users Table */}
       {filteredUndergraduates.length === 0 ? (
         <EmptyState
-          title="No Undergraduates Found"
-          description="No undergraduate students match your current filter criteria."
+          title={LABELS.NO_RESULTS_TITLE}
+          description={LABELS.NO_RESULTS_DESCRIPTION}
           icon="users"
         />
       ) : (
@@ -353,33 +424,34 @@ export default function UndergraduatesContent() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
+                {" "}
                 <tr className="bg-gray-50 text-left">
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Profile
+                    {TABLE_HEADERS.PROFILE}
                   </th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Full Name
+                    {TABLE_HEADERS.FULL_NAME}
                   </th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
+                    {TABLE_HEADERS.EMAIL}
                   </th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    University
+                    {TABLE_HEADERS.UNIVERSITY}
                   </th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Year
+                    {TABLE_HEADERS.YEAR}
                   </th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Student ID
+                    {TABLE_HEADERS.STUDENT_ID}
                   </th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Verification
+                    {TABLE_HEADERS.VERIFICATION}
                   </th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    {TABLE_HEADERS.STATUS}
                   </th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
+                    {TABLE_HEADERS.ACTIONS}
                   </th>
                 </tr>
               </thead>
@@ -388,28 +460,31 @@ export default function UndergraduatesContent() {
                   <tr key={undergraduate.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Avatar>
+                        {" "}
                         <AvatarImage
                           src={undergraduate.profilePicture}
-                          alt={undergraduate.fullName}
+                          alt={undergraduate.fullName || "User"}
                         />{" "}
                         <AvatarFallback className="bg-blue-100 text-blue-800">
                           {undergraduate.fullName
-                            .split(" ")
-                            .map((name: string) => name[0])
-                            .join("")}
+                            ? undergraduate.fullName
+                                .split(" ")
+                                .map((name: string) => name[0])
+                                .join("")
+                            : "U"}
                         </AvatarFallback>
                       </Avatar>
-                    </td>
+                    </td>{" "}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900">
-                        {undergraduate.fullName}
+                        {undergraduate.fullName || "N/A"}
                       </div>
+                    </td>{" "}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {undergraduate.email || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {undergraduate.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {undergraduate.university}
+                      {undergraduate.university || "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       Year {undergraduate.yearOfStudy}
@@ -426,7 +501,7 @@ export default function UndergraduatesContent() {
                           ? "Verified"
                           : "Not Verified"}
                       </Badge>
-                    </td>
+                    </td>{" "}
                     <td className="px-6 py-4 whitespace-nowrap">
                       {" "}
                       <Badge
@@ -434,22 +509,20 @@ export default function UndergraduatesContent() {
                           undergraduate.verificationStatus
                         )}
                       >
-                        {undergraduate.verificationStatus
-                          .charAt(0)
-                          .toUpperCase() +
-                          undergraduate.verificationStatus.slice(1)}
+                        {formatStatusText(undergraduate.verificationStatus)}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      {" "}
                       <Badge
                         variant={getStatusVariant(undergraduate.accountStatus)}
                       >
-                        {undergraduate.accountStatus.charAt(0).toUpperCase() +
-                          undergraduate.accountStatus.slice(1)}
+                        {formatStatusText(undergraduate.accountStatus)}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center space-x-2">
+                        {" "}
                         <Button
                           variant="outline"
                           size="sm"
@@ -457,9 +530,8 @@ export default function UndergraduatesContent() {
                           className="flex items-center"
                         >
                           <Eye className="h-4 w-4 mr-1" />
-                          View
+                          {ACTIONS.VIEW}
                         </Button>
-
                         {undergraduate.verificationStatus !== "verified" && (
                           <Button
                             variant="outline"
@@ -471,10 +543,9 @@ export default function UndergraduatesContent() {
                             className="flex items-center"
                           >
                             <ShieldCheck className="h-4 w-4 mr-1" />
-                            Verify
+                            {ACTIONS.VERIFY}
                           </Button>
-                        )}
-
+                        )}{" "}
                         {undergraduate.accountStatus === "active" && (
                           <Button
                             variant="outline"
@@ -486,7 +557,21 @@ export default function UndergraduatesContent() {
                             className="flex items-center text-red-600 hover:text-red-800"
                           >
                             <Shield className="h-4 w-4 mr-1" />
-                            Suspend
+                            {ACTIONS.SUSPEND}
+                          </Button>
+                        )}
+                        {undergraduate.accountStatus === "suspended" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              handleActivateUndergraduate(undergraduate.id)
+                            }
+                            disabled={activateUndergraduateMutation.loading}
+                            className="flex items-center text-green-600 hover:text-green-800"
+                          >
+                            <UserCheck className="h-4 w-4 mr-1" />
+                            {ACTIONS.ACTIVATE}
                           </Button>
                         )}
                       </div>
@@ -521,18 +606,21 @@ export default function UndergraduatesContent() {
                     />
                     <AvatarFallback className="text-lg bg-blue-100 text-blue-800">
                       {selectedUndergraduate.fullName
-                        .split(" ")
-                        .map((name) => name[0])
-                        .join("")}
+                        ? selectedUndergraduate.fullName
+                            .split(" ")
+                            .map((name) => name[0])
+                            .join("")
+                        : "U"}
                     </AvatarFallback>
                   </Avatar>
                   <div>
+                    {" "}
                     <h3 className="text-xl font-semibold">
-                      {selectedUndergraduate.fullName}
+                      {selectedUndergraduate.fullName || "N/A"}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {selectedUndergraduate.email}
-                    </p>
+                      {selectedUndergraduate.email || "N/A"}
+                    </p>{" "}
                     <div className="mt-1 flex items-center space-x-2">
                       {" "}
                       <Badge
@@ -540,59 +628,60 @@ export default function UndergraduatesContent() {
                           selectedUndergraduate.accountStatus
                         )}
                       >
-                        {selectedUndergraduate.accountStatus
-                          .charAt(0)
-                          .toUpperCase() +
-                          selectedUndergraduate.accountStatus.slice(1)}
+                        {formatStatusText(selectedUndergraduate.accountStatus)}
                       </Badge>
                       <Badge
                         variant={getStatusVariant(
                           selectedUndergraduate.verificationStatus
                         )}
                       >
-                        {selectedUndergraduate.verificationStatus
-                          .charAt(0)
-                          .toUpperCase() +
-                          selectedUndergraduate.verificationStatus.slice(1)}
+                        {formatStatusText(
+                          selectedUndergraduate.verificationStatus
+                        )}
                       </Badge>
                     </div>
                   </div>
                 </div>
-
-                <Separator />
-
-                {/* Personal Information */}
+                <Separator /> {/* Personal Information */}
                 <div className="space-y-4">
-                  <h4 className="text-lg font-medium">Personal Information</h4>
+                  <h4 className="text-lg font-medium">
+                    {SHEET_SECTIONS.PERSONAL_INFO}
+                  </h4>
 
                   <div className="grid grid-cols-1 gap-3">
                     <div className="flex items-start">
-                      <Phone className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <Phone className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />{" "}
                       <div>
+                        {" "}
                         <p className="text-sm font-medium text-gray-500">
-                          Phone Number
+                          {FIELD_LABELS.PHONE}
                         </p>
-                        <p>{selectedUndergraduate.phoneNumber}</p>
+                        <p>{selectedUndergraduate.phoneNumber || "N/A"}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
                       <UserIcon className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                       <div>
+                        {" "}
                         <p className="text-sm font-medium text-gray-500">
                           Gender
                         </p>
-                        <p>{selectedUndergraduate.gender}</p>
+                        <p>{selectedUndergraduate.gender || "N/A"}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <Calendar className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <Calendar className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />{" "}
                       <div>
                         <p className="text-sm font-medium text-gray-500">
                           Date of Birth
                         </p>
-                        <p>{formatDate(selectedUndergraduate.dateOfBirth)}</p>
+                        <p>
+                          {selectedUndergraduate.dateOfBirth
+                            ? formatDate(selectedUndergraduate.dateOfBirth)
+                            : "N/A"}
+                        </p>
                       </div>
                     </div>
 
@@ -601,41 +690,44 @@ export default function UndergraduatesContent() {
                       <div>
                         <p className="text-sm font-medium text-gray-500">
                           Address
-                        </p>
+                        </p>{" "}
                         <p>
-                          {selectedUndergraduate.address},{" "}
-                          {selectedUndergraduate.city},{" "}
-                          {selectedUndergraduate.postalCode}
+                          {[
+                            selectedUndergraduate.address,
+                            selectedUndergraduate.city,
+                            selectedUndergraduate.postalCode,
+                          ]
+                            .filter(Boolean)
+                            .join(", ") || "N/A"}
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                <Separator />
-
-                {/* Academic Information */}
+                <Separator /> {/* Academic Information */}
                 <div className="space-y-4">
-                  <h4 className="text-lg font-medium">Academic Information</h4>
+                  <h4 className="text-lg font-medium">
+                    {SHEET_SECTIONS.ACADEMIC_INFO}
+                  </h4>
 
                   <div className="grid grid-cols-1 gap-3">
                     <div className="flex items-start">
-                      <School className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <School className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />{" "}
                       <div>
                         <p className="text-sm font-medium text-gray-500">
-                          University
+                          {FIELD_LABELS.UNIVERSITY}
                         </p>
-                        <p>{selectedUndergraduate.university}</p>
+                        <p>{selectedUndergraduate.university || "N/A"}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <BookOpen className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <BookOpen className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />{" "}
                       <div>
                         <p className="text-sm font-medium text-gray-500">
-                          Faculty
+                          {FIELD_LABELS.FACULTY}
                         </p>
-                        <p>{selectedUndergraduate.faculty}</p>
+                        <p>{selectedUndergraduate.faculty || "N/A"}</p>
                       </div>
                     </div>
 
@@ -643,7 +735,7 @@ export default function UndergraduatesContent() {
                       <UserCheck className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-gray-500">
-                          Year of Study
+                          {FIELD_LABELS.YEAR_OF_STUDY}
                         </p>
                         <p>Year {selectedUndergraduate.yearOfStudy}</p>
                       </div>
@@ -653,7 +745,7 @@ export default function UndergraduatesContent() {
                       <UserCheck className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-gray-500">
-                          Student ID Verification
+                          {FIELD_LABELS.STUDENT_ID_VERIFICATION}
                         </p>
                         <Badge
                           variant={
@@ -674,7 +766,7 @@ export default function UndergraduatesContent() {
                         <ClipboardCheck className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                         <div>
                           <p className="text-sm font-medium text-gray-500">
-                            GPA
+                            {FIELD_LABELS.GPA}
                           </p>
                           <p>{selectedUndergraduate.gpa}</p>
                         </div>
@@ -682,21 +774,24 @@ export default function UndergraduatesContent() {
                     )}
                   </div>
                 </div>
-
-                <Separator />
-
-                {/* Account Information */}
+                <Separator /> {/* Account Information */}
                 <div className="space-y-4">
-                  <h4 className="text-lg font-medium">Account Information</h4>
+                  <h4 className="text-lg font-medium">
+                    {SHEET_SECTIONS.ACCOUNT_INFO}
+                  </h4>
 
                   <div className="grid grid-cols-1 gap-3">
                     <div className="flex items-start">
                       <Calendar className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-gray-500">
-                          Join Date
+                          {FIELD_LABELS.JOIN_DATE}
                         </p>
-                        <p>{formatDate(selectedUndergraduate.joinDate)}</p>
+                        <p>
+                          {selectedUndergraduate.joinDate
+                            ? formatDate(selectedUndergraduate.joinDate)
+                            : "N/A"}
+                        </p>
                       </div>
                     </div>
 
@@ -704,9 +799,13 @@ export default function UndergraduatesContent() {
                       <Clock className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-gray-500">
-                          Last Login
+                          {FIELD_LABELS.LAST_LOGIN}
                         </p>
-                        <p>{formatDate(selectedUndergraduate.lastLogin)}</p>
+                        <p>
+                          {selectedUndergraduate.lastLogin
+                            ? formatDate(selectedUndergraduate.lastLogin)
+                            : "N/A"}
+                        </p>
                       </div>
                     </div>
 
@@ -714,35 +813,32 @@ export default function UndergraduatesContent() {
                       <ClipboardCheck className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-gray-500">
-                          Verification Status
+                          {FIELD_LABELS.VERIFICATION_STATUS}
                         </p>{" "}
                         <Badge
                           variant={getStatusVariant(
                             selectedUndergraduate.verificationStatus
                           )}
                         >
-                          {selectedUndergraduate.verificationStatus
-                            .charAt(0)
-                            .toUpperCase() +
-                            selectedUndergraduate.verificationStatus.slice(1)}
+                          {formatStatusText(
+                            selectedUndergraduate.verificationStatus
+                          )}
                         </Badge>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                <Separator />
-
-                {/* Bio */}
+                <Separator /> {/* Bio */}
                 {selectedUndergraduate.bio && (
                   <div className="space-y-2">
-                    <h4 className="text-lg font-medium">Biography</h4>
+                    <h4 className="text-lg font-medium">
+                      {SHEET_SECTIONS.BIO}
+                    </h4>
                     <p className="text-sm text-gray-600">
                       {selectedUndergraduate.bio}
                     </p>
                   </div>
                 )}
-
                 {/* Skills and Interests */}
                 {selectedUndergraduate.skillsAndInterests &&
                   selectedUndergraduate.skillsAndInterests.length > 0 && (
@@ -750,7 +846,7 @@ export default function UndergraduatesContent() {
                       <Separator />
                       <div className="space-y-2">
                         <h4 className="text-lg font-medium">
-                          Skills & Interests
+                          {SHEET_SECTIONS.SKILLS_INTERESTS}
                         </h4>
                         <div className="flex flex-wrap gap-2">
                           {selectedUndergraduate.skillsAndInterests.map(

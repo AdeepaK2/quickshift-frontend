@@ -4,8 +4,21 @@
  */
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 const LOCAL_API_BASE_URL = "/api";
+
+// Environment check
+const isDevelopment = process.env.NODE_ENV === "development";
+const isProduction = process.env.NODE_ENV === "production";
+
+// API endpoints configuration
+export const API_ENDPOINTS = {
+  EMPLOYERS: "/api/employers",
+  USERS: "/api/users",
+  STUDENTS: "/api/students",
+  GIGS: "/api/gigs",
+  ANALYTICS: "/api/analytics",
+} as const;
 
 export interface ApiResponse<T> {
   success: boolean;
@@ -15,11 +28,6 @@ export interface ApiResponse<T> {
   total?: number;
   page?: number;
   pages?: number;
-}
-
-export interface ApiError {
-  message: string;
-  status?: number;
 }
 
 /**
@@ -35,9 +43,11 @@ async function apiCall<T>(
   };
 
   // Add authentication token if available
-  const token = localStorage.getItem("authToken");
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("authToken");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
   }
 
   const requestOptions: RequestInit = {
@@ -45,36 +55,58 @@ async function apiCall<T>(
     headers,
   };
 
+  let response: Response;
+
   try {
     // Try backend API first
     const backendUrl = `${API_BASE_URL}${endpoint}`;
-    let response = await fetch(backendUrl, requestOptions);
+    if (isDevelopment) {
+      console.log(`API Call: ${requestOptions.method || "GET"} ${backendUrl}`);
+    }
 
-    // If backend fails, try local API for development
+    response = await fetch(backendUrl, requestOptions);
+
     if (!response.ok) {
-      console.warn(
-        `Backend API failed (${response.status}), trying local API...`
-      );
+      throw new Error(`Backend API returned ${response.status}`);
+    }
+  } catch (backendError) {
+    // Backend failed (network error or HTTP error), try local API
+    console.warn(
+      `Backend API failed, trying local API...`,
+      backendError instanceof Error ? backendError.message : backendError
+    );
+
+    try {
       const localUrl = `${LOCAL_API_BASE_URL}${endpoint}`;
       response = await fetch(localUrl, requestOptions);
-    }
 
-    if (!response.ok) {
+      if (!response.ok) {
+        throw new ApiError(
+          `Both backend and local API failed. Local API status: ${response.status}`,
+          response.status
+        );
+      }
+    } catch (localError) {
+      console.error(`Local API also failed for ${endpoint}:`, localError);
       throw new ApiError(
-        `HTTP error! status: ${response.status}`,
-        response.status
+        `Both backend and local API failed: ${
+          localError instanceof Error ? localError.message : "Unknown error"
+        }`
       );
     }
+  }
 
+  try {
     const data = await response.json();
     return data;
-  } catch (error) {
-    console.error(`API call failed for ${endpoint}:`, error);
-    if (error instanceof ApiError) {
-      throw error;
-    }
+  } catch (parseError) {
+    console.error(`Failed to parse response for ${endpoint}:`, parseError);
     throw new ApiError(
-      error instanceof Error ? error.message : "Unknown API error"
+      `Failed to parse API response: ${
+        parseError instanceof Error
+          ? parseError.message
+          : "Unknown parsing error"
+      }`
     );
   }
 }
@@ -84,21 +116,21 @@ async function apiCall<T>(
  */
 export const employersApi = {
   getAll: async (): Promise<ApiResponse<any[]>> => {
-    return apiCall("/employers");
+    return apiCall(API_ENDPOINTS.EMPLOYERS);
   },
 
   getById: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/employers/${id}`);
+    return apiCall(`${API_ENDPOINTS.EMPLOYERS}/${id}`);
   },
 
   verify: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/employers/${id}/verify`, {
+    return apiCall(`${API_ENDPOINTS.EMPLOYERS}/${id}/verify`, {
       method: "PATCH",
     });
   },
 
   suspend: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/employers/${id}/suspend`, {
+    return apiCall(`${API_ENDPOINTS.EMPLOYERS}/${id}/suspend`, {
       method: "PATCH",
     });
   },
@@ -109,21 +141,21 @@ export const employersApi = {
  */
 export const studentsApi = {
   getAll: async (): Promise<ApiResponse<any[]>> => {
-    return apiCall("/students");
+    return apiCall(API_ENDPOINTS.STUDENTS);
   },
 
   getById: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/students/${id}`);
+    return apiCall(`${API_ENDPOINTS.STUDENTS}/${id}`);
   },
 
   verify: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/students/${id}/verify`, {
+    return apiCall(`${API_ENDPOINTS.STUDENTS}/${id}/verify`, {
       method: "PATCH",
     });
   },
 
   suspend: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/students/${id}/suspend`, {
+    return apiCall(`${API_ENDPOINTS.STUDENTS}/${id}/suspend`, {
       method: "PATCH",
     });
   },
@@ -134,66 +166,74 @@ export const studentsApi = {
  */
 export const gigsApi = {
   getAll: async (): Promise<ApiResponse<any[]>> => {
-    return apiCall("/gigs");
+    return apiCall(API_ENDPOINTS.GIGS);
   },
 
   getById: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/gigs/${id}`);
+    return apiCall(`${API_ENDPOINTS.GIGS}/${id}`);
   },
 
   update: async (id: string, data: any): Promise<ApiResponse<any>> => {
-    return apiCall(`/gigs/${id}`, {
-      method: "PUT",
+    return apiCall(`${API_ENDPOINTS.GIGS}/${id}`, {
+      method: "PATCH",
       body: JSON.stringify(data),
     });
   },
 
+  updateStatus: async (
+    id: string,
+    status: string
+  ): Promise<ApiResponse<any>> => {
+    return apiCall(`${API_ENDPOINTS.GIGS}/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  },
+
   delete: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/gigs/${id}`, {
+    return apiCall(`${API_ENDPOINTS.GIGS}/${id}`, {
       method: "DELETE",
     });
   },
 };
 
 /**
- * Undergraduates API
+ * Undergraduates API - mapped to backend /api/users
  */
 export const undergraduatesApi = {
   getAll: async (): Promise<ApiResponse<any[]>> => {
-    return apiCall("/undergraduates");
+    return apiCall(API_ENDPOINTS.USERS);
   },
 
   getById: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/undergraduates/${id}`);
+    return apiCall(`${API_ENDPOINTS.USERS}/${id}`);
   },
-
   verify: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/undergraduates/${id}/verify`, {
+    return apiCall(`${API_ENDPOINTS.USERS}/${id}/verify`, {
       method: "PATCH",
     });
   },
 
   suspend: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/undergraduates/${id}/suspend`, {
+    return apiCall(`${API_ENDPOINTS.USERS}/${id}/suspend`, {
       method: "PATCH",
     });
   },
-
   activate: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/undergraduates/${id}/activate`, {
+    return apiCall(`${API_ENDPOINTS.USERS}/${id}/verify`, {
       method: "PATCH",
     });
   },
 
   update: async (id: string, data: any): Promise<ApiResponse<any>> => {
-    return apiCall(`/undergraduates/${id}`, {
+    return apiCall(`${API_ENDPOINTS.USERS}/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   },
 
   delete: async (id: string): Promise<ApiResponse<any>> => {
-    return apiCall(`/undergraduates/${id}`, {
+    return apiCall(`${API_ENDPOINTS.USERS}/${id}`, {
       method: "DELETE",
     });
   },
@@ -204,19 +244,19 @@ export const undergraduatesApi = {
  */
 export const analyticsApi = {
   getDashboardStats: async (): Promise<ApiResponse<any>> => {
-    return apiCall("/analytics/dashboard");
+    return apiCall(`${API_ENDPOINTS.ANALYTICS}/dashboard`);
   },
 
   getUserStats: async (): Promise<ApiResponse<any>> => {
-    return apiCall("/analytics/users");
+    return apiCall(`${API_ENDPOINTS.ANALYTICS}/users`);
   },
 
   getGigStats: async (): Promise<ApiResponse<any>> => {
-    return apiCall("/analytics/gigs");
+    return apiCall(`${API_ENDPOINTS.ANALYTICS}/gigs`);
   },
 };
 
-class ApiError extends Error {
+export class ApiError extends Error {
   status?: number;
 
   constructor(message: string, status?: number) {
@@ -225,5 +265,3 @@ class ApiError extends Error {
     this.status = status;
   }
 }
-
-export { ApiError };
