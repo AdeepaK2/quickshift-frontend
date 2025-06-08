@@ -3,20 +3,25 @@
 import { useState } from "react";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import DashboardContent from "@/components/admin/DashboardContent";
-import UndergraduateContent from "@/components/admin/UndergraduatesContent";
+import UndergraduatesContent from "@/components/admin/UndergraduatesContent";
 import EmployerContent from "@/components/admin/EmployerContent";
-import JobContent from "@/components/admin/GigContent";
+import GigContent from "@/components/admin/GigContent";
 import SettingContent from "@/components/admin/SettingContent";
 
 export default function AdminLayout() {
   const [activeTab, setActiveTab] = useState("dashboard");
+
   // Render the appropriate content based on the active tab
   const renderContent = () => {
     switch (activeTab) {
       case "dashboard":
         return <DashboardContent />;
       case "undergraduate":
-        return <UndergraduateContent />;
+        return (
+          <div className="p-4 md:p-8">
+            <UndergraduatesContent />
+          </div>
+        );
       case "employer":
         return (
           <div className="p-4 md:p-8">
@@ -24,7 +29,11 @@ export default function AdminLayout() {
           </div>
         );
       case "gigs":
-        return <JobContent />;
+        return (
+          <div className="p-4 md:p-8">
+            <GigContent />
+          </div>
+        );
       case "settings":
         return (
           <div className="p-4 md:p-8">
@@ -35,6 +44,7 @@ export default function AdminLayout() {
         return <DashboardContent />;
     }
   };
+
   return (
     <div className="flex min-h-screen">
       <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />

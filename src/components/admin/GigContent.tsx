@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import {
   Search,
   Filter,
@@ -9,46 +9,158 @@ import {
   Tag,
   Building,
   Eye,
-  Edit,
   Trash2,
   RefreshCw,
-  AlertTriangle,
+  DollarSign,
+  Users,
+  Clock,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Button from "@/components/ui/Button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import Input from "@/components/ui/Input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
-  DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
+import { useApi, useMutation } from "@/lib/hooks";
+import { gigsApi } from "@/lib/api";
+import { formatDate, getStatusVariant, debounce } from "@/lib/utils";
+import { LoadingState } from "@/components/ui/loading";
+import { ErrorState } from "@/components/ui/error-state";
+import { EmptyState } from "@/components/ui/empty-state";
 
-// Mock gig data - in a real app, this would come from an API
-const mockGigs = [
+// TypeScript interfaces for Gig data
+interface TimeSlot {
+  date: string;
+  startTime: string;
+  endTime: string;
+  peopleNeeded: number;
+  peopleAssigned: number;
+}
+
+interface PayRate {
+  type: "hourly" | "fixed" | "daily";
+  min?: number;
+  max?: number;
+  amount?: number;
+  currency: string;
+}
+
+interface Location {
+  address: string;
+  city: string;
+  postalCode: string;
+}
+
+interface Employer {
+  id: string;
+  name: string;
+  email: string;
+}
+
+interface Applicant {
+  id: string;
+  name: string;
+  status: "pending" | "accepted" | "rejected";
+  appliedAt: string;
+}
+
+interface Gig {
+  id: string;
+  title: string;
+  employer: Employer;
+  category: string;
+  status: "draft" | "open" | "in_progress" | "completed" | "cancelled";
+  city: string;
+  totalPositions: number;
+  filledPositions: number;
+  applicationDeadline: string;
+  description: string;
+  payRate: PayRate;
+  timeSlots: TimeSlot[];
+  location: Location;
+  skills?: string[];
+  experience?: string;
+  dressCode?: string;
+  equipment?: string;
+  isAcceptingApplications: boolean;
+  applicants: Applicant[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface FilterState {
+  search: string;
+  status: string;
+  employer: string;
+  city: string;
+  category: string;
+  deadlineStart: string;
+  deadlineEnd: string;
+}
+
+// Constants for filter options
+const GIG_STATUSES = ["draft", "open", "in_progress", "completed", "cancelled"];
+
+const GIG_CATEGORIES = [
+  "Event Staff",
+  "Campus Tours",
+  "Warehouse",
+  "Food Service",
+  "Administrative",
+  "Marketing",
+  "Customer Service",
+  "Other",
+];
+
+// Mock data for development
+const mockGigs: Gig[] = [
   {
     id: "gig-001",
-    title: "Event Staff for Summer Festival",
+    title: "Festival Event Staff",
     employer: {
       id: "emp-001",
-      name: "Festival Productions Inc.",
-      email: "contact@festivalproductions.com",
+      name: "Events Toronto",
+      email: "hiring@eventstoronto.com",
     },
     category: "Event Staff",
     status: "open",
     city: "Toronto",
-    totalPositions: 20,
+    totalPositions: 15,
     filledPositions: 5,
-    applicationDeadline: "2025-06-15",
+    applicationDeadline: "2025-07-01",
     description:
-      "We need energetic staff to help with our annual summer festival.",
-    payRate: { type: "hourly", min: 25, max: 30, currency: "$" },
+      "Help with crowd management and customer service at our summer festival.",
+    payRate: { type: "hourly", min: 18, max: 22, currency: "$" },
     timeSlots: [
       {
         date: "2025-07-01",
-        startTime: "09:00",
-        endTime: "17:00",
-        peopleNeeded: 10,
+        startTime: "08:00",
+        endTime: "16:00",
+        peopleNeeded: 8,
         peopleAssigned: 3,
       },
       {
@@ -94,7 +206,7 @@ const mockGigs = [
       name: "University of Toronto",
       email: "admissions@utoronto.ca",
     },
-    category: "Campus Jobs",
+    category: "Campus Tours",
     status: "draft",
     city: "Toronto",
     totalPositions: 5,
@@ -134,89 +246,74 @@ const mockGigs = [
   },
   {
     id: "gig-003",
-    title: "Warehouse Helper",
+    title: "Warehouse Assistant",
     employer: {
       id: "emp-003",
-      name: "FastShip Logistics",
-      email: "hr@fastship.com",
+      name: "QuickShip Logistics",
+      email: "hr@quickship.com",
     },
     category: "Warehouse",
-    status: "in_progress",
+    status: "completed",
     city: "Mississauga",
-    totalPositions: 10,
+    totalPositions: 8,
     filledPositions: 8,
-    applicationDeadline: "2025-05-15",
-    description: "Assisting with inventory management and order fulfillment.",
-    payRate: { type: "fixed", amount: 500, currency: "$" },
+    applicationDeadline: "2025-04-15",
+    description:
+      "Assist with inventory management and package sorting in our distribution center.",
+    payRate: { type: "hourly", min: 17, max: 19, currency: "$" },
     timeSlots: [
       {
-        date: "2025-05-25",
-        startTime: "08:00",
-        endTime: "16:00",
-        peopleNeeded: 10,
-        peopleAssigned: 8,
+        date: "2025-05-01",
+        startTime: "06:00",
+        endTime: "14:00",
+        peopleNeeded: 4,
+        peopleAssigned: 4,
+      },
+      {
+        date: "2025-05-02",
+        startTime: "06:00",
+        endTime: "14:00",
+        peopleNeeded: 4,
+        peopleAssigned: 4,
       },
     ],
     location: {
-      address: "500 Industrial Pkwy",
+      address: "456 Industrial Blvd",
       city: "Mississauga",
-      postalCode: "L5T 2B1",
+      postalCode: "L5T 2R3",
     },
-    skills: [
-      "Lifting up to 50lbs",
-      "Basic computer skills",
-      "Attention to detail",
-    ],
+    skills: ["Physical stamina", "Attention to detail", "Teamwork"],
     experience: "Previous warehouse experience preferred",
-    dressCode: "Casual, closed-toe shoes required",
-    equipment: "Safety gear provided",
-    isAcceptingApplications: true,
+    dressCode: "Safety gear provided, closed-toe shoes required",
+    equipment: "Steel-toe boots recommended",
+    isAcceptingApplications: false,
     applicants: [
       {
         id: "app-003",
         name: "Mike Johnson",
         status: "accepted",
-        appliedAt: "2025-05-01T09:45:00Z",
-      },
-      {
-        id: "app-004",
-        name: "Sarah Williams",
-        status: "rejected",
-        appliedAt: "2025-05-02T14:20:00Z",
-      },
-      {
-        id: "app-005",
-        name: "David Brown",
-        status: "accepted",
-        appliedAt: "2025-05-03T11:10:00Z",
+        appliedAt: "2025-04-10T09:20:00Z",
       },
     ],
-    createdAt: "2025-04-20T08:15:00Z",
-    updatedAt: "2025-05-10T16:30:00Z",
+    createdAt: "2025-04-01T08:00:00Z",
+    updatedAt: "2025-05-02T17:00:00Z",
   },
 ];
 
-// Status badge colors mapping
-const statusBadgeVariants: Record<
-  string,
-  | "warning"
-  | "success"
-  | "info"
-  | "default"
-  | "destructive"
-  | "outline"
-  | "secondary"
-> = {
-  draft: "warning",
-  open: "success",
-  in_progress: "info",
-  completed: "default",
-  cancelled: "destructive",
-};
-
 export default function GigContent() {
-  // State for filters
-  const [filters, setFilters] = useState({
+  // API hooks
+  const {
+    data: gigsData,
+    loading: gigsLoading,
+    error: gigsError,
+    refetch,
+  } = useApi(() => gigsApi.getAll());
+  const { mutate: updateGig, loading: updateLoading } = useMutation();
+  const { mutate: deleteGig, loading: deleteLoading } = useMutation();
+
+  // State management
+  const [filters, setFilters] = useState<FilterState>({
+    search: "",
     status: "",
     employer: "",
     city: "",
@@ -225,75 +322,76 @@ export default function GigContent() {
     deadlineEnd: "",
   });
 
-  // State for selected gig details
-  const [selectedGig, setSelectedGig] = useState<any>(null);
+  const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
+  const [gigToDelete, setGigToDelete] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Apply filters to gigs
-  const filteredGigs = mockGigs.filter((gig) => {
-    if (filters.status && gig.status !== filters.status) return false;
-    if (
-      filters.employer &&
-      !gig.employer.name.toLowerCase().includes(filters.employer.toLowerCase())
-    )
-      return false;
-    if (
-      filters.city &&
-      !gig.city.toLowerCase().includes(filters.city.toLowerCase())
-    )
-      return false;
-    if (
-      filters.category &&
-      !gig.category.toLowerCase().includes(filters.category.toLowerCase())
-    )
-      return false;
+  // Use mock data if API fails or returns no data
+  const gigs = Array.isArray(gigsData) ? gigsData : mockGigs;
 
-    if (filters.deadlineStart) {
-      const deadlineDate = new Date(gig.applicationDeadline);
-      const startDate = new Date(filters.deadlineStart);
-      if (deadlineDate < startDate) return false;
-    }
-
-    if (filters.deadlineEnd) {
-      const deadlineDate = new Date(gig.applicationDeadline);
-      const endDate = new Date(filters.deadlineEnd);
-      if (deadlineDate > endDate) return false;
-    }
-
-    return true;
-  });
-
-  // Unique values for filter dropdowns
-  const uniqueEmployers = Array.from(
-    new Set(mockGigs.map((g) => g.employer.name))
+  // Debounced search function
+  const debouncedSearch = useCallback(
+    debounce((searchTerm: string) => {
+      setFilters((prev) => ({ ...prev, search: searchTerm }));
+    }, 300),
+    []
   );
-  const uniqueCities = Array.from(new Set(mockGigs.map((g) => g.city)));
-  const uniqueCategories = Array.from(new Set(mockGigs.map((g) => g.category)));
-  const statuses = ["draft", "open", "in_progress", "completed", "cancelled"];
 
-  // Format pay rate for display
-  const formatPayRate = (payRate: any) => {
-    if (payRate.type === "fixed") {
-      return `${payRate.currency}${payRate.amount} - Fixed`;
-    } else {
-      return `${payRate.currency}${payRate.min}${
-        payRate.max !== payRate.min
-          ? ` - ${payRate.currency}${payRate.max}`
-          : ""
-      } / ${payRate.type}`;
-    }
-  };
+  // Filter gigs based on current filters
+  const filteredGigs = useMemo(() => {
+    return gigs.filter((gig: Gig) => {
+      const matchesSearch =
+        !filters.search ||
+        gig.title.toLowerCase().includes(filters.search.toLowerCase()) ||
+        gig.employer.name
+          .toLowerCase()
+          .includes(filters.search.toLowerCase()) ||
+        gig.description.toLowerCase().includes(filters.search.toLowerCase());
 
-  // Function to handle filter changes
-  const handleFilterChange = (key: string, value: string) => {
-    setFilters({
-      ...filters,
-      [key]: value,
+      const matchesStatus = !filters.status || gig.status === filters.status;
+      const matchesEmployer =
+        !filters.employer || gig.employer.name === filters.employer;
+      const matchesCity = !filters.city || gig.city === filters.city;
+      const matchesCategory =
+        !filters.category || gig.category === filters.category;
+
+      const matchesDeadlineStart =
+        !filters.deadlineStart ||
+        new Date(gig.applicationDeadline) >= new Date(filters.deadlineStart);
+      const matchesDeadlineEnd =
+        !filters.deadlineEnd ||
+        new Date(gig.applicationDeadline) <= new Date(filters.deadlineEnd);
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesEmployer &&
+        matchesCity &&
+        matchesCategory &&
+        matchesDeadlineStart &&
+        matchesDeadlineEnd
+      );
     });
+  }, [gigs, filters]);
+
+  // Extract unique values for filter dropdowns
+  const uniqueEmployers = useMemo(
+    () => [...new Set(gigs.map((gig: Gig) => gig.employer.name))],
+    [gigs]
+  );
+  const uniqueCities = useMemo(
+    () => [...new Set(gigs.map((gig: Gig) => gig.city))],
+    [gigs]
+  );
+
+  // Event handlers
+  const handleFilterChange = (key: keyof FilterState, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  // Function to clear all filters
   const clearFilters = () => {
     setFilters({
+      search: "",
       status: "",
       employer: "",
       city: "",
@@ -302,647 +400,591 @@ export default function GigContent() {
       deadlineEnd: "",
     });
   };
+  const handleStatusUpdate = async (gigId: string, newStatus: string) => {
+    try {
+      await updateGig(
+        (params: { id: string; data: Partial<Gig> }) =>
+          gigsApi.update(params.id, params.data),
+        { id: gigId, data: { status: newStatus as any } }
+      );
+      await refetch();
+    } catch (error) {
+      console.error("Failed to update gig status:", error);
+    }
+  };
+  const handleDeleteGig = async () => {
+    if (!gigToDelete) return;
 
-  // View gig details
-  const viewGigDetails = (gig: any) => {
-    setSelectedGig(gig);
+    try {
+      await deleteGig((params: { id: string }) => gigsApi.delete(params.id), {
+        id: gigToDelete,
+      });
+      await refetch();
+      setShowDeleteDialog(false);
+      setGigToDelete(null);
+    } catch (error) {
+      console.error("Failed to delete gig:", error);
+    }
   };
 
-  // Handle status change (in a real app, this would call an API)
-  const handleStatusChange = (gigId: string, newStatus: string) => {
-    console.log(`Changing status for gig ${gigId} to ${newStatus}`);
-    // In a real app, this would update the backend and then refresh the data
+  const confirmDelete = (gigId: string) => {
+    setGigToDelete(gigId);
+    setShowDeleteDialog(true);
   };
 
-  // Handle delete (in a real app, this would call an API)
-  const handleDelete = (gigId: string) => {
-    console.log(`Deleting gig ${gigId}`);
-    // In a real app, this would call an API to delete the gig
+  // Format pay rate for display
+  const formatPayRate = (payRate: PayRate) => {
+    if (payRate.type === "hourly" && payRate.min && payRate.max) {
+      return `${payRate.currency}${payRate.min}-${payRate.max}/hr`;
+    } else if (payRate.type === "fixed" && payRate.amount) {
+      return `${payRate.currency}${payRate.amount} fixed`;
+    } else if (payRate.type === "daily" && payRate.amount) {
+      return `${payRate.currency}${payRate.amount}/day`;
+    }
+    return "Pay rate not specified";
   };
+
+  // Loading state
+  if (gigsLoading) {
+    return <LoadingState message="Loading gigs..." />;
+  }
+  // Error state
+  if (gigsError) {
+    return (
+      <ErrorState
+        title="Failed to load gigs"
+        message={
+          typeof gigsError === "string"
+            ? gigsError
+            : "An error occurred while loading gigs."
+        }
+        onRetry={refetch}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Gigs Management</h1>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Gig Management</h1>
+          <p className="text-gray-600">
+            Manage and monitor all gigs posted by employers
+          </p>
+        </div>
+        <Button onClick={refetch} className="flex items-center gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Total Gigs</p>
+              <p className="text-2xl font-bold text-gray-900">{gigs.length}</p>
+            </div>
+            <Building className="h-8 w-8 text-blue-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Open Gigs</p>
+              <p className="text-2xl font-bold text-green-900">
+                {gigs.filter((g: Gig) => g.status === "open").length}
+              </p>
+            </div>
+            <CheckCircle className="h-8 w-8 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">In Progress</p>
+              <p className="text-2xl font-bold text-yellow-900">
+                {gigs.filter((g: Gig) => g.status === "in_progress").length}
+              </p>
+            </div>
+            <Clock className="h-8 w-8 text-yellow-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg border p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Completed</p>
+              <p className="text-2xl font-bold text-blue-900">
+                {gigs.filter((g: Gig) => g.status === "completed").length}
+              </p>
+            </div>
+            <Users className="h-8 w-8 text-blue-600" />
+          </div>
+        </div>
+      </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
-          </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearFilters}
-            className="flex items-center gap-1"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Clear Filters
+      <div className="bg-white rounded-lg border p-6">
+        <div className="flex items-center gap-4 mb-4">
+          <Filter className="h-5 w-5 text-gray-500" />
+          <h3 className="text-lg font-medium">Filters</h3>
+          <Button variant="outline" onClick={clearFilters}>
+            Clear All
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              label=""
+              placeholder="Search gigs..."
+              className="pl-10"
+              onChange={(e) => debouncedSearch(e.target.value)}
+            />
+          </div>
+
           {/* Status Filter */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Status</label>
-            <select
-              className="w-full rounded-md border border-input p-2"
-              value={filters.status}
-              onChange={(e) => handleFilterChange("status", e.target.value)}
-            >
-              <option value="">All Statuses</option>
-              {statuses.map((status) => (
-                <option key={status} value={status}>
+          <Select
+            value={filters.status}
+            onValueChange={(value) => handleFilterChange("status", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Statuses</SelectItem>
+              {GIG_STATUSES.map((status) => (
+                <SelectItem key={status} value={status}>
                   {status.charAt(0).toUpperCase() +
                     status.slice(1).replace("_", " ")}
-                </option>
+                </SelectItem>
               ))}
-            </select>
-          </div>
-
-          {/* Employer Filter */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Employer</label>
-            <select
-              className="w-full rounded-md border border-input p-2"
-              value={filters.employer}
-              onChange={(e) => handleFilterChange("employer", e.target.value)}
-            >
-              <option value="">All Employers</option>
-              {uniqueEmployers.map((employer) => (
-                <option key={employer} value={employer}>
-                  {employer}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* City Filter */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium">City</label>
-            <select
-              className="w-full rounded-md border border-input p-2"
-              value={filters.city}
-              onChange={(e) => handleFilterChange("city", e.target.value)}
-            >
-              <option value="">All Cities</option>
-              {uniqueCities.map((city) => (
-                <option key={city} value={city}>
-                  {city}
-                </option>
-              ))}
-            </select>
-          </div>
+            </SelectContent>
+          </Select>
 
           {/* Category Filter */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Category</label>
-            <select
-              className="w-full rounded-md border border-input p-2"
-              value={filters.category}
-              onChange={(e) => handleFilterChange("category", e.target.value)}
-            >
-              <option value="">All Categories</option>
-              {uniqueCategories.map((category) => (
-                <option key={category} value={category}>
+          <Select
+            value={filters.category}
+            onValueChange={(value) => handleFilterChange("category", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Categories</SelectItem>
+              {GIG_CATEGORIES.map((category) => (
+                <SelectItem key={category} value={category}>
                   {category}
-                </option>
+                </SelectItem>
               ))}
-            </select>
-          </div>
+            </SelectContent>
+          </Select>
 
-          {/* Application Deadline Range */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Deadline From</label>
-            <input
-              type="date"
-              className="w-full rounded-md border border-input p-2"
-              value={filters.deadlineStart}
-              onChange={(e) =>
-                handleFilterChange("deadlineStart", e.target.value)
-              }
-            />
-          </div>
+          {/* City Filter */}
+          <Select
+            value={filters.city}
+            onValueChange={(value) => handleFilterChange("city", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Cities" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Cities</SelectItem>
+              {uniqueCities.map((city) => (
+                <SelectItem key={city} value={city}>
+                  {city}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <div className="space-y-1">
-            <label className="text-sm font-medium">Deadline To</label>
-            <input
-              type="date"
-              className="w-full rounded-md border border-input p-2"
-              value={filters.deadlineEnd}
-              onChange={(e) =>
-                handleFilterChange("deadlineEnd", e.target.value)
-              }
-            />
-          </div>
+          {/* Employer Filter */}
+          <Select
+            value={filters.employer}
+            onValueChange={(value) => handleFilterChange("employer", value)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="All Employers" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All Employers</SelectItem>
+              {uniqueEmployers.map((employer) => (
+                <SelectItem key={employer} value={employer}>
+                  {employer}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Deadline Start */}
+          <Input
+            label=""
+            type="date"
+            value={filters.deadlineStart}
+            onChange={(e) =>
+              handleFilterChange("deadlineStart", e.target.value)
+            }
+          />
+
+          {/* Deadline End */}
+          <Input
+            label=""
+            type="date"
+            value={filters.deadlineEnd}
+            onChange={(e) => handleFilterChange("deadlineEnd", e.target.value)}
+          />
         </div>
       </div>
 
-      {/* Gigs Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Gig Title
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  City
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Positions
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Deadline
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredGigs.length > 0 ? (
-                filteredGigs.map((gig) => (
-                  <tr key={gig.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
+      {/* Gigs List */}
+      <div className="bg-white rounded-lg border">
+        {" "}
+        {filteredGigs.length === 0 ? (
+          <EmptyState
+            title="No gigs found"
+            description="No gigs match your current filters. Try adjusting the filters or clearing them."
+            action={{
+              label: "Clear Filters",
+              onClick: clearFilters,
+            }}
+          />
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {filteredGigs.map((gig: Gig) => (
+              <div
+                key={gig.id}
+                className="p-6 hover:bg-gray-50 transition-colors"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">
                         {gig.title}
-                      </div>
+                      </h3>
+                      <Badge variant={getStatusVariant(gig.status)}>
+                        {gig.status.charAt(0).toUpperCase() +
+                          gig.status.slice(1).replace("_", " ")}
+                      </Badge>
                       {!gig.isAcceptingApplications && (
-                        <div className="mt-1 flex items-center">
-                          <AlertTriangle className="h-4 w-4 text-amber-500 mr-1" />
-                          <span className="text-xs text-amber-500">
-                            Not accepting applications
-                          </span>
-                        </div>
+                        <Badge variant="secondary">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Closed
+                        </Badge>
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Building className="h-4 w-4" />
                         {gig.employer.name}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <MapPin className="h-4 w-4" />
+                        {gig.city}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Tag className="h-4 w-4" />
                         {gig.category}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge
-                        variant={statusBadgeVariants[gig.status] || "default"}
-                      >
-                        {gig.status.replace("_", " ")}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{gig.city}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {gig.filledPositions} / {gig.totalPositions}
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <DollarSign className="h-4 w-4" />
+                        {formatPayRate(gig.payRate)}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {new Date(gig.applicationDeadline).toLocaleDateString()}
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Users className="h-4 w-4" />
+                        {gig.filledPositions}/{gig.totalPositions} filled
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex space-x-2">
-                        {/* View Details Button */}
-                        <Sheet>
-                          <SheetTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-1"
-                              onClick={() => viewGigDetails(gig)}
-                            >
-                              <Eye className="h-4 w-4" />
-                              View
-                            </Button>
-                          </SheetTrigger>
-                          <SheetContent
-                            side="right"
-                            className="w-[90vw] sm:w-[600px] overflow-y-auto"
-                          >
-                            {selectedGig && (
-                              <div className="space-y-6">
-                                <div className="border-b pb-4">
-                                  <h2 className="text-2xl font-bold">
-                                    {selectedGig.title}
-                                  </h2>
-                                  <Badge
-                                    variant={
-                                      statusBadgeVariants[selectedGig.status] ||
-                                      "default"
-                                    }
-                                    className="mt-2"
-                                  >
-                                    {selectedGig.status.replace("_", " ")}
-                                  </Badge>
-                                  {!selectedGig.isAcceptingApplications && (
-                                    <div className="mt-2 flex items-center text-amber-500">
-                                      <AlertTriangle className="h-4 w-4 mr-1" />
-                                      <span>Not accepting applications</span>
-                                    </div>
-                                  )}
-                                  <p className="mt-4 text-gray-700">
-                                    {selectedGig.description}
-                                  </p>
-                                </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Calendar className="h-4 w-4" />
+                        Deadline: {formatDate(gig.applicationDeadline)}
+                      </div>
+                    </div>
 
-                                <div className="space-y-4">
-                                  <div className="flex flex-col sm:flex-row sm:justify-between gap-4">
-                                    <div>
-                                      <h3 className="text-sm font-medium text-gray-500">
-                                        Employer
-                                      </h3>
-                                      <p className="text-base">
-                                        {selectedGig.employer.name}
-                                      </p>
-                                      <p className="text-sm text-gray-500">
-                                        {selectedGig.employer.email}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <h3 className="text-sm font-medium text-gray-500">
-                                        Category & Pay
-                                      </h3>
-                                      <p className="text-base">
-                                        {selectedGig.category}
-                                      </p>
-                                      <p className="text-sm text-gray-500">
-                                        {formatPayRate(selectedGig.payRate)}
-                                      </p>
-                                    </div>
-                                  </div>
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+                      {gig.description}
+                    </p>
 
-                                  <div>
-                                    <h3 className="text-sm font-medium text-gray-500 mb-2">
-                                      Time Slots
-                                    </h3>
-                                    <div className="border rounded-md overflow-hidden">
-                                      <table className="min-w-full divide-y divide-gray-200">
-                                        <thead className="bg-gray-50">
-                                          <tr>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                              Date
-                                            </th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                              Time
-                                            </th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                              People Needed
-                                            </th>
-                                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                              People Assigned
-                                            </th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-200">
-                                          {selectedGig.timeSlots.map(
-                                            (slot: any, index: number) => (
-                                              <tr key={index}>
-                                                <td className="px-4 py-2 text-sm">
-                                                  {new Date(
-                                                    slot.date
-                                                  ).toLocaleDateString()}
-                                                </td>
-                                                <td className="px-4 py-2 text-sm">
-                                                  {slot.startTime} -{" "}
-                                                  {slot.endTime}
-                                                </td>
-                                                <td className="px-4 py-2 text-sm">
-                                                  {slot.peopleNeeded}
-                                                </td>
-                                                <td className="px-4 py-2 text-sm">
-                                                  {slot.peopleAssigned}
-                                                </td>
-                                              </tr>
-                                            )
-                                          )}
-                                        </tbody>
-                                      </table>
-                                    </div>
-                                  </div>
+                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                      <span>Created: {formatDate(gig.createdAt)}</span>
+                      <span>•</span>
+                      <span>Updated: {formatDate(gig.updatedAt)}</span>
+                    </div>
+                  </div>
 
-                                  <div>
-                                    <h3 className="text-sm font-medium text-gray-500 mb-2">
-                                      Location
-                                    </h3>
-                                    <div className="flex items-start gap-2">
-                                      <MapPin className="h-5 w-5 text-gray-400 mt-0.5" />
-                                      <div>
-                                        <p className="text-base">
-                                          {selectedGig.location.address}
-                                        </p>
-                                        <p className="text-sm text-gray-500">
-                                          {selectedGig.location.city},{" "}
-                                          {selectedGig.location.postalCode}
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <h3 className="text-sm font-medium text-gray-500 mb-2">
-                                      Skills Required
-                                    </h3>
-                                    <div className="flex flex-wrap gap-2">
-                                      {selectedGig.skills.map(
-                                        (skill: string, index: number) => (
-                                          <Badge
-                                            key={index}
-                                            variant="outline"
-                                            className="bg-blue-50"
-                                          >
-                                            {skill}
-                                          </Badge>
-                                        )
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div>
-                                      <h3 className="text-sm font-medium text-gray-500">
-                                        Experience
-                                      </h3>
-                                      <p className="text-sm">
-                                        {selectedGig.experience}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <h3 className="text-sm font-medium text-gray-500">
-                                        Dress Code
-                                      </h3>
-                                      <p className="text-sm">
-                                        {selectedGig.dressCode}
-                                      </p>
-                                    </div>
-                                    <div>
-                                      <h3 className="text-sm font-medium text-gray-500">
-                                        Equipment
-                                      </h3>
-                                      <p className="text-sm">
-                                        {selectedGig.equipment}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div>
-                                    <h3 className="text-sm font-medium text-gray-500 mb-2">
-                                      Application Deadline
-                                    </h3>
-                                    <p className="text-base">
-                                      {new Date(
-                                        selectedGig.applicationDeadline
-                                      ).toLocaleDateString()}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <h3 className="text-sm font-medium text-gray-500 mb-2">
-                                      Positions: {selectedGig.filledPositions}{" "}
-                                      filled out of {selectedGig.totalPositions}
-                                    </h3>
-                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                      <div
-                                        className="bg-blue-600 h-2.5 rounded-full"
-                                        style={{
-                                          width: `${
-                                            (selectedGig.filledPositions /
-                                              selectedGig.totalPositions) *
-                                            100
-                                          }%`,
-                                        }}
-                                      ></div>
-                                    </div>
-                                  </div>
-
-                                  {selectedGig.applicants.length > 0 && (
-                                    <div>
-                                      <h3 className="text-sm font-medium text-gray-500 mb-2">
-                                        Applicants (
-                                        {selectedGig.applicants.length})
-                                      </h3>
-                                      <div className="border rounded-md overflow-hidden">
-                                        <table className="min-w-full divide-y divide-gray-200">
-                                          <thead className="bg-gray-50">
-                                            <tr>
-                                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                                Name
-                                              </th>
-                                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                                Status
-                                              </th>
-                                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">
-                                                Applied At
-                                              </th>
-                                            </tr>
-                                          </thead>
-                                          <tbody className="divide-y divide-gray-200">
-                                            {selectedGig.applicants.map(
-                                              (applicant: any) => (
-                                                <tr key={applicant.id}>
-                                                  <td className="px-4 py-2 text-sm">
-                                                    {applicant.name}
-                                                  </td>
-                                                  <td className="px-4 py-2 text-sm">
-                                                    <Badge
-                                                      variant={
-                                                        applicant.status ===
-                                                        "accepted"
-                                                          ? "success"
-                                                          : applicant.status ===
-                                                            "rejected"
-                                                          ? "destructive"
-                                                          : "warning"
-                                                      }
-                                                    >
-                                                      {applicant.status}
-                                                    </Badge>
-                                                  </td>
-                                                  <td className="px-4 py-2 text-sm">
-                                                    {new Date(
-                                                      applicant.appliedAt
-                                                    ).toLocaleString()}
-                                                  </td>
-                                                </tr>
-                                              )
-                                            )}
-                                          </tbody>
-                                        </table>
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-500">
-                                    <div>
-                                      <span className="font-medium">
-                                        Created:
-                                      </span>{" "}
-                                      {new Date(
-                                        selectedGig.createdAt
-                                      ).toLocaleString()}
-                                    </div>
-                                    <div>
-                                      <span className="font-medium">
-                                        Last Updated:
-                                      </span>{" "}
-                                      {new Date(
-                                        selectedGig.updatedAt
-                                      ).toLocaleString()}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </SheetContent>
-                        </Sheet>
-
-                        {/* Edit Button */}
+                  <div className="flex items-center gap-2 ml-4">
+                    {/* View Details */}
+                    <Sheet>
+                      <SheetTrigger asChild>
                         <Button
                           variant="outline"
-                          size="sm"
-                          className="flex items-center gap-1"
+                          onClick={() => setSelectedGig(gig)}
                         >
-                          <Edit className="h-4 w-4" />
-                          Edit
+                          <Eye className="h-4 w-4" />
                         </Button>
-
-                        {/* Change Status Dropdown */}
-                        <Dialog>
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex items-center gap-1"
-                            >
-                              <RefreshCw className="h-4 w-4" />
-                              Status
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent className="sm:max-w-md">
-                            <h2 className="text-xl font-semibold mb-4">
-                              Change Status
-                            </h2>
-                            <div className="space-y-4">
-                              <p>
-                                Current status:{" "}
-                                <Badge
-                                  variant={statusBadgeVariants[gig.status]}
-                                >
-                                  {gig.status}
-                                </Badge>
-                              </p>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium">
-                                  New Status
-                                </label>
-                                <select
-                                  className="w-full rounded-md border border-input p-2"
-                                  defaultValue={gig.status}
-                                >
-                                  {statuses.map((status) => (
-                                    <option key={status} value={status}>
-                                      {status.charAt(0).toUpperCase() +
-                                        status.slice(1).replace("_", " ")}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                              <div className="flex justify-end gap-2 mt-4">
-                                <DialogClose asChild>
-                                  <Button variant="outline">Cancel</Button>
-                                </DialogClose>
-                                <Button
-                                  onClick={() =>
-                                    handleStatusChange(gig.id, "new-status")
-                                  }
-                                >
-                                  Save Changes
-                                </Button>
-                              </div>
-                            </div>
-                          </DialogContent>
-                        </Dialog>
-
-                        {/* Delete Button */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex items-center gap-1 text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => handleDelete(gig.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-6 py-10 text-center text-gray-500"
-                  >
-                    No gigs found matching the current filters
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className="px-6 py-3 flex items-center justify-between border-t border-gray-200">
-          <div className="flex-1 flex justify-between sm:hidden">
-            <Button variant="outline" size="sm">
-              Previous
-            </Button>
-            <Button variant="outline" size="sm">
-              Next
-            </Button>
+                      </SheetTrigger>
+                    </Sheet>
+                    {/* Status Update */}{" "}
+                    <Select
+                      value={gig.status}
+                      onValueChange={(value) =>
+                        handleStatusUpdate(gig.id, value)
+                      }
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {GIG_STATUSES.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status.charAt(0).toUpperCase() +
+                              status.slice(1).replace("_", " ")}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {/* Delete */}
+                    <Button
+                      variant="outline"
+                      onClick={() => confirmDelete(gig.id)}
+                      disabled={deleteLoading}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm text-gray-700">
-                Showing <span className="font-medium">1</span> to{" "}
-                <span className="font-medium">{filteredGigs.length}</span> of{" "}
-                <span className="font-medium">{filteredGigs.length}</span>{" "}
-                results
-              </p>
-            </div>
-            <div>
-              <nav
-                className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-                aria-label="Pagination"
-              >
-                <Button variant="outline" size="sm" className="rounded-l-md">
-                  Previous
-                </Button>
-                <Button variant="outline" size="sm" className="rounded-r-md">
-                  Next
-                </Button>
-              </nav>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
+
+      {/* Gig Details Sheet */}
+      {selectedGig && (
+        <Sheet>
+          <SheetContent side="right" className="w-full sm:max-w-lg">
+            <SheetHeader>
+              <SheetTitle>{selectedGig.title}</SheetTitle>
+              <SheetDescription>
+                Detailed information about this gig
+              </SheetDescription>
+            </SheetHeader>
+
+            <div className="mt-6 space-y-6">
+              {/* Basic Info */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">Basic Information</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Status:</span>
+                    <Badge
+                      variant={getStatusVariant(selectedGig.status)}
+                      className="ml-2"
+                    >
+                      {selectedGig.status.charAt(0).toUpperCase() +
+                        selectedGig.status.slice(1).replace("_", " ")}
+                    </Badge>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Category:</span>
+                    <span className="ml-2 font-medium">
+                      {selectedGig.category}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Pay Rate:</span>
+                    <span className="ml-2 font-medium">
+                      {formatPayRate(selectedGig.payRate)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Positions:</span>
+                    <span className="ml-2 font-medium">
+                      {selectedGig.filledPositions}/{selectedGig.totalPositions}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Employer Info */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">Employer</h4>
+                <div className="space-y-2 text-sm">
+                  <div>
+                    <span className="text-gray-600">Name:</span>
+                    <span className="ml-2 font-medium">
+                      {selectedGig.employer.name}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Email:</span>
+                    <span className="ml-2 font-medium">
+                      {selectedGig.employer.email}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Location */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">Location</h4>
+                <div className="space-y-2 text-sm">
+                  <div>{selectedGig.location.address}</div>
+                  <div>
+                    {selectedGig.location.city},{" "}
+                    {selectedGig.location.postalCode}
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Time Slots */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">Time Slots</h4>
+                <div className="space-y-3">
+                  {selectedGig.timeSlots.map((slot, index) => (
+                    <div
+                      key={index}
+                      className="bg-gray-50 p-3 rounded-md text-sm"
+                    >
+                      <div className="font-medium">{formatDate(slot.date)}</div>
+                      <div className="text-gray-600">
+                        {slot.startTime} - {slot.endTime}
+                      </div>
+                      <div className="text-gray-600">
+                        {slot.peopleAssigned}/{slot.peopleNeeded} people
+                        assigned
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Description */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">Description</h4>
+                <p className="text-sm text-gray-600">
+                  {selectedGig.description}
+                </p>
+              </div>
+
+              {/* Requirements */}
+              {(selectedGig.skills ||
+                selectedGig.experience ||
+                selectedGig.dressCode ||
+                selectedGig.equipment) && (
+                <>
+                  <Separator />
+                  <div className="space-y-4">
+                    <h4 className="font-medium text-gray-900">Requirements</h4>
+                    <div className="space-y-3 text-sm">
+                      {selectedGig.skills && (
+                        <div>
+                          <span className="text-gray-600">Skills:</span>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {selectedGig.skills.map((skill, index) => (
+                              <Badge key={index} variant="secondary">
+                                {skill}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {selectedGig.experience && (
+                        <div>
+                          <span className="text-gray-600">Experience:</span>
+                          <span className="ml-2">{selectedGig.experience}</span>
+                        </div>
+                      )}
+                      {selectedGig.dressCode && (
+                        <div>
+                          <span className="text-gray-600">Dress Code:</span>
+                          <span className="ml-2">{selectedGig.dressCode}</span>
+                        </div>
+                      )}
+                      {selectedGig.equipment && (
+                        <div>
+                          <span className="text-gray-600">Equipment:</span>
+                          <span className="ml-2">{selectedGig.equipment}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              <Separator />
+
+              {/* Applicants */}
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">
+                  Applicants ({selectedGig.applicants.length})
+                </h4>
+                {selectedGig.applicants.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedGig.applicants.map((applicant) => (
+                      <div
+                        key={applicant.id}
+                        className="bg-gray-50 p-3 rounded-md text-sm"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{applicant.name}</span>
+                          <Badge variant={getStatusVariant(applicant.status)}>
+                            {applicant.status}
+                          </Badge>
+                        </div>
+                        <div className="text-gray-600 mt-1">
+                          Applied: {formatDate(applicant.appliedAt)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-600">No applicants yet</p>
+                )}
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Gig</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this gig? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button
+              variant="primary"
+              onClick={handleDeleteGig}
+              disabled={deleteLoading}
+            >
+              {deleteLoading ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

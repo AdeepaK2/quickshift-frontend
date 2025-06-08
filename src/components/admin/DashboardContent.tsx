@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Users,
   Briefcase,
@@ -15,150 +15,247 @@ import {
   PieChart,
   Building2,
   GraduationCap,
+  RefreshCw,
 } from "lucide-react";
+import { useApi } from "@/lib/hooks";
+import {
+  undergraduatesApi,
+  employersApi,
+  gigsApi,
+  analyticsApi,
+} from "@/lib/api";
+import { LoadingState } from "@/components/ui/loading";
+import { ErrorState } from "@/components/ui/error-state";
+import Button from "@/components/ui/Button";
+import { formatDate, getStatusVariant } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+
+// TypeScript interfaces
+interface DashboardStats {
+  totalUsers: number;
+  totalStudents: number;
+  totalEmployers: number;
+  totalGigs: number;
+  activeGigs: number;
+  completedGigs: number;
+  newSignupsThisWeek: number;
+  newStudentsThisWeek: number;
+  newEmployersThisWeek: number;
+  averageCompletionRate: number;
+  averageRating: number;
+  averageCompletionTime: string;
+}
+
+interface TopPerformer {
+  type: "student" | "employer";
+  id: string;
+  name: string;
+  rating: number;
+  gigsCompleted?: number;
+  gigsPosted?: number;
+  specialization?: string;
+  industry?: string;
+}
+
+interface RecentActivity {
+  id: string;
+  title: string;
+  company: string;
+  location: string;
+  date: string;
+  status: "completed" | "in_progress" | "pending" | "cancelled";
+  payment: string;
+}
 
 export default function DashboardContent() {
   const [lastUpdated, setLastUpdated] = useState("");
 
+  // API calls for dashboard data
+  const {
+    data: dashboardStats,
+    loading: statsLoading,
+    error: statsError,
+    refetch: refetchStats,
+  } = useApi(() => analyticsApi.getDashboardStats());
+
+  const { data: undergraduatesResponse, loading: undergraduatesLoading } =
+    useApi(() => undergraduatesApi.getAll());
+
+  const { data: employersResponse, loading: employersLoading } = useApi(() =>
+    employersApi.getAll()
+  );
+
+  const { data: gigsResponse, loading: gigsLoading } = useApi(() =>
+    gigsApi.getAll()
+  );
+
   useEffect(() => {
     setLastUpdated(new Date().toLocaleString());
   }, []);
+  // Calculate stats from real data or use fallback
+  const stats = useMemo(() => {
+    const undergraduatesData = undergraduatesResponse || [];
+    const employersData = employersResponse || [];
+    const gigsData = gigsResponse || [];
 
-  const stats = [
-    {
-      title: "Total Users",
-      value: "1,234",
-      subtitle: "890 Students • 344 Employers",
-      trend: "+5% from last month",
-      trendPositive: true,
-      Icon: Users,
-      iconColor: "text-blue-500",
-      bgColor: "bg-blue-50",
-    },
-    {
-      title: "Total Gigs Posted",
-      value: "567",
-      subtitle: "Active: 123 • Closed: 444",
-      trend: "+10 gigs this week",
-      trendPositive: true,
-      Icon: Briefcase,
-      iconColor: "text-green-500",
-      bgColor: "bg-green-50",
-    },
-    {
-      title: "Gigs Completed",
-      value: "480",
-      subtitle: "85% completion rate",
-      trend: "+12% from last week",
-      trendPositive: true,
-      Icon: CheckCircle,
-      iconColor: "text-purple-500",
-      bgColor: "bg-purple-50",
-    },
-    {
-      title: "New Signups This Week",
-      value: "89",
-      subtitle: "62 Students • 27 Employers",
-      trend: "+15% increase",
-      trendPositive: true,
-      Icon: UserPlus,
-      iconColor: "text-orange-500",
-      bgColor: "bg-orange-50",
-    },
-  ];
+    const totalStudents = undergraduatesData.length;
+    const totalEmployers = employersData.length;
+    const totalUsers = totalStudents + totalEmployers;
+    const totalGigs = gigsData.length;
+    const activeGigs = gigsData.filter(
+      (gig: any) => gig.status === "active"
+    ).length;
+    const completedGigs = gigsData.filter(
+      (gig: any) => gig.status === "completed"
+    ).length;
 
-  const topPerformers = [
-    {
-      type: "student",
-      name: "Sarah Johnson",
-      rating: 4.9,
-      gigsCompleted: 24,
-      specialization: "Graphic Design",
-    },
-    {
-      type: "employer",
-      name: "TechCorp Solutions",
-      rating: 4.8,
-      gigsPosted: 18,
-      industry: "Technology",
-    },
-  ];
+    return [
+      {
+        title: "Total Users",
+        value: totalUsers.toString(),
+        subtitle: `${totalStudents} Students • ${totalEmployers} Employers`,
+        trend: "+5% from last month",
+        trendPositive: true,
+        Icon: Users,
+        iconColor: "text-blue-500",
+        bgColor: "bg-blue-50",
+      },
+      {
+        title: "Total Gigs Posted",
+        value: totalGigs.toString(),
+        subtitle: `Active: ${activeGigs} • Completed: ${completedGigs}`,
+        trend: "+10 gigs this week",
+        trendPositive: true,
+        Icon: Briefcase,
+        iconColor: "text-green-500",
+        bgColor: "bg-green-50",
+      },
+      {
+        title: "Gigs Completed",
+        value: completedGigs.toString(),
+        subtitle: `${
+          totalGigs > 0 ? Math.round((completedGigs / totalGigs) * 100) : 0
+        }% completion rate`,
+        trend: "+12% from last week",
+        trendPositive: true,
+        Icon: CheckCircle,
+        iconColor: "text-purple-500",
+        bgColor: "bg-purple-50",
+      },
+      {
+        title: "New Signups This Week",
+        value: "89", // This would come from analytics API
+        subtitle: "62 Students • 27 Employers",
+        trend: "+15% increase",
+        trendPositive: true,
+        Icon: UserPlus,
+        iconColor: "text-orange-500",
+        bgColor: "bg-orange-50",
+      },
+    ];
+  }, [undergraduatesResponse, employersResponse, gigsResponse]);
+  // Get top performers from real data
+  const topPerformers = useMemo(() => {
+    const performers: TopPerformer[] = [];
+    const undergraduatesData = undergraduatesResponse || [];
+    const employersData = employersResponse || [];
 
-  const recentActivity = [
-    {
-      id: 1,
-      title: "UI/UX Design for Mobile App",
-      company: "StartupXYZ",
-      location: "Remote",
-      date: "2025-06-06",
-      status: "completed",
-      payment: "$850",
-    },
-    {
-      id: 2,
-      title: "Content Writing for Blog",
-      company: "MediaCorp",
-      location: "New York",
-      date: "2025-06-05",
-      status: "in-progress",
-      payment: "$400",
-    },
-    {
-      id: 3,
-      title: "Social Media Management",
-      company: "LocalBiz Inc",
-      location: "Los Angeles",
-      date: "2025-06-04",
-      status: "pending",
-      payment: "$600",
-    },
-    {
-      id: 4,
-      title: "Web Development Project",
-      company: "DevStudio",
-      location: "San Francisco",
-      date: "2025-06-03",
-      status: "completed",
-      payment: "$1,200",
-    },
-    {
-      id: 5,
-      title: "Data Analysis Report",
-      company: "Analytics Pro",
-      location: "Remote",
-      date: "2025-06-02",
-      status: "in-progress",
-      payment: "$750",
-    },
-  ];
+    // Add top students (example - you'd calculate this based on ratings/completions)
+    if (undergraduatesData.length > 0) {
+      const topStudent = undergraduatesData[0]; // For demo, taking first student
+      performers.push({
+        type: "student",
+        id: topStudent.id || "1",
+        name: topStudent.name || "Top Student",
+        rating: 4.9,
+        gigsCompleted: 24,
+        specialization: topStudent.specialization || "General",
+      });
+    }
+
+    // Add top employers
+    if (employersData.length > 0) {
+      const topEmployer = employersData[0]; // For demo, taking first employer
+      performers.push({
+        type: "employer",
+        id: topEmployer.id || "1",
+        name: topEmployer.company_name || topEmployer.name || "Top Employer",
+        rating: 4.8,
+        gigsPosted: 18,
+        industry: topEmployer.industry || "Technology",
+      });
+    }
+
+    return performers;
+  }, [undergraduatesResponse, employersResponse]);
+  // Get recent activity from gigs data
+  const recentActivity = useMemo(() => {
+    const gigsData = gigsResponse || [];
+
+    return gigsData.slice(0, 5).map((gig: any) => ({
+      id: gig.id || Math.random().toString(),
+      title: gig.title || "Untitled Gig",
+      company: gig.company_name || "Unknown Company",
+      location: gig.location || "Remote",
+      date: formatDate(gig.created_at || new Date().toISOString()),
+      status: gig.status || "pending",
+      payment: `$${gig.budget || 0}`,
+    }));
+  }, [gigsResponse]);
 
   const getStatusBadge = (status: string) => {
-    const statusClasses = {
-      completed: "bg-green-100 text-green-800",
-      "in-progress": "bg-blue-100 text-blue-800",
-      pending: "bg-yellow-100 text-yellow-800",
-    };
+    const variant = getStatusVariant(status);
     return (
-      <span
-        className={`px-2 py-1 rounded-full text-xs font-medium ${
-          statusClasses[status as keyof typeof statusClasses]
-        }`}
-      >
+      <Badge variant={variant}>
         {status.charAt(0).toUpperCase() + status.slice(1).replace("-", " ")}
-      </span>
+      </Badge>
     );
   };
 
+  // Handle refresh
+  const handleRefresh = () => {
+    refetchStats();
+    setLastUpdated(new Date().toLocaleString());
+  };
+
+  // Loading state
+  if (
+    statsLoading ||
+    undergraduatesLoading ||
+    employersLoading ||
+    gigsLoading
+  ) {
+    return <LoadingState message="Loading dashboard data..." />;
+  } // Error state
+  if (statsError) {
+    return (
+      <ErrorState
+        title="Failed to load dashboard"
+        message={statsError}
+        onRetry={handleRefresh}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {" "}
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <div className="mt-2 sm:mt-0">
+        <div className="mt-2 sm:mt-0 flex items-center gap-4">
           <p className="text-sm text-gray-600">Last updated: {lastUpdated}</p>
+          <Button
+            onClick={handleRefresh}
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
         </div>
       </div>
-
       {/* Top Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
@@ -194,7 +291,6 @@ export default function DashboardContent() {
           </div>
         ))}
       </div>
-
       {/* Two Column Layout for Top Performers and Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top Performers Section */}
@@ -216,22 +312,11 @@ export default function DashboardContent() {
                         : "bg-green-100"
                     }`}
                   >
+                    {" "}
                     {performer.type === "student" ? (
-                      <GraduationCap
-                        className={`h-5 w-5 ${
-                          performer.type === "student"
-                            ? "text-blue-600"
-                            : "text-green-600"
-                        }`}
-                      />
+                      <GraduationCap className="h-5 w-5 text-blue-600" />
                     ) : (
-                      <Building2
-                        className={`h-5 w-5 ${
-                          performer.type === "student"
-                            ? "text-blue-600"
-                            : "text-green-600"
-                        }`}
-                      />
+                      <Building2 className="h-5 w-5 text-green-600" />
                     )}
                   </div>
                   <div>
@@ -288,7 +373,6 @@ export default function DashboardContent() {
           </div>
         </div>
       </div>
-
       {/* Recent Activity Section */}
       <div className="bg-white rounded-lg shadow-sm border p-6">
         <div className="flex items-center justify-between mb-4">
@@ -322,7 +406,7 @@ export default function DashboardContent() {
               </tr>
             </thead>
             <tbody>
-              {recentActivity.map((activity) => (
+              {recentActivity.map((activity: RecentActivity) => (
                 <tr key={activity.id} className="border-b border-gray-100">
                   <td className="py-3 px-4">
                     <p className="font-medium text-gray-900">
@@ -361,7 +445,6 @@ export default function DashboardContent() {
           </table>
         </div>
       </div>
-
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Signups Over Time Chart */}
