@@ -1,55 +1,69 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
+import toast, { Toaster } from "react-hot-toast";
 import {
   Search,
-  ChevronDown,
-  ChevronUp,
-  Filter,
   Eye,
-  Building,
-  Calendar,
-  MapPin,
   Phone,
   Mail,
-  ClipboardCheck,
-  Clock,
-  UserCheck,
+  Check,
+  AlertTriangle,
   Star,
   Shield,
-  AlertTriangle,
-  Check,
+  Calendar,
+  MapPin,
 } from "lucide-react";
-import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
-import CustomSelect from "@/components/ui/select"; // Renamed to avoid conflict
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
+import { Select as CustomSelect } from "@/components/ui/custom-select";
+import { useApi, useMutation } from "@/lib/hooks";
+import { employersApi } from "@/lib/api";
+import { formatDateTime, getInitials } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingSpinner } from "@/components/ui/loading";
 
-// Define types for our employer data
+// Debounce utility function
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
+// Define types for our employer data (matching backend API)
 type Employer = {
-  id: string;
+  _id: string;
   companyName: string;
   email: string;
-  phoneNumber: string;
-  location: string;
+  phone?: string;
+  location?: string;
   isVerified: boolean;
-  accountVerified: boolean;
-  averageRating: number;
-  totalReviews: number;
-  lastLogin: string;
-  profilePicture: string;
-  companyDescription: string;
+  verified: boolean;
+  ratings: {
+    averageRating: number;
+    totalReviews: number;
+  };
+  lastLoginAt?: string;
+  profilePicture?: string;
+  companyDescription?: string;
   createdAt: string;
   updatedAt: string;
 };
 
 // Badge component (if not available from shadcn/ui)
-const Badge = ({ 
-  children, 
-  variant = "default", 
+const Badge = ({
+  children,
+  variant = "default",
   className = "",
-  onClick 
-}: { 
-  children: React.ReactNode; 
+  onClick,
+}: {
+  children: React.ReactNode;
   variant?: "default" | "success" | "warning" | "destructive";
   className?: string;
   onClick?: () => void;
@@ -72,37 +86,60 @@ const Badge = ({
 };
 
 // Avatar component (if not available from shadcn/ui)
-const Avatar = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-  <div className={`relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full ${className}`}>
+const Avatar = ({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <div
+    className={`relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full ${className}`}
+  >
     {children}
   </div>
 );
 
 const AvatarImage = ({ src, alt }: { src: string; alt: string }) => (
-  <img className="aspect-square h-full w-full object-cover" src={src} alt={alt} />
+  <img
+    className="aspect-square h-full w-full object-cover"
+    src={src}
+    alt={alt}
+  />
 );
 
-const AvatarFallback = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-  <div className={`flex h-full w-full items-center justify-center rounded-full bg-muted ${className}`}>
+const AvatarFallback = ({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <div
+    className={`flex h-full w-full items-center justify-center rounded-full bg-muted ${className}`}
+  >
     {children}
   </div>
 );
 
 // Dialog component (simplified version)
-const Dialog = ({ 
-  open, 
-  onOpenChange, 
-  children 
-}: { 
-  open: boolean; 
-  onOpenChange: (open: boolean) => void; 
-  children: React.ReactNode; 
+const Dialog = ({
+  open,
+  onOpenChange,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: React.ReactNode;
 }) => {
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="fixed inset-0 bg-black/50" onClick={() => onOpenChange(false)} />
+      <div
+        className="fixed inset-0 bg-black/50"
+        onClick={() => onOpenChange(false)}
+      />
       <div className="relative z-50 bg-white rounded-lg shadow-lg max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
         {children}
       </div>
@@ -110,9 +147,13 @@ const Dialog = ({
   );
 };
 
-const DialogContent = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-  <div className={`p-6 ${className}`}>{children}</div>
-);
+const DialogContent = ({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => <div className={`p-6 ${className}`}>{children}</div>;
 
 const DialogHeader = ({ children }: { children: React.ReactNode }) => (
   <div className="mb-4">{children}</div>
@@ -131,104 +172,13 @@ const Separator = ({ className = "" }: { className?: string }) => (
   <hr className={`border-gray-200 ${className}`} />
 );
 
-// Mock data for employers
-const mockEmployers: Employer[] = [
-  {
-    id: "1",
-    companyName: "Tech Innovations Inc.",
-    email: "hr@techinnovations.com",
-    phoneNumber: "+1234567890",
-    location: "New York, USA",
-    isVerified: true,
-    accountVerified: true,
-    averageRating: 4.7,
-    totalReviews: 45,
-    lastLogin: "2025-05-25T10:30:00",
-    profilePicture: "",
-    companyDescription:
-      "Leading technology solutions provider specializing in AI and machine learning applications for enterprise clients.",
-    createdAt: "2024-01-15T08:20:00",
-    updatedAt: "2025-05-20T14:45:00",
-  },
-  {
-    id: "2",
-    companyName: "Global Finance Partners",
-    email: "careers@gfpartners.com",
-    phoneNumber: "+1987654321",
-    location: "London, UK",
-    isVerified: true,
-    accountVerified: true,
-    averageRating: 4.2,
-    totalReviews: 38,
-    lastLogin: "2025-05-24T15:45:00",
-    profilePicture: "",
-    companyDescription:
-      "International financial services firm providing consulting and investment solutions for businesses and individuals.",
-    createdAt: "2024-02-22T10:15:00",
-    updatedAt: "2025-05-18T09:30:00",
-  },
-  {
-    id: "3",
-    companyName: "Creative Media Solutions",
-    email: "jobs@creativemedia.com",
-    phoneNumber: "+1122334455",
-    location: "Los Angeles, USA",
-    isVerified: false,
-    accountVerified: false,
-    averageRating: 3.9,
-    totalReviews: 22,
-    lastLogin: "2025-05-23T09:15:00",
-    profilePicture: "",
-    companyDescription:
-      "Boutique media agency specializing in digital marketing, content creation, and brand strategy for emerging companies.",
-    createdAt: "2024-03-10T13:40:00",
-    updatedAt: "2025-05-15T11:20:00",
-  },
-  {
-    id: "4",
-    companyName: "Sustainable Energy Corp",
-    email: "recruitment@sustainableenergy.org",
-    phoneNumber: "+1565758595",
-    location: "Berlin, Germany",
-    isVerified: true,
-    accountVerified: false,
-    averageRating: 4.8,
-    totalReviews: 31,
-    lastLogin: "2025-05-20T14:20:00",
-    profilePicture: "",
-    companyDescription:
-      "Pioneering renewable energy solutions with a focus on solar and wind technologies for residential and commercial applications.",
-    createdAt: "2024-04-05T09:50:00",
-    updatedAt: "2025-05-12T16:15:00",
-  },
-  {
-    id: "5",
-    companyName: "Health Innovations",
-    email: "careers@healthinnovations.com",
-    phoneNumber: "+1454545454",
-    location: "Boston, USA",
-    isVerified: false,
-    accountVerified: true,
-    averageRating: 4.1,
-    totalReviews: 27,
-    lastLogin: "2025-05-18T11:10:00",
-    profilePicture: "",
-    companyDescription:
-      "Healthcare technology company developing patient-centered solutions and digital health platforms for hospitals and clinics.",
-    createdAt: "2024-05-20T14:30:00",
-    updatedAt: "2025-05-10T10:45:00",
-  },
-];
-
-// Locations for the filter
-const locations = [
-  "All Locations",
-  "New York, USA",
-  "London, UK",
-  "Los Angeles, USA",
-  "Berlin, Germany",
-  "Boston, USA",
-];
+// LoadingState component for consistency
+const LoadingState = ({ message }: { message: string }) => (
+  <div className="flex flex-col items-center justify-center py-12">
+    <LoadingSpinner size="lg" />
+    <p className="mt-4 text-gray-600">{message}</p>
+  </div>
+);
 
 // Verification statuses for the filter
 const verificationStatuses = ["All", "Verified", "Not Verified"];
@@ -243,7 +193,6 @@ const ratingRanges = [
 ];
 
 export default function EmployerContent() {
-  const [employers, setEmployers] = useState<Employer[]>(mockEmployers);
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(
     null
   );
@@ -255,15 +204,48 @@ export default function EmployerContent() {
   const [verificationFilter, setVerificationFilter] = useState("All");
   const [ratingFilter, setRatingFilter] = useState("all");
 
-  // Function to handle filtering
+  // API hooks
+  const {
+    data: employersData,
+    loading,
+    error,
+    refetch,
+  } = useApi(employersApi.getAll);
+  const { mutate: verifyEmployer, loading: verifyLoading } = useMutation();
+  const { mutate: suspendEmployer, loading: suspendLoading } = useMutation();
+
+  const employers = employersData || [];
+
+  // Debug: Log the API response to console for development
   useEffect(() => {
-    let filteredEmployers = mockEmployers;
+    if (employersData) {
+      console.log("Employers API Response:", employersData);
+    }
+    if (error) {
+      console.error("Employers API Error:", error);
+    }
+  }, [employersData, error]); // Extract unique locations for filter dropdown
+  const availableLocations = useMemo(() => {
+    const locations = new Set(
+      employers
+        .map((employer: Employer) => employer.location)
+        .filter(
+          (location: string | undefined): location is string =>
+            location !== undefined && location.trim() !== ""
+        )
+    );
+    return ["All Locations", ...Array.from(locations)];
+  }, [employers]);
+
+  // Filter employers based on search and filter criteria
+  const filteredEmployers = useMemo(() => {
+    let filtered = employers;
 
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filteredEmployers = filteredEmployers.filter(
-        (employer) =>
+      filtered = filtered.filter(
+        (employer: Employer) =>
           employer.companyName.toLowerCase().includes(query) ||
           employer.email.toLowerCase().includes(query)
       );
@@ -271,63 +253,82 @@ export default function EmployerContent() {
 
     // Filter by location
     if (locationFilter && locationFilter !== "All Locations") {
-      filteredEmployers = filteredEmployers.filter(
-        (employer) => employer.location === locationFilter
+      filtered = filtered.filter(
+        (employer: Employer) => employer.location === locationFilter
       );
     }
 
     // Filter by verification status
     if (verificationFilter !== "All") {
       const isVerified = verificationFilter === "Verified";
-      filteredEmployers = filteredEmployers.filter(
-        (employer) => employer.accountVerified === isVerified
+      filtered = filtered.filter(
+        (employer: Employer) => employer.verified === isVerified
       );
     }
 
     // Filter by rating range
     if (ratingFilter !== "all") {
       const [min, max] = ratingFilter.split("-").map(Number);
-      filteredEmployers = filteredEmployers.filter(
-        (employer) =>
-          employer.averageRating >= min && employer.averageRating <= max
+      filtered = filtered.filter(
+        (employer: Employer) =>
+          employer.ratings.averageRating >= min &&
+          employer.ratings.averageRating <= max
       );
     }
 
-    setEmployers(filteredEmployers);
-  }, [searchQuery, locationFilter, verificationFilter, ratingFilter]);
+    return filtered;
+  }, [
+    searchQuery,
+    locationFilter,
+    verificationFilter,
+    ratingFilter,
+    employers,
+  ]);
 
-  // Function to format date and time
-  const formatDateTime = (dateTimeString: string): string => {
-    const date = new Date(dateTimeString);
-    return new Intl.DateTimeFormat("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  };
-
-  // Function to handle employer verification
-  const handleVerifyEmployer = (employerId: string) => {
-    setEmployers((prevEmployers) =>
-      prevEmployers.map((employer) =>
-        employer.id === employerId
-          ? { ...employer, accountVerified: true, isVerified: true }
-          : employer
-      )
-    );
+  // Debounced search to improve performance
+  const debouncedSearch = debounce(
+    (value: string) => setSearchQuery(value),
+    300
+  ); // Function to handle employer verification
+  const handleVerifyEmployer = async (employerId: string) => {
+    try {
+      const result = await verifyEmployer(employersApi.verify, employerId);
+      if (result) {
+        toast.success("Employer verified successfully!");
+        refetch(); // Refresh the data
+        if (selectedEmployer && selectedEmployer._id === employerId) {
+          setSelectedEmployer({
+            ...selectedEmployer,
+            verified: true,
+            isVerified: true,
+          });
+        }
+      } else {
+        toast.error("Failed to verify employer. Please try again.");
+      }
+    } catch (error) {
+      console.error("Failed to verify employer:", error);
+      toast.error("Failed to verify employer. Please try again.");
+    }
   };
 
   // Function to handle employer suspension
-  const handleSuspendEmployer = (employerId: string) => {
-    setEmployers((prevEmployers) =>
-      prevEmployers.map((employer) =>
-        employer.id === employerId
-          ? { ...employer, accountVerified: false }
-          : employer
-      )
-    );
+  const handleSuspendEmployer = async (employerId: string) => {
+    try {
+      const result = await suspendEmployer(employersApi.suspend, employerId);
+      if (result) {
+        toast.success("Employer suspended successfully!");
+        refetch(); // Refresh the data
+        if (selectedEmployer && selectedEmployer._id === employerId) {
+          setSelectedEmployer({ ...selectedEmployer, verified: false });
+        }
+      } else {
+        toast.error("Failed to suspend employer. Please try again.");
+      }
+    } catch (error) {
+      console.error("Failed to suspend employer:", error);
+      toast.error("Failed to suspend employer. Please try again.");
+    }
   };
 
   // View employer details
@@ -336,6 +337,36 @@ export default function EmployerContent() {
     setIsDialogOpen(true);
   };
 
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery("");
+    setLocationFilter("All Locations");
+    setVerificationFilter("All");
+    setRatingFilter("all");
+  };
+
+  if (loading) {
+    return <LoadingState message="Loading employers..." />;
+  }
+  if (error) {
+    const isConnectionError =
+      error.includes("Failed to fetch") ||
+      error.includes("Network Error") ||
+      error.includes("Backend API failed");
+    const errorMessage = isConnectionError
+      ? `Unable to connect to backend API. Please ensure the backend server is running at ${
+          process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
+        }`
+      : error;
+
+    return (
+      <ErrorState
+        title="Failed to load employers"
+        message={errorMessage}
+        onRetry={refetch}
+      />
+    );
+  }
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Employer Management</h1>
@@ -351,8 +382,7 @@ export default function EmployerContent() {
               type="text"
               placeholder="Search by company name or email..."
               className="pl-10"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => debouncedSearch(e.target.value)}
             />
           </div>
         </div>
@@ -360,11 +390,14 @@ export default function EmployerContent() {
         {/* Filter Options */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Location</label>
+            <label className="text-sm font-medium">Location</label>{" "}
             <CustomSelect
               value={locationFilter}
-              onChange={(value) => setLocationFilter(value)}
-              options={locations.map(loc => ({ value: loc, label: loc }))}
+              onChange={(value: string) => setLocationFilter(value)}
+              options={availableLocations.map((loc) => ({
+                value: loc,
+                label: loc,
+              }))}
             />
           </div>
 
@@ -372,8 +405,11 @@ export default function EmployerContent() {
             <label className="text-sm font-medium">Verification Status</label>
             <CustomSelect
               value={verificationFilter}
-              onChange={(value) => setVerificationFilter(value)}
-              options={verificationStatuses.map(status => ({ value: status, label: status }))}
+              onChange={(value: string) => setVerificationFilter(value)}
+              options={verificationStatuses.map((status) => ({
+                value: status,
+                label: status,
+              }))}
             />
           </div>
 
@@ -381,56 +417,56 @@ export default function EmployerContent() {
             <label className="text-sm font-medium">Rating</label>
             <CustomSelect
               value={ratingFilter}
-              onChange={(value) => setRatingFilter(value)}
-              options={ratingRanges.map(range => ({ value: range.value, label: range.label }))}
+              onChange={(value: string) => setRatingFilter(value)}
+              options={ratingRanges.map((range) => ({
+                value: range.value,
+                label: range.label,
+              }))}
             />
           </div>
         </div>
 
         {/* Employers Table */}
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Company Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Phone Number
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Location
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Account Verified
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rating
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 bg-white">
-              {employers.length > 0 ? (
-                employers.map((employer) => (
-                  <tr key={employer.id} className="hover:bg-gray-50">
+          {filteredEmployers.length > 0 ? (
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Company Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Phone Number
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Location
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Account Verified
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Rating
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>{" "}
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {filteredEmployers.map((employer: Employer) => (
+                  <tr key={employer._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <Avatar className="h-8 w-8 mr-3">
                           <AvatarImage
-                            src={employer.profilePicture}
+                            src={employer.profilePicture || ""}
                             alt={employer.companyName}
                           />
                           <AvatarFallback className="bg-blue-100 text-blue-800">
-                            {employer.companyName
-                              .split(" ")
-                              .map((name) => name[0])
-                              .join("")}
+                            {getInitials(employer.companyName)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="font-medium text-gray-900">
@@ -442,24 +478,22 @@ export default function EmployerContent() {
                       {employer.email}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {employer.phoneNumber}
+                      {employer.phone || "Not provided"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {employer.location}
+                      {employer.location || "Not provided"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Badge
-                        variant={
-                          employer.accountVerified ? "success" : "warning"
-                        }
+                        variant={employer.verified ? "success" : "warning"}
                       >
-                        {employer.accountVerified ? "Verified" : "Not Verified"}
+                        {employer.verified ? "Verified" : "Not Verified"}
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center">
                         <Star className="h-4 w-4 text-yellow-400 mr-1" />
-                        <span>{employer.averageRating.toFixed(1)}</span>
+                        <span>{employer.ratings.averageRating.toFixed(1)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -472,40 +506,46 @@ export default function EmployerContent() {
                           <Eye className="h-4 w-4 mr-1" />
                           View
                         </Button>
-                        {!employer.accountVerified && (
-                          <Badge
-                            className="cursor-pointer hover:bg-green-100 bg-green-50 text-green-800 border border-green-200 px-3 py-1"
-                            onClick={() => handleVerifyEmployer(employer.id)}
+                        {!employer.verified && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleVerifyEmployer(employer._id)}
+                            disabled={verifyLoading}
+                            className="bg-green-50 text-green-800 border-green-200 hover:bg-green-100"
                           >
-                            <Check className="h-4 w-4 mr-1 inline text-green-600" />
+                            <Check className="h-4 w-4 mr-1" />
                             Verify
-                          </Badge>
+                          </Button>
                         )}
-                        {employer.accountVerified && (
-                          <Badge
-                            className="cursor-pointer hover:bg-red-100 bg-red-50 text-red-800 border border-red-200 px-3 py-1"
-                            onClick={() => handleSuspendEmployer(employer.id)}
+                        {employer.verified && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleSuspendEmployer(employer._id)}
+                            disabled={suspendLoading}
+                            className="bg-red-50 text-red-800 border-red-200 hover:bg-red-100"
                           >
-                            <AlertTriangle className="h-4 w-4 mr-1 inline text-red-600" />
+                            <AlertTriangle className="h-4 w-4 mr-1" />
                             Suspend
-                          </Badge>
+                          </Button>
                         )}
                       </div>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-6 py-4 text-center text-sm text-gray-500"
-                  >
-                    No employers found. Try adjusting your filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <EmptyState
+              title="No employers found"
+              description="Try adjusting your search criteria or filters to find employers."
+              action={{
+                label: "Clear Filters",
+                onClick: clearFilters,
+              }}
+            />
+          )}
         </div>
       </div>
 
@@ -519,20 +559,16 @@ export default function EmployerContent() {
                 Detailed information about {selectedEmployer.companyName}
               </DialogDescription>
             </DialogHeader>
-
             <div className="mt-4">
-              {/* Company Profile Header */}
+              {/* Company Profile Header */}{" "}
               <div className="flex items-center space-x-4 mb-6">
                 <Avatar className="h-16 w-16">
                   <AvatarImage
-                    src={selectedEmployer.profilePicture}
+                    src={selectedEmployer.profilePicture || ""}
                     alt={selectedEmployer.companyName}
                   />
                   <AvatarFallback className="text-lg bg-blue-100 text-blue-800">
-                    {selectedEmployer.companyName
-                      .split(" ")
-                      .map((name) => name[0])
-                      .join("")}
+                    {getInitials(selectedEmployer.companyName)}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -545,12 +581,10 @@ export default function EmployerContent() {
                   <div className="mt-1 flex items-center space-x-2">
                     <Badge
                       variant={
-                        selectedEmployer.accountVerified
-                          ? "success"
-                          : "destructive"
+                        selectedEmployer.verified ? "success" : "warning"
                       }
                     >
-                      {selectedEmployer.accountVerified
+                      {selectedEmployer.verified
                         ? "Account Verified"
                         : "Not Verified"}
                     </Badge>
@@ -561,7 +595,7 @@ export default function EmployerContent() {
                     >
                       {selectedEmployer.isVerified
                         ? "Profile Verified"
-                        : "Not Verified"}
+                        : "Profile Not Verified"}
                     </Badge>
                   </div>
                 </div>
@@ -581,7 +615,7 @@ export default function EmployerContent() {
                       </div>
                       <div className="flex items-center">
                         <Phone className="h-4 w-4 text-gray-500 mr-2" />
-                        <span>{selectedEmployer.phoneNumber}</span>
+                        <span>{selectedEmployer.phone || "Not provided"}</span>
                       </div>
                       <div className="flex items-center">
                         <MapPin className="h-4 w-4 text-gray-500 mr-2" />
@@ -599,15 +633,18 @@ export default function EmployerContent() {
                         <Star className="h-4 w-4 text-yellow-400 mr-2" />
                         <span>
                           Average Rating:{" "}
-                          {selectedEmployer.averageRating.toFixed(1)} (
-                          {selectedEmployer.totalReviews} reviews)
+                          {selectedEmployer.ratings.averageRating.toFixed(1)} (
+                          {selectedEmployer.ratings.totalReviews} reviews)
                         </span>
                       </div>
                       <div className="flex items-center">
-                        <Clock className="h-4 w-4 text-gray-500 mr-2" />
+                        <Calendar className="h-4 w-4 text-gray-500 mr-2" />
                         <span>
                           Last Login:{" "}
-                          {formatDateTime(selectedEmployer.lastLogin)}
+                          {formatDateTime(
+                            selectedEmployer.lastLoginAt ||
+                              selectedEmployer.updatedAt
+                          )}
                         </span>
                       </div>
                     </div>
@@ -620,7 +657,8 @@ export default function EmployerContent() {
                       Company Description
                     </h4>
                     <p className="mt-2 text-sm text-gray-700">
-                      {selectedEmployer.companyDescription}
+                      {selectedEmployer.companyDescription ||
+                        "No description provided"}
                     </p>
                   </div>
 
@@ -646,36 +684,63 @@ export default function EmployerContent() {
                 </div>
               </div>
               <Separator className="my-4" />
-              {/* Action Buttons */}
+              {/* Action Buttons */}{" "}
               <div className="flex justify-end space-x-3">
-                {!selectedEmployer.accountVerified ? (
-                  <Badge
-                    className="cursor-pointer hover:bg-green-100 bg-green-50 text-green-800 border border-green-200 px-4 py-2"
+                {!selectedEmployer.verified ? (
+                  <Button
                     onClick={() => {
-                      handleVerifyEmployer(selectedEmployer.id);
+                      handleVerifyEmployer(selectedEmployer._id);
                       setIsDialogOpen(false);
                     }}
+                    disabled={verifyLoading}
+                    className="bg-green-600 hover:bg-green-700 text-white"
                   >
-                    <Shield className="h-4 w-4 mr-2 inline text-green-600" />
+                    <Shield className="h-4 w-4 mr-2" />
                     Verify Employer
-                  </Badge>
+                  </Button>
                 ) : (
-                  <Badge
-                    className="cursor-pointer hover:bg-red-100 bg-red-50 text-red-800 border border-red-200 px-4 py-2"
+                  <Button
+                    variant="outline"
                     onClick={() => {
-                      handleSuspendEmployer(selectedEmployer.id);
+                      handleSuspendEmployer(selectedEmployer._id);
                       setIsDialogOpen(false);
                     }}
+                    disabled={suspendLoading}
+                    className="bg-red-50 text-red-800 border-red-200 hover:bg-red-100"
                   >
-                    <AlertTriangle className="h-4 w-4 mr-2 inline text-red-600" />
+                    <AlertTriangle className="h-4 w-4 mr-2" />
                     Suspend Account
-                  </Badge>
+                  </Button>
                 )}
               </div>
-            </div>
+            </div>{" "}
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Toast notifications */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: "#363636",
+            color: "#fff",
+          },
+          success: {
+            duration: 3000,
+            style: {
+              background: "#10b981",
+            },
+          },
+          error: {
+            duration: 4000,
+            style: {
+              background: "#ef4444",
+            },
+          },
+        }}
+      />
     </div>
   );
 }
