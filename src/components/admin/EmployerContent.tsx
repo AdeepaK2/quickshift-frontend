@@ -15,54 +15,179 @@ import {
 } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
-import { LoadingState } from "@/components/ui/loading";
-import { ErrorState } from "@/components/ui/error-state";
-import { EmptyState } from "@/components/ui/empty-state";
+import { Select as CustomSelect } from "@/components/ui/custom-select";
 import { useApi, useMutation } from "@/lib/hooks";
 import { employersApi } from "@/lib/api";
-import {
-  formatDateTime,
-  getInitials,
-  getStatusVariant,
-  debounce,
-} from "@/lib/utils";
+import { formatDateTime, getInitials } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ErrorState } from "@/components/ui/error-state";
+import { LoadingSpinner } from "@/components/ui/loading";
 
-// Define types for our employer data (matching backend API response)
-interface Employer {
+// Debounce utility function
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
+
+// Define types for our employer data (matching backend API)
+type Employer = {
   _id: string;
   companyName: string;
   email: string;
-  phone: string;
-  location: string;
+  phone?: string;
+  location?: string;
   isVerified: boolean;
   verified: boolean;
   ratings: {
     averageRating: number;
     totalReviews: number;
   };
-  lastLoginAt: string;
-  profilePicture: string;
-  companyDescription: string;
+  lastLoginAt?: string;
+  profilePicture?: string;
+  companyDescription?: string;
   createdAt: string;
   updatedAt: string;
-}
+};
+
+// Badge component (if not available from shadcn/ui)
+const Badge = ({
+  children,
+  variant = "default",
+  className = "",
+  onClick,
+}: {
+  children: React.ReactNode;
+  variant?: "default" | "success" | "warning" | "destructive";
+  className?: string;
+  onClick?: () => void;
+}) => {
+  const variants = {
+    default: "bg-gray-100 text-gray-800",
+    success: "bg-green-100 text-green-800",
+    warning: "bg-yellow-100 text-yellow-800",
+    destructive: "bg-red-100 text-red-800",
+  };
+
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]} ${className}`}
+      onClick={onClick}
+    >
+      {children}
+    </span>
+  );
+};
+
+// Avatar component (if not available from shadcn/ui)
+const Avatar = ({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <div
+    className={`relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full ${className}`}
+  >
+    {children}
+  </div>
+);
+
+const AvatarImage = ({ src, alt }: { src: string; alt: string }) => (
+  <img
+    className="aspect-square h-full w-full object-cover"
+    src={src}
+    alt={alt}
+  />
+);
+
+const AvatarFallback = ({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <div
+    className={`flex h-full w-full items-center justify-center rounded-full bg-muted ${className}`}
+  >
+    {children}
+  </div>
+);
+
+// Dialog component (simplified version)
+const Dialog = ({
+  open,
+  onOpenChange,
+  children,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: React.ReactNode;
+}) => {
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div
+        className="fixed inset-0 bg-black/50"
+        onClick={() => onOpenChange(false)}
+      />
+      <div className="relative z-50 bg-white rounded-lg shadow-lg max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+        {children}
+      </div>
+    </div>
+  );
+};
+
+const DialogContent = ({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => <div className={`p-6 ${className}`}>{children}</div>;
+
+const DialogHeader = ({ children }: { children: React.ReactNode }) => (
+  <div className="mb-4">{children}</div>
+);
+
+const DialogTitle = ({ children }: { children: React.ReactNode }) => (
+  <h2 className="text-lg font-semibold">{children}</h2>
+);
+
+const DialogDescription = ({ children }: { children: React.ReactNode }) => (
+  <p className="text-sm text-gray-600 mt-2">{children}</p>
+);
+
+// Separator component
+const Separator = ({ className = "" }: { className?: string }) => (
+  <hr className={`border-gray-200 ${className}`} />
+);
+
+// LoadingState component for consistency
+const LoadingState = ({ message }: { message: string }) => (
+  <div className="flex flex-col items-center justify-center py-12">
+    <LoadingSpinner size="lg" />
+    <p className="mt-4 text-gray-600">{message}</p>
+  </div>
+);
+
+// Locations for the filter
+const locations = [
+  "All Locations",
+  "New York, USA",
+  "London, UK",
+  "Los Angeles, USA",
+  "Berlin, Germany",
+  "Boston, USA",
+];
 
 // Verification statuses for the filter
 const verificationStatuses = ["All", "Verified", "Not Verified"];
@@ -98,14 +223,15 @@ export default function EmployerContent() {
   const { mutate: verifyEmployer, loading: verifyLoading } = useMutation();
   const { mutate: suspendEmployer, loading: suspendLoading } = useMutation();
 
-  const employers = employersData || [];
-
-  // Extract unique locations for filter dropdown
+  const employers = employersData || []; // Extract unique locations for filter dropdown
   const availableLocations = useMemo(() => {
     const locations = new Set(
       employers
-        .map((employer) => employer.location)
-        .filter((location) => location && location.trim() !== "")
+        .map((employer: Employer) => employer.location)
+        .filter(
+          (location: string | undefined): location is string =>
+            location !== undefined && location.trim() !== ""
+        )
     );
     return ["All Locations", ...Array.from(locations)];
   }, [employers]);
@@ -118,7 +244,7 @@ export default function EmployerContent() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
-        (employer) =>
+        (employer: Employer) =>
           employer.companyName.toLowerCase().includes(query) ||
           employer.email.toLowerCase().includes(query)
       );
@@ -127,7 +253,7 @@ export default function EmployerContent() {
     // Filter by location
     if (locationFilter && locationFilter !== "All Locations") {
       filtered = filtered.filter(
-        (employer) => employer.location === locationFilter
+        (employer: Employer) => employer.location === locationFilter
       );
     }
 
@@ -135,7 +261,7 @@ export default function EmployerContent() {
     if (verificationFilter !== "All") {
       const isVerified = verificationFilter === "Verified";
       filtered = filtered.filter(
-        (employer) => employer.verified === isVerified
+        (employer: Employer) => employer.verified === isVerified
       );
     }
 
@@ -143,7 +269,7 @@ export default function EmployerContent() {
     if (ratingFilter !== "all") {
       const [min, max] = ratingFilter.split("-").map(Number);
       filtered = filtered.filter(
-        (employer) =>
+        (employer: Employer) =>
           employer.ratings.averageRating >= min &&
           employer.ratings.averageRating <= max
       );
@@ -163,7 +289,6 @@ export default function EmployerContent() {
     (value: string) => setSearchQuery(value),
     300
   );
-
   // Function to handle employer verification
   const handleVerifyEmployer = async (employerId: string) => {
     const result = await verifyEmployer(employersApi.verify, employerId);
@@ -241,54 +366,39 @@ export default function EmployerContent() {
         {/* Filter Options */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="space-y-2">
-            <label className="text-sm font-medium">Location</label>
-            <Select value={locationFilter} onValueChange={setLocationFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select Location" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableLocations.map((location) => (
-                  <SelectItem key={location} value={location}>
-                    {location}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <label className="text-sm font-medium">Location</label>{" "}
+            <CustomSelect
+              value={locationFilter}
+              onChange={(value: string) => setLocationFilter(value)}
+              options={availableLocations.map((loc) => ({
+                value: loc,
+                label: loc,
+              }))}
+            />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Verification Status</label>
-            <Select
+            <CustomSelect
               value={verificationFilter}
-              onValueChange={setVerificationFilter}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Status" />
-              </SelectTrigger>
-              <SelectContent>
-                {verificationStatuses.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value: string) => setVerificationFilter(value)}
+              options={verificationStatuses.map((status) => ({
+                value: status,
+                label: status,
+              }))}
+            />
           </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Rating</label>
-            <Select value={ratingFilter} onValueChange={setRatingFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select Rating Range" />
-              </SelectTrigger>
-              <SelectContent>
-                {ratingRanges.map((range) => (
-                  <SelectItem key={range.value} value={range.value}>
-                    {range.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CustomSelect
+              value={ratingFilter}
+              onChange={(value: string) => setRatingFilter(value)}
+              options={ratingRanges.map((range) => ({
+                value: range.value,
+                label: range.label,
+              }))}
+            />
           </div>
         </div>
 
@@ -320,15 +430,15 @@ export default function EmployerContent() {
                     Actions
                   </th>
                 </tr>
-              </thead>
+              </thead>{" "}
               <tbody className="divide-y divide-gray-200 bg-white">
-                {filteredEmployers.map((employer) => (
+                {filteredEmployers.map((employer: Employer) => (
                   <tr key={employer._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <Avatar className="h-8 w-8 mr-3">
                           <AvatarImage
-                            src={employer.profilePicture}
+                            src={employer.profilePicture || ""}
                             alt={employer.companyName}
                           />
                           <AvatarFallback className="bg-blue-100 text-blue-800">
@@ -427,11 +537,11 @@ export default function EmployerContent() {
             </DialogHeader>
 
             <div className="mt-4">
-              {/* Company Profile Header */}
+              {/* Company Profile Header */}{" "}
               <div className="flex items-center space-x-4 mb-6">
                 <Avatar className="h-16 w-16">
                   <AvatarImage
-                    src={selectedEmployer.profilePicture}
+                    src={selectedEmployer.profilePicture || ""}
                     alt={selectedEmployer.companyName}
                   />
                   <AvatarFallback className="text-lg bg-blue-100 text-blue-800">
@@ -442,7 +552,7 @@ export default function EmployerContent() {
                   <h3 className="text-xl font-semibold">
                     {selectedEmployer.companyName}
                   </h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-gray-500">
                     {selectedEmployer.email}
                   </p>
                   <div className="mt-1 flex items-center space-x-2">
@@ -467,9 +577,7 @@ export default function EmployerContent() {
                   </div>
                 </div>
               </div>
-
               <Separator className="my-4" />
-
               {/* Company Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
@@ -552,10 +660,8 @@ export default function EmployerContent() {
                   </div>
                 </div>
               </div>
-
               <Separator className="my-4" />
-
-              {/* Action Buttons */}
+              {/* Action Buttons */}{" "}
               <div className="flex justify-end space-x-3">
                 {!selectedEmployer.verified ? (
                   <Button
