@@ -7,9 +7,23 @@ module.exports = {
   ],
   theme: {
     extend: {
+
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+
+      fontFamily: {
+        'inter': ['var(--font-inter)', 'sans-serif'],
+        'poppins': ['var(--font-poppins)', 'sans-serif'],
+      },
+      colors: {
+        'quickshift-primary': '#0077B6',
+        'quickshift-secondary': '#00B4D8',
+        'quickshift-tertiary': '#90E0EF',
+        'quickshift-quaternary': '#CAF0F8',
+        'quickshift-dark': '#03045E',
+        'quickshift-bg': '#F8FAFC',
+
       },
     },
   },
