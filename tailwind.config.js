@@ -7,6 +7,11 @@ module.exports = {
   ],
   theme: {
     extend: {
+
+      colors: {
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+
       fontFamily: {
         'inter': ['var(--font-inter)', 'sans-serif'],
         'poppins': ['var(--font-poppins)', 'sans-serif'],
@@ -18,6 +23,7 @@ module.exports = {
         'quickshift-quaternary': '#CAF0F8',
         'quickshift-dark': '#03045E',
         'quickshift-bg': '#F8FAFC',
+
       },
     },
   },

@@ -26,8 +26,11 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "QuickShift - Your job platform",
-  description: "QuickShift platform for job seekers and employers",
+
+  title: "QuickShift - a platform for university students to find part-time jobs",
+  description:
+    "QuickShift is a dynamic platform designed to connect university students with flexible, part-time job opportunities that fit their schedules.",
+
 };
 
 export default function RootLayout({

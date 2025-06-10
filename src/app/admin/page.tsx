@@ -1,6 +1,10 @@
 "use client";
 
 export default function AdminPage() {
-  // This page is intentionally left empty as content is rendered in the layout
-  return null;
+  return (
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Admin Dashboard</h1>
+      <p>Welcome to the admin dashboard.</p>
+    </div>
+  );
 }
