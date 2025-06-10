@@ -1,4 +1,3 @@
-"use client";
 import * as React from "react";
 
 export default function QuickShiftLandingPage() {
@@ -37,23 +36,11 @@ export default function QuickShiftLandingPage() {
                     Find Your Perfect Part-Time Job Today!
                   </div>
                   <div className="mt-10 text-2xl text-black max-md:max-w-full">
-                    <span
-                      style={{
-                        fontFamily:
-                          "Inter, -apple-system, Roboto, Helvetica, sans-serif",
-                        fontWeight: 700,
-                        fontSize: "36px",
-                      }}
-                    >
+                    <span className="text-4xl font-bold">
                       Work. Earn. Succeed.
                     </span>
                     <br />
-                    <span
-                      style={{
-                        fontFamily:
-                          "Inter, -apple-system, Roboto, Helvetica, sans-serif",
-                      }}
-                    >
+                    <span className="text-base">
                       Connect with flexible job opportunities perfect for university students - from tutoring and freelancing to delivery and promotional work.
                     </span>
                   </div>
@@ -375,7 +362,7 @@ export default function QuickShiftLandingPage() {
               </div>
               <div className="flex flex-col pl-1.5 mt-11 max-md:mt-10 max-md:max-w-full">
                 <div className="text-lg leading-8 text-neutral-600 max-md:max-w-full">
-                  <span style={{ fontWeight: 700, fontSize: "24px" }}>
+                  <span className="text-xl font-bold">
                     Your next part-time job is just a click away!
                   </span>
                   <br />
