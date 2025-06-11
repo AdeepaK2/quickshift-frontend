@@ -1,12 +1,8 @@
-import { ReactNode } from 'react';
-
 interface SwitchProps {
   label: string;
   description?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
-  // Add these new props
-  icon?: ReactNode;
   activeColor?: string;
 }
 
@@ -15,7 +11,6 @@ export default function Switch({
   description, 
   checked, 
   onChange,
-  icon,
   activeColor = 'bg-blue-600' // Default color
 }: SwitchProps) {
   return (

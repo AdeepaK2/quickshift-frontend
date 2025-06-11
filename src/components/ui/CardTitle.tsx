@@ -1,9 +1,7 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-interface CardTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {}
-
-const CardTitle = React.forwardRef<HTMLHeadingElement, CardTitleProps>(
+const CardTitle = React.forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}

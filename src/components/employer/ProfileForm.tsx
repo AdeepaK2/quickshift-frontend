@@ -1,8 +1,6 @@
 'use client';
 import { useState } from 'react';
 import { EmployerProfile } from '@/types/employer';
-import Button from '@/components/ui/button';
-import Input from "@/components/ui/input";
 import { motion } from 'framer-motion';
 import { 
   UserCircleIcon, 
@@ -10,6 +8,7 @@ import {
   DocumentTextIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
+import Image from 'next/image';
 
 interface ProfileFormProps {
   profile: EmployerProfile;
@@ -140,9 +139,11 @@ export default function ProfileForm({ profile, onSave, onCancel }: ProfileFormPr
               <div className="relative group">
                 <div className="w-28 h-28 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg">
                   {previewUrl ? (
-                    <img 
+                    <Image 
                       src={previewUrl} 
                       alt="Profile preview" 
+                      width={112}
+                      height={112}
                       className="w-full h-full object-cover"
                     />
                   ) : (

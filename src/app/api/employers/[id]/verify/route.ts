@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     console.log(`Local API: PATCH /api/employers/${id}/verify called`);
 
     // Simulate API delay

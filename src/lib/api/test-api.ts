@@ -45,6 +45,6 @@ export async function testApiConnectivity() {
 
 // For browser console testing
 if (typeof window !== 'undefined') {
-  (window as any).testApi = testApiConnectivity;
+  (window as unknown as { testApi: () => Promise<boolean> }).testApi = testApiConnectivity;
   console.log('API test function available as window.testApi()');
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { testConnection, TestResult } from "@/lib/test-connection";
-import Button from "@/components/ui/Button";
+import Button from "@/components/ui/button";
 
 export function ConnectionTestPanel() {
   const [isTestingConnection, setIsTestingConnection] = useState(false);
@@ -22,10 +22,6 @@ export function ConnectionTestPanel() {
 
   const getStatusIcon = (success: boolean) => {
     return success ? "✅" : "❌";
-  };
-
-  const getStatusColor = (success: boolean) => {
-    return success ? "text-green-600" : "text-red-600";
   };
 
   return (
@@ -70,7 +66,13 @@ export function ConnectionTestPanel() {
                   </span>
                   {result.success ? (
                     <span className="text-sm text-green-600">
-                      {result.data?.data?.length || 0} items
+                      {/* Safely display item count for array or object-with-data */}
+                      {Array.isArray(result.data)
+                        ? `${result.data.length} items`
+                        : result.data && typeof result.data === "object" &&
+                          Array.isArray((result.data as { data?: unknown[] }).data)
+                        ? `${((result.data as { data?: unknown[] }).data?.length ?? 0)} items`
+                        : "OK"}
                     </span>
                   ) : (
                     <span className="text-sm text-red-600 max-w-xs truncate">

@@ -16,7 +16,6 @@ interface Application {
 export default function MyApplications() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all');
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedApplication, setSelectedApplication] = useState<string | null>(null);
 
   // Mock data - replace with actual API call
   const applications: Application[] = [
@@ -174,11 +173,8 @@ export default function MyApplications() {
                   <FaCalendarAlt className="mr-3 text-[#0077B6]" />
                   <span className="text-lg">Applied {new Date(application.appliedDate).toLocaleDateString()}</span>
                 </div>
-              </div>
-
-              <div className="mt-6 flex justify-end">
+              </div>              <div className="mt-6 flex justify-end">
                 <button
-                  onClick={() => setSelectedApplication(application.id)}
                   className="flex items-center text-[#0077B6] hover:text-[#00B4D8] transition-colors duration-200"
                 >
                   <FaEye className="mr-2" />
@@ -197,7 +193,7 @@ export default function MyApplications() {
               </svg>
             </div>
             <h3 className="text-xl font-medium text-gray-900 mb-2">No Applications Found</h3>
-            <p className="text-gray-500">You haven't applied to any jobs yet or there are no applications matching your current filter.</p>
+            <p className="text-gray-500">You haven&apos;t applied to any jobs yet or there are no applications matching your current filter.</p>
           </div>
         )}
       </div>

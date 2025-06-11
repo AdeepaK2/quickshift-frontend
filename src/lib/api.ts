@@ -9,7 +9,6 @@ const LOCAL_API_BASE_URL = "/api";
 
 // Environment check
 const isDevelopment = process.env.NODE_ENV === "development";
-const isProduction = process.env.NODE_ENV === "production";
 
 // API endpoints configuration
 export const API_ENDPOINTS = {
@@ -111,25 +110,42 @@ async function apiCall<T>(
   }
 }
 
+// Define Employer type here for API typing
+export type Employer = {
+  _id: string;
+  companyName: string;
+  email: string;
+  phone?: string;
+  location?: string;
+  isVerified: boolean;
+  verified: boolean;
+  ratings: {
+    averageRating: number;
+    totalReviews: number;
+  };
+  lastLoginAt?: string;
+  profilePicture?: string;
+  companyDescription?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 /**
  * Employers API
  */
 export const employersApi = {
-  getAll: async (): Promise<ApiResponse<any[]>> => {
+  getAll: async (): Promise<ApiResponse<Employer[]>> => {
     return apiCall(API_ENDPOINTS.EMPLOYERS);
   },
-
-  getById: async (id: string): Promise<ApiResponse<any>> => {
+  getById: async (id: string): Promise<ApiResponse<Employer>> => {
     return apiCall(`${API_ENDPOINTS.EMPLOYERS}/${id}`);
   },
-
-  verify: async (id: string): Promise<ApiResponse<any>> => {
+  verify: async (id: string): Promise<ApiResponse<Employer>> => {
     return apiCall(`${API_ENDPOINTS.EMPLOYERS}/${id}/verify`, {
       method: "PATCH",
     });
   },
-
-  suspend: async (id: string): Promise<ApiResponse<any>> => {
+  suspend: async (id: string): Promise<ApiResponse<Employer>> => {
     return apiCall(`${API_ENDPOINTS.EMPLOYERS}/${id}/suspend`, {
       method: "PATCH",
     });
@@ -139,22 +155,21 @@ export const employersApi = {
 /**
  * Students/Undergraduates API
  */
+import type { Undergraduate } from "@/lib/api/undergraduateApi";
+
 export const studentsApi = {
-  getAll: async (): Promise<ApiResponse<any[]>> => {
+  getAll: async (): Promise<ApiResponse<Undergraduate[]>> => {
     return apiCall(API_ENDPOINTS.STUDENTS);
   },
-
-  getById: async (id: string): Promise<ApiResponse<any>> => {
+  getById: async (id: string): Promise<ApiResponse<Undergraduate>> => {
     return apiCall(`${API_ENDPOINTS.STUDENTS}/${id}`);
   },
-
-  verify: async (id: string): Promise<ApiResponse<any>> => {
+  verify: async (id: string): Promise<ApiResponse<Undergraduate>> => {
     return apiCall(`${API_ENDPOINTS.STUDENTS}/${id}/verify`, {
       method: "PATCH",
     });
   },
-
-  suspend: async (id: string): Promise<ApiResponse<any>> => {
+  suspend: async (id: string): Promise<ApiResponse<Undergraduate>> => {
     return apiCall(`${API_ENDPOINTS.STUDENTS}/${id}/suspend`, {
       method: "PATCH",
     });
@@ -164,33 +179,31 @@ export const studentsApi = {
 /**
  * Gigs API
  */
+import type { Gig } from "@/lib/api/gigsApi";
+
 export const gigsApi = {
-  getAll: async (): Promise<ApiResponse<any[]>> => {
+  getAll: async (): Promise<ApiResponse<Gig[]>> => {
     return apiCall(API_ENDPOINTS.GIGS);
   },
-
-  getById: async (id: string): Promise<ApiResponse<any>> => {
+  getById: async (id: string): Promise<ApiResponse<Gig>> => {
     return apiCall(`${API_ENDPOINTS.GIGS}/${id}`);
   },
-
-  update: async (id: string, data: any): Promise<ApiResponse<any>> => {
+  update: async (id: string, data: Partial<Gig>): Promise<ApiResponse<Gig>> => {
     return apiCall(`${API_ENDPOINTS.GIGS}/${id}`, {
       method: "PATCH",
       body: JSON.stringify(data),
     });
   },
-
   updateStatus: async (
     id: string,
     status: string
-  ): Promise<ApiResponse<any>> => {
+  ): Promise<ApiResponse<Gig>> => {
     return apiCall(`${API_ENDPOINTS.GIGS}/${id}/status`, {
       method: "PATCH",
       body: JSON.stringify({ status }),
     });
   },
-
-  delete: async (id: string): Promise<ApiResponse<any>> => {
+  delete: async (id: string): Promise<ApiResponse<void>> => {
     return apiCall(`${API_ENDPOINTS.GIGS}/${id}`, {
       method: "DELETE",
     });
@@ -201,38 +214,34 @@ export const gigsApi = {
  * Undergraduates API - mapped to backend /api/users
  */
 export const undergraduatesApi = {
-  getAll: async (): Promise<ApiResponse<any[]>> => {
+  getAll: async (): Promise<ApiResponse<Undergraduate[]>> => {
     return apiCall(API_ENDPOINTS.USERS);
   },
-
-  getById: async (id: string): Promise<ApiResponse<any>> => {
+  getById: async (id: string): Promise<ApiResponse<Undergraduate>> => {
     return apiCall(`${API_ENDPOINTS.USERS}/${id}`);
   },
-  verify: async (id: string): Promise<ApiResponse<any>> => {
+  verify: async (id: string): Promise<ApiResponse<Undergraduate>> => {
     return apiCall(`${API_ENDPOINTS.USERS}/${id}/verify`, {
       method: "PATCH",
     });
   },
-
-  suspend: async (id: string): Promise<ApiResponse<any>> => {
+  suspend: async (id: string): Promise<ApiResponse<Undergraduate>> => {
     return apiCall(`${API_ENDPOINTS.USERS}/${id}/suspend`, {
       method: "PATCH",
     });
   },
-  activate: async (id: string): Promise<ApiResponse<any>> => {
+  activate: async (id: string): Promise<ApiResponse<Undergraduate>> => {
     return apiCall(`${API_ENDPOINTS.USERS}/${id}/verify`, {
       method: "PATCH",
     });
   },
-
-  update: async (id: string, data: any): Promise<ApiResponse<any>> => {
+  update: async (id: string, data: Partial<Undergraduate>): Promise<ApiResponse<Undergraduate>> => {
     return apiCall(`${API_ENDPOINTS.USERS}/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
     });
   },
-
-  delete: async (id: string): Promise<ApiResponse<any>> => {
+  delete: async (id: string): Promise<ApiResponse<void>> => {
     return apiCall(`${API_ENDPOINTS.USERS}/${id}`, {
       method: "DELETE",
     });
@@ -243,15 +252,13 @@ export const undergraduatesApi = {
  * Analytics API
  */
 export const analyticsApi = {
-  getDashboardStats: async (): Promise<ApiResponse<any>> => {
+  getDashboardStats: async (): Promise<ApiResponse<Record<string, unknown>>> => {
     return apiCall(`${API_ENDPOINTS.ANALYTICS}/dashboard`);
   },
-
-  getUserStats: async (): Promise<ApiResponse<any>> => {
+  getUserStats: async (): Promise<ApiResponse<Record<string, unknown>>> => {
     return apiCall(`${API_ENDPOINTS.ANALYTICS}/users`);
   },
-
-  getGigStats: async (): Promise<ApiResponse<any>> => {
+  getGigStats: async (): Promise<ApiResponse<Record<string, unknown>>> => {
     return apiCall(`${API_ENDPOINTS.ANALYTICS}/gigs`);
   },
 };

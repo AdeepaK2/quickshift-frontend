@@ -8,7 +8,7 @@ import { employersApi, undergraduatesApi, gigsApi, analyticsApi } from "./api";
 export interface TestResult {
   endpoint: string;
   success: boolean;
-  data?: any;
+  data?: unknown;
   error?: string;
   timing: number;
 }
@@ -18,7 +18,7 @@ export class ConnectionTester {
 
   async testEndpoint(
     name: string,
-    apiCall: () => Promise<any>
+    apiCall: () => Promise<unknown>
   ): Promise<TestResult> {
     const startTime = Date.now();
     try {
@@ -92,7 +92,18 @@ export class ConnectionTester {
     if (successful.length > 0) {
       console.log("\n✅ Successful Endpoints:");
       successful.forEach((result) => {
-        const dataCount = result.data?.data?.length || result.data?.length || 0;
+        let dataCount = 0;
+        if (result && typeof result === "object") {
+          if (Array.isArray((result.data as unknown[]))) {
+            dataCount = (result.data as unknown[]).length;
+          } else if (
+            result.data &&
+            typeof result.data === "object" &&
+            Array.isArray((result.data as { data?: unknown[] }).data)
+          ) {
+            dataCount = ((result.data as { data?: unknown[] }).data?.length ?? 0);
+          }
+        }
         console.log(
           `  - ${result.endpoint}: ${result.timing}ms (${dataCount} items)`
         );
@@ -135,7 +146,7 @@ export const testConnection = async (): Promise<TestResult[]> => {
 
 // Browser console helper
 if (typeof window !== "undefined") {
-  (window as any).testBackendConnection = testConnection;
+  (window as unknown as { testBackendConnection: () => Promise<TestResult[]> }).testBackendConnection = testConnection;
   console.log(
     "💡 Run 'testBackendConnection()' in console to test your backend connection"
   );
