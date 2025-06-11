@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { FaBriefcase, FaUser, FaHistory, FaStar, FaSearch, FaMoneyBillWave } from 'react-icons/fa';
+import { FaBriefcase, FaUser, FaHistory, FaSearch, FaMoneyBillWave } from 'react-icons/fa';
 
 // Components
 import JobList from './components/JobList';

@@ -13,25 +13,14 @@ import {
   Bell,
   AlertTriangle,
   MessageSquare,
-  CheckCircle,
-  XCircle,
 } from "lucide-react";
 import { useMutation } from "@/lib/hooks";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
+import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
 import { LoadingState } from "@/components/ui/loading";
 import { formatDate } from "@/lib/utils";
 
 // TypeScript interfaces
-interface AdminProfile {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
 interface AdminSettings {
   maintenanceMode: boolean;
   feedbackCollection: boolean;
@@ -188,7 +177,7 @@ export default function SettingContent() {
 
       setLastUpdated(new Date().toLocaleString());
       alert("Profile updated successfully!");
-    } catch (error) {
+    } catch {
       alert("Failed to update profile. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -232,7 +221,7 @@ export default function SettingContent() {
       }));
       setLastUpdated(new Date().toLocaleString());
       alert("Password changed successfully!");
-    } catch (error) {
+    } catch {
       alert("Failed to change password. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -255,7 +244,7 @@ export default function SettingContent() {
 
       setLastUpdated(new Date().toLocaleString());
       alert("Settings saved successfully!");
-    } catch (error) {
+    } catch {
       alert("Failed to save settings. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -284,7 +273,7 @@ export default function SettingContent() {
       try {
         // API call would go here
         alert("Password reset link has been sent to your email address.");
-      } catch (error) {
+      } catch {
         alert("Failed to send password reset link. Please try again.");
       }
     }
@@ -383,8 +372,7 @@ export default function SettingContent() {
               Change Password
             </h4>
             <p className="text-sm text-gray-600 mb-4">
-              Leave password fields empty if you don't want to change your
-              password.
+              Leave password fields empty if you don&apos;t want to change your password.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
               <div>

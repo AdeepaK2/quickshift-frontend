@@ -5,13 +5,12 @@ import {
   Briefcase,
   CheckCircle,
   UserPlus,
-  Activity,
   RefreshCw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 // Corrected imports for UI components - assuming default exports based on typical usage
-import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
+import Button from "@/components/ui/button";
+import Card from "@/components/ui/card";
 import CardContent from "@/components/ui/CardContent";
 import CardDescription from "@/components/ui/CardDescription";
 import CardHeader from "@/components/ui/CardHeader";
@@ -25,7 +24,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"; // Keep if path is correct
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"; // Keep if path is correct
 
 import { useEffect, useMemo, useState } from "react";
 import { useApi } from "@/lib/hooks";
@@ -39,7 +37,6 @@ import { gigsApi, type Gig } from "@/lib/api/gigsApi";
 import {
   adminApi,
   type AdminDashboardStats,
-  type ApiError as AdminApiError,
 } from "@/lib/api/adminApi";
 import {
   DASHBOARD_CONSTANTS,
@@ -92,28 +89,28 @@ export default function DashboardContent() {
     loading: undergraduatesLoading,
     error: undergraduatesError,
     refetch: refetchUndergraduates,
-  } = useApi<Undergraduate[]>(() => undergraduatesApi.getAll(), []);
+  } = useApi<Undergraduate[]>(() => undergraduatesApi.getAll());
 
   const {
     data: employersData,
     loading: employersLoading,
     error: employersError,
     refetch: refetchEmployers,
-  } = useApi<Employer[]>(() => employersApi.getAll(), []);
+  } = useApi<Employer[]>(() => employersApi.getAll());
 
   const {
     data: gigsData,
     loading: gigsLoading,
     error: gigsError,
     refetch: refetchGigs,
-  } = useApi<Gig[]>(() => gigsApi.getAll(), []);
+  } = useApi<Gig[]>(() => gigsApi.getAll());
 
   const {
     data: adminStatsData,
     loading: adminStatsLoading,
     error: adminStatsError,
     refetch: refetchAdminStats,
-  } = useApi<AdminDashboardStats>(() => adminApi.getDashboardStats(), []);
+  } = useApi<AdminDashboardStats>(() => adminApi.getDashboardStats());
 
   useEffect(() => {
     setLastUpdated(new Date().toLocaleString());
@@ -230,13 +227,11 @@ export default function DashboardContent() {
         performers.push({
           type: "student",
           id: topStudent.id || DASHBOARD_CONSTANTS.DEFAULT_ID,
-          name: `${topStudent.firstName || "Top"} ${
-            topStudent.lastName || "Student"
-          }`,
+          name: topStudent.fullName || "Top Student",
           rating: DASHBOARD_CONSTANTS.MOCK_TOP_STUDENT_RATING, // Replace with actual if available: topStudent.averageRating
           gigsCompleted: DASHBOARD_CONSTANTS.MOCK_STUDENT_GIGS_COMPLETED, // Replace with actual
           specialization:
-            topStudent.skills?.[0] ||
+            topStudent.skillsAndInterests?.[0] ||
             DASHBOARD_CONSTANTS.DEFAULT_SPECIALIZATION, // Example from skills
         });
       }

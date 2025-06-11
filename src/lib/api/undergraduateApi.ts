@@ -3,11 +3,29 @@ import { ApiResponse } from "./adminApi"; // Assuming ApiResponse is in a shared
 
 export interface Undergraduate {
   id: string;
-  firstName: string;
-  lastName: string;
+  _id: string;
+  profilePicture: string | null;
+  fullName: string;
   email: string;
-  skills?: string[];
-  // Add other relevant fields
+  university: string;
+  yearOfStudy: number;
+  studentIdVerified: boolean;
+  phoneNumber: string;
+  faculty: string;
+  gender: string;
+  dateOfBirth: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  accountStatus: string;
+  verificationStatus: string;
+  lastLogin: string;
+  bio: string;
+  gpa: number;
+  skillsAndInterests: string[];
+  documentsUploaded: string[];
+  joinDate: string;
+  verified: boolean;
 }
 
 export const undergraduatesApi = {

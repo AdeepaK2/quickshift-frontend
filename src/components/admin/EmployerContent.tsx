@@ -14,22 +14,23 @@ import {
   Calendar,
   MapPin,
 } from "lucide-react";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import { Select as CustomSelect } from "@/components/ui/custom-select";
+import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
+import Select from "@/components/ui/select";
 import { useApi, useMutation } from "@/lib/hooks";
 import { employersApi } from "@/lib/api";
 import { formatDateTime, getInitials } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingSpinner } from "@/components/ui/loading";
+import Image from "next/image";
 
 // Debounce utility function
-function debounce<T extends (...args: any[]) => any>(
+function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
+  let timeout: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {
     clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
@@ -101,10 +102,12 @@ const Avatar = ({
 );
 
 const AvatarImage = ({ src, alt }: { src: string; alt: string }) => (
-  <img
+  <Image
     className="aspect-square h-full w-full object-cover"
     src={src}
     alt={alt}
+    width={112}
+    height={112}
   />
 );
 
@@ -214,7 +217,8 @@ export default function EmployerContent() {
   const { mutate: verifyEmployer, loading: verifyLoading } = useMutation();
   const { mutate: suspendEmployer, loading: suspendLoading } = useMutation();
 
-  const employers = employersData || [];
+  // Move employers and undergraduates initialization inside useMemo to fix react-hooks/exhaustive-deps warnings
+  const employers = useMemo(() => employersData || [], [employersData]);
 
   // Debug: Log the API response to console for development
   useEffect(() => {
@@ -287,12 +291,15 @@ export default function EmployerContent() {
 
   // Debounced search to improve performance
   const debouncedSearch = debounce(
-    (value: string) => setSearchQuery(value),
+    (value: unknown) => setSearchQuery(value as string),
     300
   ); // Function to handle employer verification
   const handleVerifyEmployer = async (employerId: string) => {
     try {
-      const result = await verifyEmployer(employersApi.verify, employerId);
+      const result = await verifyEmployer(
+        (id: unknown) => employersApi.verify(id as string),
+        employerId
+      );
       if (result) {
         toast.success("Employer verified successfully!");
         refetch(); // Refresh the data
@@ -315,7 +322,10 @@ export default function EmployerContent() {
   // Function to handle employer suspension
   const handleSuspendEmployer = async (employerId: string) => {
     try {
-      const result = await suspendEmployer(employersApi.suspend, employerId);
+      const result = await suspendEmployer(
+        (id: unknown) => employersApi.suspend(id as string),
+        employerId
+      );
       if (result) {
         toast.success("Employer suspended successfully!");
         refetch(); // Refresh the data
@@ -391,7 +401,7 @@ export default function EmployerContent() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="space-y-2">
             <label className="text-sm font-medium">Location</label>{" "}
-            <CustomSelect
+            <Select
               value={locationFilter}
               onChange={(value: string) => setLocationFilter(value)}
               options={availableLocations.map((loc) => ({
@@ -403,7 +413,7 @@ export default function EmployerContent() {
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Verification Status</label>
-            <CustomSelect
+            <Select
               value={verificationFilter}
               onChange={(value: string) => setVerificationFilter(value)}
               options={verificationStatuses.map((status) => ({
@@ -415,7 +425,7 @@ export default function EmployerContent() {
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Rating</label>
-            <CustomSelect
+            <Select
               value={ratingFilter}
               onChange={(value: string) => setRatingFilter(value)}
               options={ratingRanges.map((range) => ({

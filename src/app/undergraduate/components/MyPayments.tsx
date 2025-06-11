@@ -16,35 +16,35 @@ export default function MyPayments() {
   const [isLoading, setIsLoading] = useState(true);
   const [payments, setPayments] = useState<Payment[]>([]);
 
-  // Mock data - replace with actual API call
-  const mockPayments: Payment[] = [
-    {
-      id: '1',
-      gigTitle: 'Event Staff',
-      amount: 'LKR 15,000',
-      date: '2024-03-25',
-      status: 'paid',
-      employer: 'EventPro Solutions',
-    },
-    {
-      id: '2',
-      gigTitle: 'Delivery Assistant',
-      amount: 'LKR 12,000',
-      date: '2024-03-15',
-      status: 'paid',
-      employer: 'QuickDeliver',
-    },
-    {
-      id: '3',
-      gigTitle: 'Data Entry Clerk',
-      amount: 'LKR 18,000',
-      date: '2024-03-28',
-      status: 'pending',
-      employer: 'DataTech Solutions',
-    },
-  ];
-
   useEffect(() => {
+    // Mock data - replace with actual API call
+    const mockPayments: Payment[] = [
+      {
+        id: '1',
+        gigTitle: 'Event Staff',
+        amount: 'LKR 15,000',
+        date: '2024-03-25',
+        status: 'paid',
+        employer: 'EventPro Solutions',
+      },
+      {
+        id: '2',
+        gigTitle: 'Delivery Assistant',
+        amount: 'LKR 12,000',
+        date: '2024-03-15',
+        status: 'paid',
+        employer: 'QuickDeliver',
+      },
+      {
+        id: '3',
+        gigTitle: 'Data Entry Clerk',
+        amount: 'LKR 18,000',
+        date: '2024-03-28',
+        status: 'pending',
+        employer: 'DataTech Solutions',
+      },
+    ];
+
     // Simulate API call
     const timer = setTimeout(() => {
       setPayments(mockPayments);
@@ -130,10 +130,10 @@ export default function MyPayments() {
               </svg>
             </div>
             <h3 className="text-xl font-medium text-gray-900 mb-2">No Payments Found</h3>
-            <p className="text-gray-500">You haven't received any payments yet.</p>
+            <p className="text-gray-500">You haven&apos;t received any payments yet.</p>
           </div>
         )}
       </div>
     </div>
   );
-} 
+}

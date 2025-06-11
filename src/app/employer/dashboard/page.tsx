@@ -12,7 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export default function Dashboard() {
-  const [stats, setStats] = useState({
+  const [stats] = useState({
     totalJobs: 12,
     activeJobs: 8,
     totalApplicants: 47,
@@ -48,7 +48,7 @@ export default function Dashboard() {
         
         <div className={`transition-all duration-700 transform ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">Employer Dashboard</h1>
-          <p className="text-blue-100 max-w-2xl text-sm sm:text-base">Welcome back! Here's an overview of your job listings and applications.</p>
+          <p className="text-blue-100 max-w-2xl text-sm sm:text-base">Welcome back! Here&apos;s an overview of your job listings and applications.</p>
         </div>
       </div>
       

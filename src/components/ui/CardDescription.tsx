@@ -1,12 +1,9 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-interface CardDescriptionProps
-  extends React.HTMLAttributes<HTMLParagraphElement> {}
-
 const CardDescription = React.forwardRef<
   HTMLParagraphElement,
-  CardDescriptionProps
+  React.HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}

@@ -1,7 +1,6 @@
 /**
  * Admin API - Centralized API calls for admin-specific operations
  */
-import { type Gig } from "./gigsApi"; // Assuming Gig type might be useful, or remove if not
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
@@ -79,7 +78,7 @@ async function apiCall<T>(
       let errorData;
       try {
         errorData = await response.json();
-      } catch (e) {
+      } catch {
         // If parsing JSON fails, use status text or a generic message
         errorData = {
           message:

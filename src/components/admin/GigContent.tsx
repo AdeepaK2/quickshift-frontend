@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import {
   Search,
@@ -19,15 +19,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
+import Select from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -109,24 +103,24 @@ export default function GigContent() {
     if (!gigsResponse) return [];
 
     // If response has a data property, use it; otherwise assume direct array
-    if ((gigsResponse as any).data) {
-      return Array.isArray((gigsResponse as any).data)
-        ? (gigsResponse as any).data
-        : [];
+    if ((gigsResponse as unknown as { data?: unknown }).data) {
+      const data = (gigsResponse as unknown as { data?: unknown }).data;
+      return Array.isArray(data) ? (data as Gig[]) : [];
     }
 
     // If response is directly an array
     if (Array.isArray(gigsResponse)) {
-      return gigsResponse;
+      return gigsResponse as Gig[];
     }
 
     // Fallback to empty array
     return [];
   }, [gigsResponse]);
   // Debounced search function
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const debouncedSearch = useCallback(
-    debounce((searchTerm: string) => {
-      setFilters((prev) => ({ ...prev, search: searchTerm }));
+    debounce((searchTerm: unknown) => {
+      setFilters((prev) => ({ ...prev, search: searchTerm as string }));
     }, 300),
     []
   );
@@ -200,8 +194,10 @@ export default function GigContent() {
       const loadingToast = toast.loading("Updating gig status...");
 
       await updateGig(
-        (params: { id: string; status: string }) =>
-          gigsApi.updateStatus(params.id, params.status),
+        (params: unknown) => {
+          const { id, status } = params as { id: string; status: string };
+          return gigsApi.updateStatus(id, status);
+        },
         { id: gigId, status: newStatus }
       );
 
@@ -224,7 +220,7 @@ export default function GigContent() {
     try {
       const loadingToast = toast.loading("Deleting gig...");
 
-      await deleteGig((params: string) => gigsApi.delete(params), gigToDelete);
+      await deleteGig((params: unknown) => gigsApi.delete(params as string), gigToDelete);
 
       toast.dismiss(loadingToast);
       toast.success("Gig deleted successfully");
@@ -287,7 +283,7 @@ export default function GigContent() {
             toast.loading("Retrying...", { id: "retry" });
             await refetch();
             toast.success("Gigs loaded successfully", { id: "retry" });
-          } catch (error) {
+          } catch {
             toast.error("Failed to load gigs", { id: "retry" });
           }
         }}
@@ -313,7 +309,7 @@ export default function GigContent() {
                 toast.loading("Refreshing gigs...", { id: "refresh" });
                 await refetch();
                 toast.success("Gigs refreshed successfully", { id: "refresh" });
-              } catch (error) {
+              } catch {
                 toast.error("Failed to refresh gigs", { id: "refresh" });
               }
             }}
@@ -379,7 +375,7 @@ export default function GigContent() {
               toast.loading("Refreshing gigs...", { id: "refresh" });
               await refetch();
               toast.success("Gigs refreshed successfully", { id: "refresh" });
-            } catch (error) {
+            } catch {
               toast.error("Failed to refresh gigs", { id: "refresh" });
             }
           }}
@@ -463,88 +459,51 @@ export default function GigContent() {
               onChange={(e) => debouncedSearch(e.target.value)}
             />
           </div>
-
           {/* Status Filter */}
           <Select
             value={filters.status}
-            onValueChange={(value) => handleFilterChange("status", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Statuses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Statuses</SelectItem>
-              {GIG_STATUSES.map((status) => (
-                <SelectItem key={status} value={status}>
-                  {status.charAt(0).toUpperCase() +
-                    status.slice(1).replace("_", " ")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
+            onChange={(value: string) => handleFilterChange("status", value)}
+            options={[
+              { value: "", label: "All Statuses" },
+              ...GIG_STATUSES.map((status) => ({
+                value: status,
+                label: status.charAt(0).toUpperCase() + status.slice(1).replace("_", " "),
+              })),
+            ]}
+          />
           {/* Category Filter */}
           <Select
             value={filters.category}
-            onValueChange={(value) => handleFilterChange("category", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Categories</SelectItem>
-              {GIG_CATEGORIES.map((category) => (
-                <SelectItem key={category} value={category}>
-                  {category}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
+            onChange={(value: string) => handleFilterChange("category", value)}
+            options={[
+              { value: "", label: "All Categories" },
+              ...GIG_CATEGORIES.map((category) => ({ value: category, label: category })),
+            ]}
+          />
           {/* City Filter */}
           <Select
             value={filters.city}
-            onValueChange={(value) => handleFilterChange("city", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Cities" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Cities</SelectItem>
-              {uniqueCities.map((city) => (
-                <SelectItem key={city} value={city}>
-                  {city}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
+            onChange={(value: string) => handleFilterChange("city", value)}
+            options={[
+              { value: "", label: "All Cities" },
+              ...uniqueCities.map((city) => ({ value: city, label: city })),
+            ]}
+          />
           {/* Employer Filter */}
           <Select
             value={filters.employer}
-            onValueChange={(value) => handleFilterChange("employer", value)}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="All Employers" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Employers</SelectItem>
-              {uniqueEmployers.map((employer) => (
-                <SelectItem key={employer} value={employer}>
-                  {employer}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
+            onChange={(value: string) => handleFilterChange("employer", value)}
+            options={[
+              { value: "", label: "All Employers" },
+              ...uniqueEmployers.map((employer) => ({ value: employer, label: employer })),
+            ]}
+          />
           {/* Deadline Start */}
           <Input
             label=""
             type="date"
             value={filters.deadlineStart}
-            onChange={(e) =>
-              handleFilterChange("deadlineStart", e.target.value)
-            }
+            onChange={(e) => handleFilterChange("deadlineStart", e.target.value)}
           />
 
           {/* Deadline End */}
@@ -644,22 +603,10 @@ export default function GigContent() {
                     {/* Status Update */}
                     <Select
                       value={gig.status}
-                      onValueChange={(value) =>
-                        handleStatusUpdate(gig.id, value)
-                      }
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {GIG_STATUSES.map((status) => (
-                          <SelectItem key={status} value={status}>
-                            {status.charAt(0).toUpperCase() +
-                              status.slice(1).replace("_", " ")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(value: string) => handleStatusUpdate(gig.id, value)}
+                      options={GIG_STATUSES.map((status) => ({ value: status, label: status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ") }))}
+                      className="w-32"
+                    />
                     {/* Quick Actions for Draft Status */}
                     {gig.status === "draft" && (
                       <>

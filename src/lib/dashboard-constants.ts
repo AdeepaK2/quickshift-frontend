@@ -86,8 +86,8 @@ export const calculateCompletionRate = (
 };
 
 export const calculateAverageRating = (
-  items: any[],
-  ratingProperty: string | ((item: any) => number)
+  items: { [key: string]: number }[],
+  ratingProperty: string | ((item: { [key: string]: number }) => number)
 ): string => {
   if (!items || items.length === 0)
     return DASHBOARD_CONSTANTS.DEFAULT_PLATFORM_RATING.toString();

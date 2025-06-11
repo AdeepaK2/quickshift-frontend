@@ -15,9 +15,9 @@ import {
 } from "lucide-react";
 import { useApi } from "@/lib/hooks";
 import { undergraduatesApi, employersApi, gigsApi } from "@/lib/api";
+import { Gig } from "@/lib/api/gigsApi";
 import { LoadingState } from "@/components/ui/loading";
-import { ErrorState } from "@/components/ui/error-state";
-import Button from "@/components/ui/Button";
+import Button from "@/components/ui/button";
 
 export default function AnalyticsContent() {
   const [lastUpdated, setLastUpdated] = useState("");
@@ -47,9 +47,8 @@ export default function AnalyticsContent() {
     const gigs = gigsData || [];
 
     const totalUsers = undergraduates.length + employers.length;
-    const totalGigs = gigs.length;
-    const completedGigs = gigs.filter(
-      (gig: any) => gig.status === "completed"
+    const totalGigs = gigs.length;    const completedGigs = gigs.filter(
+      (gig: Gig) => gig.status === "completed"
     ).length;
     const completionRate =
       totalGigs > 0 ? Math.round((completedGigs / totalGigs) * 100) : 0;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FaMapMarkerAlt, FaMoneyBillWave, FaCalendarAlt, FaBuilding, FaArrowLeft } from 'react-icons/fa';
+import { FaMapMarkerAlt, FaMoneyBillWave, FaCalendarAlt, FaArrowLeft } from 'react-icons/fa';
 
 interface JobDetailsProps {
   jobId: string;
@@ -52,9 +52,8 @@ export default function JobDetails({ jobId, onBack }: JobDetailsProps) {
     
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setApplicationStatus('success');
-    } catch (error) {
+      await new Promise(resolve => setTimeout(resolve, 1500));      setApplicationStatus('success');
+    } catch {
       setApplicationStatus('error');
     } finally {
       setIsApplying(false);
@@ -159,7 +158,7 @@ export default function JobDetails({ jobId, onBack }: JobDetailsProps) {
                   </svg>
                 </div>
                 <h3 className="text-lg font-medium text-green-800 mb-2">Application Submitted!</h3>
-                <p className="text-green-600">We'll review your application and get back to you soon.</p>
+                <p className="text-green-600">We&apos;ll review your application and get back to you soon.</p>
               </div>
             ) : applicationStatus === 'error' ? (
               <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
