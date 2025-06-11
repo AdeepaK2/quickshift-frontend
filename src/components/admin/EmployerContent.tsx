@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
-import Select from "@/components/ui/select";
+import Select from "@/components/ui/Select";
 import { useApi, useMutation } from "@/lib/hooks";
 import { employersApi } from "@/lib/api";
 import { formatDateTime, getInitials } from "@/lib/utils";
