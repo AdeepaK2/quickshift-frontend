@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 // Mock data for development/fallback
 const mockEmployers = [
@@ -58,7 +58,7 @@ const mockEmployers = [
   },
 ];
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log("Local API: GET /api/employers called");
 

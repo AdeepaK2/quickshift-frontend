@@ -12,24 +12,17 @@ import {
   Phone,
   BookOpen,
   School,
-  Mail,
   ClipboardCheck,
   Clock,
   UserCheck,
   Shield,
   ShieldCheck,
 } from "lucide-react";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
+import Button from "@/components/ui/button";
+import Input from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import Select from "@/components/ui/select";
 import {
   Sheet,
   SheetContent,
@@ -55,27 +48,29 @@ import { UNDERGRADUATE_CONSTANTS } from "@/lib/undergraduate-constants";
 // TypeScript interfaces for Undergraduate data
 interface Undergraduate {
   id: string;
-  profilePicture?: string;
-  fullName?: string;
-  email?: string;
-  university?: string;
+  _id: string;
+  profilePicture: string | null;
+  fullName: string;
+  email: string;
+  university: string;
   yearOfStudy: number;
   studentIdVerified: boolean;
-  phoneNumber?: string;
-  faculty?: string;
-  gender?: "Male" | "Female" | "Other";
-  dateOfBirth?: string;
-  address?: string;
-  city?: string;
-  postalCode?: string;
-  accountStatus?: "active" | "inactive" | "suspended";
-  verificationStatus?: "verified" | "pending" | "rejected";
-  lastLogin?: string;
-  bio?: string;
-  gpa?: number;
-  skillsAndInterests?: string[];
-  documentsUploaded?: string[];
-  joinDate?: string;
+  phoneNumber: string;
+  faculty: string;
+  gender: string;
+  dateOfBirth: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  accountStatus: string;
+  verificationStatus: string;
+  lastLogin: string;
+  bio: string;
+  gpa: number;
+  skillsAndInterests: string[];
+  documentsUploaded: string[];
+  joinDate: string;
+  verified: boolean;
 }
 
 interface FilterState {
@@ -120,8 +115,10 @@ export default function UndergraduatesContent() {
   const suspendUndergraduateMutation = useMutation();
   const activateUndergraduateMutation = useMutation();
 
-  // Extract undergraduates from API response
-  const undergraduates = undergraduatesResponse || [];
+  // Move undergraduates initialization inside useMemo to fix react-hooks/exhaustive-deps warnings
+  const undergraduates = useMemo(() => undergraduatesResponse || [], [
+    undergraduatesResponse,
+  ]);
 
   // Extract unique universities for filter dropdown
   const availableUniversities = useMemo(() => {
@@ -139,11 +136,18 @@ export default function UndergraduatesContent() {
   // Debounced search handler
   const debouncedSearch = useMemo(
     () =>
-      debounce((value: string) => {
+      debounce((...args: unknown[]) => {
+        const value = args[0] as string;
         setFilters((prev) => ({ ...prev, search: value }));
       }, 300),
     []
   );
+
+  // Fix mutation usage by wrapping API calls with unknown
+  const verifyUndergraduate = (params: unknown) => undergraduatesApi.verify(params as string);
+  const suspendUndergraduate = (params: unknown) => undergraduatesApi.suspend(params as string);
+  const activateUndergraduate = (params: unknown) => undergraduatesApi.activate(params as string);
+
   // Filtered undergraduates with memoization for performance
   const filteredUndergraduates = useMemo(() => {
     if (!undergraduates) return [];
@@ -195,10 +199,7 @@ export default function UndergraduatesContent() {
   // Handle verification action
   const handleVerifyUndergraduate = async (id: string) => {
     try {
-      const result = await verifyUndergraduateMutation.mutate(
-        undergraduatesApi.verify,
-        id
-      );
+      const result = await verifyUndergraduateMutation.mutate(verifyUndergraduate, id);
       if (result) {
         toast.success("Undergraduate verified successfully!");
         await refetch();
@@ -218,10 +219,7 @@ export default function UndergraduatesContent() {
   // Handle suspension action
   const handleSuspendUndergraduate = async (id: string) => {
     try {
-      const result = await suspendUndergraduateMutation.mutate(
-        undergraduatesApi.suspend,
-        id
-      );
+      const result = await suspendUndergraduateMutation.mutate(suspendUndergraduate, id);
       if (result) {
         toast.success("Undergraduate suspended successfully!");
         await refetch();
@@ -242,10 +240,7 @@ export default function UndergraduatesContent() {
   // Handle activation action
   const handleActivateUndergraduate = async (id: string) => {
     try {
-      const result = await activateUndergraduateMutation.mutate(
-        undergraduatesApi.activate,
-        id
-      );
+      const result = await activateUndergraduateMutation.mutate(activateUndergraduate, id);
       if (result) {
         toast.success("Undergraduate activated successfully!");
         await refetch();
@@ -269,7 +264,7 @@ export default function UndergraduatesContent() {
   };
 
   // Update other filters
-  const updateFilter = (key: keyof FilterState, value: any) => {
+  const updateFilter = (key: keyof FilterState, value: string | number | null) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -311,95 +306,43 @@ export default function UndergraduatesContent() {
 
         {/* Filter Options */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {" "}
           <div className="space-y-2">
             <label className="text-sm font-medium">University</label>
             <Select
               value={filters.university}
-              onValueChange={(value) => updateFilter("university", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select University" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableUniversities.map((university) => (
-                  <SelectItem key={university} value={university}>
-                    {university}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value: string) => updateFilter("university", value)}
+              options={availableUniversities.map((university) => ({ value: university, label: university }))}
+            />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Year of Study</label>{" "}
+            <label className="text-sm font-medium">Year of Study</label>
             <Select
               value={filters.yearOfStudy?.toString() || "all"}
-              onValueChange={(value) =>
-                updateFilter(
-                  "yearOfStudy",
-                  value === "all" ? null : parseInt(value)
-                )
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Year" />
-              </SelectTrigger>{" "}
-              <SelectContent>
-                <SelectItem value={LABELS.ALL_YEARS}>
-                  {LABELS.ALL_YEARS}
-                </SelectItem>
-                {YEARS_OF_STUDY.map((year) => (
-                  <SelectItem key={year} value={year.toString()}>
-                    Year {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value: string) => updateFilter("yearOfStudy", value === "all" ? null : parseInt(value))}
+              options={[{ value: LABELS.ALL_YEARS, label: LABELS.ALL_YEARS }, ...YEARS_OF_STUDY.map((year) => ({ value: year.toString(), label: `Year ${year}` }))]}
+            />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Verification Status</label>
             <Select
               value={filters.verificationStatus || "all"}
-              onValueChange={(value) =>
-                updateFilter(
-                  "verificationStatus",
-                  value === "all" ? null : value
-                )
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Status" />
-              </SelectTrigger>{" "}
-              <SelectContent>
-                <SelectItem value="all">{LABELS.ALL_STATUSES}</SelectItem>
-                {VERIFICATION_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {formatStatusText(status)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value: string) => updateFilter("verificationStatus", value === "all" ? null : value)}
+              options={[
+                { value: "all", label: LABELS.ALL_STATUSES },
+                ...VERIFICATION_STATUSES.map((status) => ({ value: status, label: formatStatusText(status) }))
+              ]}
+            />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Account Status</label>
             <Select
               value={filters.accountStatus || "all"}
-              onValueChange={(value) =>
-                updateFilter("accountStatus", value === "all" ? null : value)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select Status" />
-              </SelectTrigger>{" "}
-              <SelectContent>
-                <SelectItem value="all">{LABELS.ALL_STATUSES}</SelectItem>
-                {ACCOUNT_STATUSES.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {formatStatusText(status)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value: string) => updateFilter("accountStatus", value === "all" ? null : value)}
+              options={[
+                { value: "all", label: LABELS.ALL_STATUSES },
+                ...ACCOUNT_STATUSES.map((status) => ({ value: status, label: formatStatusText(status) }))
+              ]}
+            />
           </div>
         </div>
       </div>{" "}
@@ -462,7 +405,7 @@ export default function UndergraduatesContent() {
                       <Avatar>
                         {" "}
                         <AvatarImage
-                          src={undergraduate.profilePicture}
+                          src={undergraduate.profilePicture || undefined}
                           alt={undergraduate.fullName || "User"}
                         />{" "}
                         <AvatarFallback className="bg-blue-100 text-blue-800">
@@ -601,7 +544,7 @@ export default function UndergraduatesContent() {
                 <div className="flex items-center space-x-4">
                   <Avatar className="h-16 w-16">
                     <AvatarImage
-                      src={selectedUndergraduate.profilePicture}
+                      src={selectedUndergraduate?.profilePicture || undefined}
                       alt={selectedUndergraduate.fullName}
                     />
                     <AvatarFallback className="text-lg bg-blue-100 text-blue-800">

@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AppearanceSettings from '@/components/employer/AppearanceSettings';
 import NotificationSettings from '@/components/employer/NotificationSettings';
@@ -12,7 +12,6 @@ import { CogIcon, BellIcon, PaintBrushIcon, ShieldCheckIcon } from '@heroicons/r
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('appearance');
-  const [isVisible, setIsVisible] = useState(false);
   const [settings, setSettings] = useState<Settings>({
     theme: 'light',
     language: 'en',
@@ -30,12 +29,7 @@ export default function SettingsPage() {
     autoSave: true,
     showProfile: true,
     twoFactorAuth: false,
-    sessionTimeout: 30,
-  });
-
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
+    sessionTimeout: 30,  });
 
   const tabs = [
     { id: 'appearance', name: 'Appearance', icon: PaintBrushIcon },

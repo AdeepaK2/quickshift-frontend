@@ -17,13 +17,13 @@ export interface UseApiState<T> {
  * Generic hook for API calls with loading and error states
  */
 export function useApi<T>(
-  apiCall: () => Promise<ApiResponse<T>>,
-  dependencies: any[] = []
+  apiCall: () => Promise<ApiResponse<T>>
 ): UseApiState<T> {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
@@ -45,10 +45,11 @@ export function useApi<T>(
     } finally {
       setLoading(false);
     }
-  }, dependencies);
+  }, [apiCall]);
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchData]);
 
   return {
@@ -62,7 +63,7 @@ export function useApi<T>(
 /**
  * Hook for mutations (POST, PUT, DELETE operations)
  */
-export function useMutation<T, P = any>() {
+export function useMutation<T, P = unknown>() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

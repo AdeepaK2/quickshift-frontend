@@ -1,13 +1,16 @@
-import * as React from "react";
+import Image from "next/image";
 
 export default function QuickShiftLandingPage() {
   return (
     <div className="flex overflow-hidden flex-col bg-white">
       <div className="flex flex-col pr-5 pl-12 w-full max-md:pl-5 max-md:max-w-full">
-        <div className="flex flex-wrap gap-5 justify-between w-full text-sm font-medium max-w-[1314px] text-neutral-600 max-md:max-w-full">
-          <img
-            src="bird_2.jpg"
+        <div className="flex flex-wrap gap-5 justify-between w-full text-sm font-medium max-w-[1314px] text-neutral-600 max-md:max-w-full">          <Image
+            src="/bird_2.jpg"
+            alt="QuickShift Logo"
+            width={150}
+            height={88}
             className="object-contain shrink-0 max-w-full aspect-[1.7] w-[150px]"
+            priority
           />
           <div className="flex flex-wrap gap-8 items-center self-start mt-3.5 max-md:max-w-full">
             <div className="grow self-stretch my-auto text-neutral-600">
@@ -49,17 +52,22 @@ export default function QuickShiftLandingPage() {
                   <div className="self-stretch my-auto text-white">
                     Find Jobs Now
                   </div>
-                </div>
-                <img
+                </div>                <Image
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/73a9136882a46ffb2c0990fdb50c7a3d45d94cd0?placeholderIfAbsent=true"
+                  alt="Step 1 icon"
                   className="object-contain z-10 self-center mt-0 w-9 aspect-square"
+                  width={36}
+                  height={36}
                 />
               </div>
             </div>
             <div className="ml-5 w-6/12 max-md:ml-0 max-md:w-full">
-              <img
-                src="Girl 2.png"
+              <Image
+                src="/Girl 2.png"
                 className="object-contain grow w-full aspect-[0.87] max-md:mt-10 max-md:max-w-full"
+                alt="A girl working on a laptop"
+                width={600}
+                height={690}
               />
             </div>
           </div>
@@ -70,25 +78,34 @@ export default function QuickShiftLandingPage() {
           <div className="flex gap-5 max-md:flex-col max-md:">
             <div className="w-9/12 max-md:ml-0 max-md:w-full">
               <div className="flex grow gap-5 justify-between leading-none text-sky-950 max-md:mt-10">
-                <img
+                <Image
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/30268fe193f6d4ce42d1af1c1042492e142e73bc?placeholderIfAbsent=true"
                   className="object-contain shrink-0 aspect-square rounded-[39px] w-[78px]"
+                  alt="Open Opportunities icon"
+                  width={78}
+                  height={78}
                 />
                 <div className="flex flex-col my-auto">
                   <div className="self-start text-4xl font-bold">450+</div>
                   <div className="mt-7 text-lg">Open Opportunities</div>
                 </div>
-                <img
+                <Image
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/d9311bdf9014d2c9159e63f60430d4a53ac56d9a?placeholderIfAbsent=true"
                   className="object-contain shrink-0 aspect-square rounded-[39px] w-[78px]"
+                  alt="Students Employed icon"
+                  width={78}
+                  height={78}
                 />
                 <div className="flex flex-col my-auto">
                   <div className="self-start text-4xl font-bold">1.2K+</div>
                   <div className="mt-7 text-lg">Students Employed</div>
                 </div>
-                <img
+                <Image
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/6b9b66fa873989f083fe0f017ee88389925ebbf4?placeholderIfAbsent=true"
                   className="object-contain shrink-0 aspect-square rounded-[39px] w-[78px]"
+                  alt="Placement Rate icon"
+                  width={78}
+                  height={78}
                 />
                 <div className="flex flex-col my-auto">
                   <div className="self-start text-4xl font-bold">92%</div>
@@ -98,9 +115,12 @@ export default function QuickShiftLandingPage() {
             </div>
             <div className="ml-5 w-3/12 max-md:ml-0 max-md:w-full">
               <div className="flex grow gap-5 leading-none text-sky-950 max-md:mt-10">
-                <img
+                <Image
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/8709b69cce85b3d079e8c6c9bf0810adf3fb225b?placeholderIfAbsent=true"
                   className="object-contain shrink-0 aspect-square rounded-[39px] w-[78px]"
+                  alt="Active Students icon"
+                  width={78}
+                  height={78}
                 />
                 <div className="flex flex-col my-auto">
                   <div className="self-start text-4xl font-bold">3.5K+</div>
@@ -114,18 +134,23 @@ export default function QuickShiftLandingPage() {
       <div className="self-center mt-24 w-full max-w-[1298px] max-md:mt-10 max-md:max-w-full">
         <div className="flex gap-5 max-md:flex-col max-md:">
           <div className="w-6/12 max-md:ml-0 max-md:w-full">
-            <img
+            <Image
               src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
               alt="Students working together on laptops"
               className="object-contain grow w-full aspect-[0.98] max-md:mt-10 max-md:max-w-full"
+              width={800}
+              height={800}
             />
           </div>
           <div className="ml-5 w-6/12 max-md:ml-0 max-md:w-full">
             <div className="flex flex-col mt-28 w-full max-md:mt-10 max-md:max-w-full">
               <div className="flex gap-1.5 self-start text-lg leading-loose text-cyan-500 uppercase">
-                <img
+                <Image
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/d08d92b7d1e75018b774046dc399ea474fcd93a6?placeholderIfAbsent=true"
                   className="object-contain shrink-0 w-3.5 aspect-[0.87]"
+                  alt="About Us icon"
+                  width={14}
+                  height={14}
                 />
                 <div>about us</div>
               </div>
@@ -134,7 +159,7 @@ export default function QuickShiftLandingPage() {
                   Connecting Students with Perfect Part-Time Opportunities
                 </div>
                 <div className="self-stretch mt-7 text-lg leading-8 text-neutral-600 max-md:max-w-full">
-                  At QuickShift, we understand that university life requires financial flexibility. Our platform connects ambitious students with part-time job opportunities that fit their schedules. Whether you're looking to earn through tutoring, freelancing, delivery services, promotional work, or handbill distribution, we make it easy to find legitimate, student-friendly employment that works around your studies.
+                  At QuickShift, we understand that university life requires financial flexibility. Our platform connects ambitious students with part-time job opportunities that fit their schedules. Whether you&apos;re looking to earn through tutoring, freelancing, delivery services, promotional work, or handbull distribution, we make it easy to find legitimate, student-friendly employment that works around your studies.
                 </div>
                 <div className="px-16 py-6 mt-11 text-base leading-4 text-center text-white uppercase bg-sky-600 rounded-md shadow-sm max-md:px-5 max-md:mt-10">
                   Join Now
@@ -152,9 +177,12 @@ export default function QuickShiftLandingPage() {
           <div className="flex gap-5 max-md:flex-col max-md:">
             <div className="w-3/12 max-md:ml-0 max-md:w-full">
               <div className="flex flex-col items-center px-2 py-9 mx-auto w-full text-center bg-white rounded-3xl shadow-[0px_4px_4px_rgba(0,0,0,0.25)] max-md:mt-10">
-                <img
+                <Image
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/0d1c9b10efd5ef7e0569d6a82bc09cb99ec4ae7b?placeholderIfAbsent=true"
                   className="object-contain max-w-full aspect-square rounded-[45px] w-[108px]"
+                  alt="Tutoring & Teaching icon"
+                  width={108}
+                  height={108}
                 />
                 <div className="mt-6 text-2xl font-bold leading-6 text-sky-950">
                   Tutoring & Teaching
@@ -164,18 +192,24 @@ export default function QuickShiftLandingPage() {
                 </div>
                 <div className="flex gap-3.5 px-5 py-6 mt-11 max-w-full text-base tracking-normal leading-4 text-white rounded-[200px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] w-[156px] max-md:mt-10">
                   <div>view details</div>
-                  <img
+                  <Image
                     src="https://cdn.builder.io/api/v1/image/assets/TEMP/5fa84eddbccfb8e58a2c48fc7fbe7610e214c7dd?placeholderIfAbsent=true"
                     className="object-contain shrink-0 aspect-[1.21] w-[17px]"
+                    alt="View Details icon"
+                    width={17}
+                    height={17}
                   />
                 </div>
               </div>
             </div>
             <div className="ml-5 w-3/12 max-md:ml-0 max-md:w-full">
               <div className="flex flex-col items-center px-1.5 py-8 mx-auto w-full text-center bg-white rounded-3xl shadow-[0px_4px_4px_rgba(0,0,0,0.25)] max-md:mt-10">
-                <img
+                <Image
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/06d35471050634b8a68f7ac8e71af600c2a80b2d?placeholderIfAbsent=true"
                   className="object-contain max-w-full aspect-square rounded-[45px] w-[108px]"
+                  alt="Freelancing & Remote Work icon"
+                  width={108}
+                  height={108}
                 />
                 <div className="mt-6 text-2xl font-bold leading-6 text-sky-950">
                   Freelancing & Remote Work
@@ -185,18 +219,24 @@ export default function QuickShiftLandingPage() {
                 </div>
                 <div className="flex gap-3.5 px-5 py-6 mt-12 max-w-full text-base tracking-normal leading-4 text-white rounded-[200px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] w-[156px] max-md:mt-10">
                   <div>view details</div>
-                  <img
+                  <Image
                     src="https://cdn.builder.io/api/v1/image/assets/TEMP/5fa84eddbccfb8e58a2c48fc7fbe7610e214c7dd?placeholderIfAbsent=true"
                     className="object-contain shrink-0 aspect-[1.21] w-[17px]"
+                    alt="View Details icon"
+                    width={17}
+                    height={17}
                   />
                 </div>
               </div>
             </div>
             <div className="ml-5 w-3/12 max-md:ml-0 max-md:w-full">
               <div className="flex flex-col items-center py-8 pr-4 pl-1.5 mx-auto w-full text-center bg-white rounded-3xl shadow-[0px_4px_4px_rgba(0,0,0,0.25)] max-md:mt-10">
-                <img
+                <Image
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/3c2d6fcdfa0195d2f066d6b9003de37b3483edf7?placeholderIfAbsent=true"
                   className="object-contain max-w-full aspect-square rounded-[45px] w-[108px]"
+                  alt="Delivery & Distribution icon"
+                  width={108}
+                  height={108}
                 />
                 <div className="mt-4 text-2xl font-bold leading-6 text-sky-950">
                   {" "}
@@ -208,18 +248,24 @@ export default function QuickShiftLandingPage() {
                 </div>
                 <div className="flex gap-3.5 px-5 py-6 mt-11 max-w-full text-base tracking-normal leading-4 text-white rounded-[200px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] w-[156px] max-md:mt-10">
                   <div>view details</div>
-                  <img
+                  <Image
                     src="https://cdn.builder.io/api/v1/image/assets/TEMP/a8bea8aa4407969aa9ade6e727b1940c5b612680?placeholderIfAbsent=true"
                     className="object-contain shrink-0 aspect-[1.21] w-[17px]"
+                    alt="View Details icon"
+                    width={17}
+                    height={17}
                   />
                 </div>
               </div>
             </div>
             <div className="ml-5 w-3/12 max-md:ml-0 max-md:w-full">
               <div className="flex flex-col items-center px-3.5 py-9 mx-auto w-full text-center bg-white rounded-3xl shadow-[0px_4px_4px_rgba(0,0,0,0.25)] max-md:mt-10">
-                <img
+                <Image
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/8f6c66c5bb131860440ec411f33afb40fe1f800b?placeholderIfAbsent=true"
                   className="object-contain max-w-full aspect-square rounded-[45px] w-[108px]"
+                  alt="Campus & Event Work icon"
+                  width={108}
+                  height={108}
                 />
                 <div className="mt-6 text-2xl font-bold leading-6 text-sky-950 w-[260px]">
                   Campus & Event Work
@@ -229,9 +275,12 @@ export default function QuickShiftLandingPage() {
                 </div>
                 <div className="flex gap-3.5 px-5 py-6 mt-10 max-w-full text-base tracking-normal leading-4 text-white rounded-[200px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] w-[156px]">
                   <div>view details</div>
-                  <img
+                  <Image
                     src="https://cdn.builder.io/api/v1/image/assets/TEMP/92e3a315403cdcddca7017f39985afdf19995d2d?placeholderIfAbsent=true"
                     className="object-contain shrink-0 aspect-[1.21] w-[17px]"
+                    alt="View Details icon"
+                    width={17}
+                    height={17}
                   />
                 </div>
               </div>
@@ -269,21 +318,23 @@ export default function QuickShiftLandingPage() {
               <div className="flex gap-5 max-md:flex-col max-md:">
                 <div className="w-[33%] max-md:ml-0 max-md:w-full">
                   <div className="grow pb-9 w-full text-lg bg-blue-50 rounded-3xl shadow-[0px_4px_4px_rgba(0,0,0,0.25)] max-md:mt-10">
-                    <img
+                    <Image
                       src="https://cdn.builder.io/api/v1/image/assets/TEMP/cafe4f8ac438a458c3105fc1b0f1253c79858fc1?placeholderIfAbsent=true"
                       className="object-contain aspect-[3] w-[51px]"
+                      alt="Success Story 1 icon"
+                      width={51}
+                      height={51}
                     />
-                    <div className="flex flex-col items-start px-8 mt-6 max-md:px-5">
-                      <div className="self-stretch leading-8 text-neutral-700">
-                        "QuickShift helped me find flexible tutoring 
+                    <div className="flex flex-col items-start px-8 mt-6 max-md:px-5">                      <div className="self-stretch leading-8 text-neutral-700">
+                        &quot;QuickShift helped me find flexible tutoring 
                         <br />
                         opportunities that fit perfectly around my 
                         <br />
-                        engineering classes. I've earned enough to 
+                        engineering classes. I&apos;ve earned enough to 
                         <br />
                         cover my textbooks and even save for 
                         <br />
-                        next semester!"
+                        next semester!&quot;
                       </div>
                       <div className="mt-6 text-xl font-bold leading-none text-sky-950">
                         Sarah Chen
@@ -296,21 +347,22 @@ export default function QuickShiftLandingPage() {
                 </div>
                 <div className="ml-5 w-[33%] max-md:ml-0 max-md:w-full">
                   <div className="grow pb-9 w-full text-lg bg-blue-50 rounded-3xl shadow-[0px_4px_4px_rgba(0,0,0,0.25)] max-md:mt-10">
-                    <img
+                    <Image
                       src="https://cdn.builder.io/api/v1/image/assets/TEMP/d36b16ce378eb0d3ead9e49471eedd39d398569f?placeholderIfAbsent=true"
                       className="object-contain aspect-[3] w-[51px]"
+                      alt="Success Story 2 icon"
+                      width={51}
+                      height={51}
                     />
-                    <div className="flex flex-col items-start px-8 mt-6 max-md:px-5">
-                      <div className="self-stretch leading-8 text-neutral-700">
-                        "The delivery jobs through QuickShift are 
+                    <div className="flex flex-col items-start px-8 mt-6 max-md:px-5">                      <div className="self-stretch leading-8 text-neutral-700">
+                        &quot;The delivery jobs through QuickShift are 
                         <br />
-                        perfect for my schedule. I can work between 
+                        perfect for my schedule. I can work between
                         <br />
                         classes and on weekends. The pay is fair 
+                        <br />                        and helps me cover my living expenses 
                         <br />
-                        and helps me cover my living expenses 
-                        <br />
-                        without stress."
+                        without stress.&quot;
                       </div>
                       <div className="mt-6 text-xl font-bold leading-none text-sky-950">
                         Marcus Rodriguez
@@ -323,13 +375,15 @@ export default function QuickShiftLandingPage() {
                 </div>
                 <div className="ml-5 w-[33%] max-md:ml-0 max-md:w-full">
                   <div className="grow pb-9 w-full text-lg bg-blue-50 rounded-3xl shadow-[0px_4px_4px_rgba(0,0,0,0.25)] max-md:mt-10">
-                    <img
+                    <Image
                       src="https://cdn.builder.io/api/v1/image/assets/TEMP/9dd232a8d1db8bf453da9c1a927defe1085fd6bd?placeholderIfAbsent=true"
                       className="object-contain aspect-[3] w-[51px]"
+                      alt="Success Story 3 icon"
+                      width={51}
+                      height={51}
                     />
-                    <div className="flex flex-col items-start px-8 mt-6 max-md:px-5">
-                      <div className="self-stretch leading-8 text-neutral-700">
-                        "I found amazing freelance graphic design 
+                    <div className="flex flex-col items-start px-8 mt-6 max-md:px-5">                      <div className="self-stretch leading-8 text-neutral-700">
+                        &quot;I found amazing freelance graphic design 
                         <br />
                         projects through QuickShift. Working 
                         <br />
@@ -337,7 +391,7 @@ export default function QuickShiftLandingPage() {
                         <br />
                         while earning money for my art supplies 
                         <br />
-                        and materials."
+                        and materials.&quot;
                       </div>
                       <div className="mt-6 text-xl font-bold leading-none text-sky-950">
                         Emma Thompson
@@ -375,10 +429,12 @@ export default function QuickShiftLandingPage() {
             </div>
           </div>
           <div className="ml-5 w-[44%] max-md:ml-0 max-md:w-full">
-            <img
+            <Image
               src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
               alt="Students earning money through part-time work"
               className="object-contain grow mt-20 w-full aspect-[0.83] max-md:mt-10 max-md:max-w-full"
+              width={600}
+              height={720}
             />
           </div>
         </div>

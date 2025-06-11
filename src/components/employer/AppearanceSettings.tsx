@@ -9,7 +9,6 @@ import {
   ComputerDesktopIcon,
   LanguageIcon
 } from '@heroicons/react/24/outline';
-import Card from '@/components/ui/card';
 import {Select} from '@/components/ui/custom-select';
 
 interface AppearanceSettingsProps {

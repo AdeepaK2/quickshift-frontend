@@ -7,8 +7,6 @@ import {
   LockClosedIcon,
   FingerPrintIcon
 } from '@heroicons/react/24/outline';
-import Card from '@/components/ui/card';
-import Switch from '@/components/ui/Switch';
 import {Select} from '@/components/ui/custom-select';
 
 interface SecuritySettingsProps {

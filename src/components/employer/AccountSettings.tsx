@@ -2,11 +2,8 @@ import { Settings } from '@/types/settings';
 import { motion } from 'framer-motion';
 import { 
   ShieldCheckIcon, 
-  DocumentCheckIcon,
-  EyeIcon,
-  ArrowPathIcon
+  DocumentCheckIcon
 } from '@heroicons/react/24/outline';
-import Card from '@/components/ui/card';
 import Switch from '@/components/ui/Switch';
 
 interface AccountSettingsProps {
@@ -63,7 +60,6 @@ export default function AccountSettings({ settings, onUpdate }: AccountSettingsP
                 description="Automatically save your progress when creating or editing job postings"
                 checked={settings.autoSave}
                 onChange={(checked) => onUpdate({ autoSave: checked })}
-                icon={<ArrowPathIcon className="h-4 w-4 text-blue-500" />}
                 activeColor="bg-blue-500"
               />
             </motion.div>
@@ -78,7 +74,6 @@ export default function AccountSettings({ settings, onUpdate }: AccountSettingsP
                 description="Make your profile visible to job seekers browsing the platform"
                 checked={settings.showProfile}
                 onChange={(checked) => onUpdate({ showProfile: checked })}
-                icon={<EyeIcon className="h-4 w-4 text-indigo-500" />}
                 activeColor="bg-indigo-500"
               />
             </motion.div>
