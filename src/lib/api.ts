@@ -81,8 +81,7 @@ async function apiCall<T>(
 
       if (!response.ok) {
         throw new ApiError(
-          `Both backend and local API failed. Local API status: ${response.status}`,
-          response.status
+          `Both backend and local API failed. Local API status: ${response.status}`
         );
       }
     } catch (localError) {
@@ -263,12 +262,10 @@ export const analyticsApi = {
   },
 };
 
+// Add ApiError class if referenced
 export class ApiError extends Error {
-  status?: number;
-
-  constructor(message: string, status?: number) {
+  constructor(message: string) {
     super(message);
     this.name = "ApiError";
-    this.status = status;
   }
 }

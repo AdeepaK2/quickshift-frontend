@@ -24,7 +24,19 @@ const navigation = [
   { name: 'Settings', href: '/employer/settings', icon: Cog6ToothIcon, category: 'account' },
 ];
 
-export default function Sidebar() {
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+}
+
+interface SidebarProps {
+  user?: User | null;
+  onLogout?: () => void;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export default function Sidebar({ user, onLogout }: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);

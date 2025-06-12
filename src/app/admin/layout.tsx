@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth, withAuth } from "@/contexts/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import DashboardContent from "@/components/admin/DashboardContent";
 import UndergraduatesContent from "@/components/admin/UndergraduatesContent";
@@ -8,11 +9,12 @@ import EmployerContent from "@/components/admin/EmployerContent";
 import GigContent from "@/components/admin/GigContent";
 import SettingContent from "@/components/admin/SettingContent";
 
-export default function AdminLayout({
+function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
 
   // Render the appropriate content based on the active tab
@@ -48,9 +50,28 @@ export default function AdminLayout({
         return <DashboardContent />;
     }
   };
+
+  const handleLogout = async () => {
+    if (confirm("Are you sure you want to logout?")) {
+      try {
+        await logout();
+        // Logout function in context will handle redirect
+      } catch (error) {
+        console.error('Logout error:', error);
+        // Force redirect even if logout API fails
+        window.location.href = '/auth/login';
+      }
+    }
+  };
+
   return (
     <div className="flex min-h-screen">
-      <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <AdminSidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab}
+        user={user}
+        onLogout={handleLogout}
+      />
       <main className="flex-1 p-6 ml-0 md:ml-64">
         {children}
         {renderContent()}
@@ -58,3 +79,6 @@ export default function AdminLayout({
     </div>
   );
 }
+
+// Wrap with auth protection - only allow admin users
+export default withAuth(AdminLayout, ['admin']);
