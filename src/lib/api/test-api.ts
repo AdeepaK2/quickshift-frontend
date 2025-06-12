@@ -4,6 +4,8 @@
  */
 
 import { gigsApi } from './gigsApi';
+// Add import if ApiError is referenced
+// import { ApiError } from './gigsApi';
 
 export async function testApiConnectivity() {
   console.log('Testing API connectivity...');
