@@ -15,7 +15,10 @@ import {
 } from '@heroicons/react/24/outline';
 
 interface SidebarProps {
-  user?: any;
+  user?: {
+    companyName?: string;
+    email?: string;
+  } | null;
   onLogout: () => void;
 }
 
