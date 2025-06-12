@@ -22,6 +22,7 @@ function RegisterForm() {
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -38,7 +39,6 @@ function RegisterForm() {
       [name]: value
     }));
     
-    // Clear specific field error when user types
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -46,6 +46,7 @@ function RegisterForm() {
       }));
     }
     if (error) setError('');
+    if (success) setSuccess('');
   };
 
   const validateForm = () => {
@@ -80,6 +81,15 @@ function RegisterForm() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const getRedirectPath = (userType: string) => {
+    switch (userType) {
+      case 'employer':
+        return '/employer/dashboard';
+      default:
+        return '/undergraduate';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -87,6 +97,7 @@ function RegisterForm() {
     
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       let response;
@@ -109,26 +120,36 @@ function RegisterForm() {
       }
 
       if (response.success && response.data) {
-        // Store tokens and user data
+        // Store auth data
         authService.setTokens(
           response.data.tokens.accessToken,
           response.data.tokens.refreshToken
-        );        authService.setUserType(userType);
+        );
+        authService.setUserType(userType);
         const userData = response.data.user || response.data.employer;
         if (userData) {
           authService.setUser(userData);
         }
 
-        // Redirect based on user type
-        if (userType === 'employer') {
-          router.push('/employer/dashboard');
-        } else {
-          router.push('/undergraduate');
-        }
-      }    } catch (err: unknown) {
+        // Show success message
+        const userName = userType === 'employer' 
+          ? formData.companyName 
+          : `${formData.firstName} ${formData.lastName}`;
+        
+        setSuccess(`Welcome to QuickShift, ${userName}! Your account has been created successfully. Redirecting to your dashboard...`);
+
+        // Redirect after delay
+        setTimeout(() => {
+          window.location.href = getRedirectPath(userType);
+        }, 2000);
+
+      } else {
+        setError(response.message || 'Registration failed. Please try again.');
+      }
+    } catch (err: unknown) {
       const errorMessage = (err as Error).message;
-      if (errorMessage.includes('already registered')) {
-        setError('An account with this email already exists.');
+      if (errorMessage.includes('already registered') || errorMessage.includes('already exists')) {
+        setError('An account with this email already exists. Please try logging in instead.');
       } else {
         setError(errorMessage || 'Registration failed. Please try again.');
       }
@@ -153,11 +174,12 @@ function RegisterForm() {
           <div className="grid grid-cols-2 bg-gray-100 p-1 rounded-lg">
             <button
               type="button"
+              disabled={loading}
               onClick={() => {
                 setUserType('user');
                 router.push('/auth/register?type=user');
               }}
-              className={`py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+              className={`py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 disabled:opacity-50 ${
                 userType === 'user'
                   ? 'bg-white text-[#0077B6] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -167,11 +189,12 @@ function RegisterForm() {
             </button>
             <button
               type="button"
+              disabled={loading}
               onClick={() => {
                 setUserType('employer');
                 router.push('/auth/register?type=employer');
               }}
-              className={`py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 ${
+              className={`py-2 px-4 rounded-md text-sm font-medium transition-all duration-200 disabled:opacity-50 ${
                 userType === 'employer'
                   ? 'bg-white text-[#0077B6] shadow-sm'
                   : 'text-gray-600 hover:text-gray-900'
@@ -198,7 +221,8 @@ function RegisterForm() {
                       name="firstName"
                       value={formData.firstName}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 ${
+                      disabled={loading}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 disabled:opacity-50 ${
                         errors.firstName ? 'border-red-500' : 'border-gray-300'
                       }`}
                       placeholder="John"
@@ -216,7 +240,8 @@ function RegisterForm() {
                       name="lastName"
                       value={formData.lastName}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 ${
+                      disabled={loading}
+                      className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 disabled:opacity-50 ${
                         errors.lastName ? 'border-red-500' : 'border-gray-300'
                       }`}
                       placeholder="Doe"
@@ -238,7 +263,8 @@ function RegisterForm() {
                   name="companyName"
                   value={formData.companyName}
                   onChange={handleInputChange}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 ${
+                  disabled={loading}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 disabled:opacity-50 ${
                     errors.companyName ? 'border-red-500' : 'border-gray-300'
                   }`}
                   placeholder="Your Company Name"
@@ -259,7 +285,8 @@ function RegisterForm() {
                 name="email"
                 value={formData.email}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 ${
+                disabled={loading}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 disabled:opacity-50 ${
                   errors.email ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Enter your email"
@@ -279,7 +306,8 @@ function RegisterForm() {
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200"
+                disabled={loading}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 disabled:opacity-50"
                 placeholder="+1 (555) 123-4567"
               />
             </div>
@@ -294,7 +322,8 @@ function RegisterForm() {
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 ${
+                disabled={loading}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 disabled:opacity-50 ${
                   errors.password ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Create a strong password"
@@ -314,7 +343,8 @@ function RegisterForm() {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 ${
+                disabled={loading}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 disabled:opacity-50 ${
                   errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="Confirm your password"
@@ -324,10 +354,52 @@ function RegisterForm() {
               )}
             </div>
 
-            {/* General Error */}
+            {/* Success Message */}
+            {success && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-green-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <p className="text-green-700 text-sm font-medium">{success}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-red-600 text-sm">{error}</p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-red-500 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-red-600 text-sm">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Manual Redirect Buttons (Only show after success) */}
+            {success && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-700 mb-3">
+                  If you're not redirected automatically, click your dashboard:
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.location.href = '/undergraduate'}
+                    className="px-4 py-2 bg-[#0077B6] text-white rounded-lg hover:bg-[#005F8A] transition-colors text-sm"
+                  >
+                    Student Dashboard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.location.href = '/employer/dashboard'}
+                    className="px-4 py-2 bg-[#00B4D8] text-white rounded-lg hover:bg-[#0096C7] transition-colors text-sm"
+                  >
+                    Employer Dashboard
+                  </button>
+                </div>
               </div>
             )}
 
@@ -363,7 +435,8 @@ function RegisterForm() {
               </p>
             </div>
           </form>
-        </div>      </div>
+        </div>
+      </div>
     </div>
   );
 }

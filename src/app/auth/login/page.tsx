@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { authService } from '@/services/authService';
 import { UserType, LoginResponse, ApiResponse } from '@/types/auth';
 
@@ -14,20 +13,34 @@ export default function LoginPage() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const router = useRouter();
+  const [success, setSuccess] = useState('');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
-    }));    if (error) setError(''); // Clear error when user types
+    }));
+    if (error) setError('');
+    if (success) setSuccess('');
+  };
+
+  const getRedirectPath = (userType: string) => {
+    switch (userType) {
+      case 'admin':
+        return '/admin';
+      case 'employer':
+        return '/employer/dashboard';
+      default:
+        return '/undergraduate';
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccess('');
     
     try {
       let response: ApiResponse<LoginResponse>;
@@ -40,42 +53,38 @@ export default function LoginPage() {
       } else {
         response = await authService.login(formData);
       }
+
       if (response.success && response.data) {
-        try {
-          // Store tokens and user data
-          authService.setTokens(
-            response.data.tokens.accessToken,
-            response.data.tokens.refreshToken
-          );
-          authService.setUserType(response.data.userType);
-          authService.setUser(response.data.user);
-          
-          // Set cookies manually to ensure they're available for middleware
-          document.cookie = `accessToken=${response.data.tokens.accessToken}; path=/; max-age=2592000`;
-          document.cookie = `refreshToken=${response.data.tokens.refreshToken}; path=/; max-age=2592000`;
-          document.cookie = `userType=${response.data.userType}; path=/; max-age=2592000`;
-          
-          // Store the user type before navigation
-          const userType = response.data.userType;
-          // Use router.push for navigation
-          switch (userType) {
-            case 'admin':
-              router.push('/admin');
-              break;
-            case 'employer':
-              router.push('/employer/dashboard');
-              break;
-            default:
-              router.push('/undergraduate');
-              break;
-          }
-        } catch (err) {
-          console.error("Error during login redirection:", err);
-          setError('Login successful but failed to redirect. Please try again.');
-        }
+        // Store auth data
+        authService.setTokens(
+          response.data.tokens.accessToken,
+          response.data.tokens.refreshToken
+        );
+        authService.setUserType(response.data.userType);
+        authService.setUser(response.data.user);
+        
+        // Show success message
+        const userName = response.data.user.firstName 
+          ? `${response.data.user.firstName} ${response.data.user.lastName}`
+          : response.data.user.companyName || response.data.user.email;
+        
+        setSuccess(`Welcome back, ${userName}! Redirecting to your dashboard...`);
+        
+        // Redirect after short delay
+        setTimeout(() => {
+          window.location.href = getRedirectPath(response.data.userType);
+        }, 1500);
+        
+      } else {
+        setError(response.message || 'Login failed. Please try again.');
       }
     } catch (err: unknown) {
-      setError((err as Error).message || 'Login failed. Please try again.');
+      const errorMessage = (err as Error).message;
+      if (errorMessage.includes('Invalid credentials')) {
+        setError('Invalid email or password. Please check your credentials and try again.');
+      } else {
+        setError(errorMessage || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -103,6 +112,7 @@ export default function LoginPage() {
                 value={formData.userType}
                 onChange={handleInputChange}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 bg-white"
+                disabled={loading}
               >
                 <option value="user">Student/Job Seeker</option>
                 <option value="employer">Employer</option>
@@ -121,6 +131,7 @@ export default function LoginPage() {
                 value={formData.email}
                 onChange={handleInputChange}
                 required
+                disabled={loading}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200"
                 placeholder="Enter your email"
               />
@@ -137,15 +148,65 @@ export default function LoginPage() {
                 value={formData.password}
                 onChange={handleInputChange}
                 required
+                disabled={loading}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200"
                 placeholder="Enter your password"
               />
             </div>
 
+            {/* Success Message */}
+            {success && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 text-green-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <p className="text-green-700 text-sm font-medium">{success}</p>
+                </div>
+              </div>
+            )}
+
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-red-600 text-sm">{error}</p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <svg className="w-5 h-5 text-red-500 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-red-600 text-sm">{error}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Manual Redirect Buttons (Only show after success) */}
+            {success && (
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-700 mb-3">
+                  If you're not redirected automatically, click your dashboard:
+                </p>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.location.href = '/undergraduate'}
+                    className="px-4 py-2 bg-[#0077B6] text-white rounded-lg hover:bg-[#005F8A] transition-colors text-sm"
+                  >
+                    Student Dashboard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.location.href = '/employer/dashboard'}
+                    className="px-4 py-2 bg-[#00B4D8] text-white rounded-lg hover:bg-[#0096C7] transition-colors text-sm"
+                  >
+                    Employer Dashboard
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.location.href = '/admin'}
+                    className="px-4 py-2 bg-[#023E8A] text-white rounded-lg hover:bg-[#03045E] transition-colors text-sm"
+                  >
+                    Admin Dashboard
+                  </button>
+                </div>
               </div>
             )}
 
@@ -176,7 +237,9 @@ export default function LoginPage() {
               >
                 Forgot your password?
               </Link>
-            </div>            {/* Register Links */}
+            </div>
+
+            {/* Register Links */}
             <div className="border-t border-gray-200 pt-6">
               <p className="text-center text-gray-600 text-sm mb-4">
                 Don&apos;t have an account?
