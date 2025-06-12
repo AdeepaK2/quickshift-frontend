@@ -2,9 +2,10 @@
  * Shared error state component with retry functionality
  */
 
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import React from "react";
+import { AlertTriangle } from "lucide-react";
+
 import { cn } from "@/lib/utils";
-import Button from "./button";
 
 interface ErrorStateProps {
   title?: string;
@@ -30,14 +31,12 @@ export function ErrorState({
       <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
       <p className="text-gray-600 mb-4 max-w-md">{message}</p>
       {onRetry && (
-        <Button
-          variant="outline"
+        <button
           onClick={onRetry}
-          className="flex items-center"
+          className="inline-flex items-center px-3 py-1.5 border border-red-300 shadow-sm text-xs font-medium rounded text-red-800 bg-white hover:bg-red-50 focus:outline-none"
         >
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Try Again
-        </Button>
+          Retry
+        </button>
       )}
     </div>
   );

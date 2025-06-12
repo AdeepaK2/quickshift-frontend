@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { User as UserType } from "@/types/auth";
 import {
   LayoutDashboard,
   Users,
@@ -11,6 +11,7 @@ import {
   Copyright,
   Menu,
   X,
+  User,
 } from "lucide-react";
 
 // Navigation items for the admin panel
@@ -45,30 +46,19 @@ const navItems = [
 interface AdminSidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  user?: UserType | null;
+  onLogout: () => void;
 }
 
 export default function AdminSidebar({
   activeTab,
   setActiveTab,
+  user,
+  onLogout,
 }: AdminSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const router = useRouter();
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
-  const handleLogout = () => {
-    if (confirm("Are you sure you want to logout?")) {
-      // Clear authentication data
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("adminSession");
-      localStorage.removeItem("userType");
-
-      // Clear any session storage
-      sessionStorage.clear();
-
-      // Redirect to login page
-      router.push("/login");
-    }
-  };
 
   const handleNavItemClick = (tabId: string) => {
     setActiveTab(tabId);
@@ -103,9 +93,24 @@ export default function AdminSidebar({
       >
         {/* Header */}
         <div className="p-4">
-          <div className="text-2xl font-semibold text-[#CAF0F8] mb-8 pt-16 md:pt-4 text-center md:text-left">
+          <div className="text-2xl font-semibold text-[#CAF0F8] mb-2 pt-16 md:pt-4 text-center md:text-left">
             Admin Panel
           </div>
+          {user && (
+            <div className="flex items-center space-x-3 p-3 bg-[#0077B6]/20 rounded-lg mt-4">
+              <div className="w-10 h-10 bg-[#CAF0F8] rounded-full flex items-center justify-center">
+                <User className="w-6 h-6 text-[#023E8A]" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">
+                  {user.firstName ? `${user.firstName} ${user.lastName}` : user.email}
+                </p>
+                <p className="text-xs text-[#90E0EF]">
+                  {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Navigation */}
@@ -132,7 +137,7 @@ export default function AdminSidebar({
         <div className="p-2 space-y-2">
           {/* Logout Button */}
           <button
-            onClick={handleLogout}
+            onClick={onLogout}
             className="flex items-center w-full text-left px-4 py-3 mx-2 rounded-md transition-colors text-[#90E0EF] hover:bg-[#0096C7] hover:text-white"
           >
             <span className="w-6 h-6 mr-3 flex items-center justify-center">

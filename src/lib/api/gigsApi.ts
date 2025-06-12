@@ -111,12 +111,9 @@ async function apiCall<T>(
 }
 
 export class ApiError extends Error {
-  status?: number;
-
-  constructor(message: string, status?: number) {
+  constructor(message: string) {
     super(message);
     this.name = "ApiError";
-    this.status = status;
   }
 }
 

@@ -35,6 +35,7 @@ export interface AdminDashboardStats {
   generatedAt: string;
 }
 
+// Add ApiError class if not already defined
 export class ApiError extends Error {
   status?: number;
 
