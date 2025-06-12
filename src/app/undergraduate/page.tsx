@@ -14,8 +14,14 @@ import MyPayments from './components/MyPayments';
 
 type TabType = 'jobs' | 'applications' | 'gigs' | 'payments' | 'profile';
 
+interface UndergraduateUser {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+}
+
 export default function UndergraduatePage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<UndergraduateUser | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('jobs');
   const [selectedJob, setSelectedJob] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

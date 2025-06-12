@@ -35,7 +35,7 @@ class AuthService {
         // Handle different error scenarios
         if (response.status === 400 && data.errors) {
           // Validation errors
-          const errorMessages = data.errors.map((err: any) => err.message).join(', ');
+          const errorMessages = data.errors.map((err: { message: string }) => err.message).join(', ');
           throw new Error(errorMessages);
         } else if (response.status === 401) {
           throw new Error(data.message || 'Invalid credentials');
@@ -304,7 +304,7 @@ class AuthService {
     }
   }
 
-  async updateProfile(token: string, profileData: Record<string, unknown>): Promise<ApiResponse<any>> {
+  async updateProfile(token: string, profileData: Record<string, unknown>): Promise<ApiResponse<unknown>> {
     try {
       if (!token) {
         throw new Error('Access token is required');

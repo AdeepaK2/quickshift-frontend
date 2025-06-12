@@ -8,9 +8,10 @@ import UndergraduatesContent from '@/components/admin/UndergraduatesContent';
 import EmployerContent from '@/components/admin/EmployerContent';
 import GigContent from '@/components/admin/GigContent';
 import SettingContent from '@/components/admin/SettingContent';
+import { User } from '@/types/auth';
 
 export default function AdminPage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [loading, setLoading] = useState(true);
 
@@ -21,7 +22,7 @@ export default function AdminPage() {
     
     // Verify user is admin
     if (userData && userType === 'admin') {
-      setUser(userData);
+      setUser(userData as User);
     } else {
       // If not admin, redirect to login
       window.location.href = '/auth/login';
@@ -133,7 +134,7 @@ export default function AdminPage() {
         <div className="mb-6">
           <div className="bg-gradient-to-r from-[#023E8A] to-[#0077B6] rounded-xl p-6 text-white shadow-lg">
             <h1 className="text-2xl font-bold mb-2">
-              Welcome back, {user.firstName ? `${user.firstName} ${user.lastName}` : 'Admin'}! 👨‍💼
+              Welcome back, {user?.firstName ? `${user.firstName} ${user.lastName}` : 'Admin'}! 👨‍💼
             </h1>
             <p className="text-blue-100">
               Manage your QuickShift platform from this admin dashboard.

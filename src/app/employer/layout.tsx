@@ -4,12 +4,17 @@ import { useState, useEffect } from 'react';
 import { authService } from '@/services/authService';
 import Sidebar from '@/components/layout/Sidebar';
 
+interface EmployerUser {
+  companyName?: string;
+  email?: string;
+}
+
 export default function EmployerLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -55,7 +60,7 @@ export default function EmployerLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar user={user} onLogout={handleLogout} />
+      <Sidebar user={user as EmployerUser} onLogout={handleLogout} />
       <main className="flex-1 p-6">
         {children}
       </main>
