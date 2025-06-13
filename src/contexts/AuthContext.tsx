@@ -88,10 +88,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               authService.clearTokens();
               setUser(null);
               setUserType(null);
-            }
-          } catch (error) {
+            }          } catch {
             console.log('AuthContext: Token verification error, trying refresh...');
-            
             // Try to refresh token
             const refreshToken = authService.getRefreshToken();
             if (refreshToken) {
@@ -119,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   setUser(null);
                   setUserType(null);
                 }
-              } catch (refreshError) {
+              } catch {
                 console.log('AuthContext: Token refresh error, clearing auth');
                 authService.clearTokens();
                 setUser(null);
@@ -137,8 +135,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setUserType(null);
         }
-      } catch (error) {
-        console.error('AuthContext: Auth initialization error:', error);
+      } catch {
+        console.error('AuthContext: Auth initialization error');
         authService.clearTokens();
         setUser(null);
         setUserType(null);
@@ -173,9 +171,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         throw new Error(response.message || 'Login failed');
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      throw error;
+    } catch {
+      console.error('Login error');
+      throw new Error('Login failed');
     }
   };
 
@@ -185,8 +183,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (refreshToken) {
         await authService.logout(refreshToken);
       }
-    } catch (error) {
-      console.error('Logout error:', error);
+    } catch {
+      console.error('Logout error');
     } finally {
       // Clear local state and storage regardless of API call success
       authService.clearTokens();

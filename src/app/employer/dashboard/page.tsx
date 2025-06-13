@@ -13,8 +13,13 @@ import {
   PlusIcon
 } from '@heroicons/react/24/outline';
 
+interface EmployerUser {
+  companyName?: string;
+  email?: string;
+}
+
 export default function EmployerDashboard() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<EmployerUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
 

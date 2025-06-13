@@ -72,7 +72,9 @@ export default function LoginPage() {
         
         // Redirect after short delay
         setTimeout(() => {
-          window.location.href = getRedirectPath(response.data.userType);
+          if (response.data) {
+            window.location.href = getRedirectPath(response.data.userType);
+          }
         }, 1500);
         
       } else {
@@ -182,7 +184,7 @@ export default function LoginPage() {
             {success && (
               <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-700 mb-3">
-                  If you're not redirected automatically, click your dashboard:
+                  If you&apos;re not redirected automatically, click your dashboard:
                 </p>
                 <div className="flex flex-col sm:flex-row gap-2">
                   <button

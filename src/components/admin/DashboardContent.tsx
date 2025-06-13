@@ -6,27 +6,30 @@ import {
   Briefcase,
   CheckCircle,
   UserPlus,
-  ArrowTrendingUpIcon,
   RefreshCw,
 } from "lucide-react";
 
 // Simplified components for clean admin dashboard
-const Card = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+interface CardProps {
+  children: React.ReactNode;
+  className?: string;
+}
+const Card = ({ children, className = "" }: CardProps) => (
   <div className={`bg-white rounded-lg border shadow-sm ${className}`}>
     {children}
   </div>
 );
 
-const CardContent = ({ children }: { children: React.ReactNode }) => (
-  <div className="p-6">{children}</div>
+const CardContent = ({ children, className = "" }: CardProps) => (
+  <div className={`p-6 ${className}`}>{children}</div>
 );
 
-const CardHeader = ({ children }: { children: React.ReactNode }) => (
-  <div className="p-6 pb-3">{children}</div>
+const CardHeader = ({ children, className = "" }: CardProps) => (
+  <div className={`p-6 pb-3 ${className}`}>{children}</div>
 );
 
-const CardTitle = ({ children }: { children: React.ReactNode }) => (
-  <h3 className="text-lg font-semibold">{children}</h3>
+const CardTitle = ({ children, className = "" }: CardProps) => (
+  <h3 className={`text-lg font-semibold ${className}`}>{children}</h3>
 );
 
 const CardDescription = ({ children }: { children: React.ReactNode }) => (
