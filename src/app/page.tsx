@@ -34,6 +34,11 @@ export default function ContactUs() {
           {/* Left side - Contact Info */}
           <div className="space-y-8">
             <div>
+              <img
+                src="https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&w=600&q=80"
+                alt="University student smiling with laptop"
+                className="w-full h-64 object-cover rounded-lg mb-8 shadow-md"
+              />
               <h1 className="text-5xl font-bold text-gray-900 mb-6">Contact Us</h1>
               <p className="text-lg text-gray-600 leading-relaxed">
                 Feel free to use the form or drop us an email. Old-fashioned phone calls work too.
