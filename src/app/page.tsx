@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Phone, Mail, MapPin } from 'lucide-react';
 
-export default function ContactUs() {
+export default function Page() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -84,7 +84,7 @@ export default function ContactUs() {
 
           {/* Right side - Form */}
           <div className="bg-white rounded-lg shadow-lg p-8">
-            <div className="space-y-6">
+            <form className="space-y-6" onSubmit={handleSubmit}>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Name
@@ -96,7 +96,7 @@ export default function ContactUs() {
                     placeholder="First"
                     value={formData.firstName}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-500"
                     required
                   />
                   <input
@@ -105,7 +105,7 @@ export default function ContactUs() {
                     placeholder="Last"
                     value={formData.lastName}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-500"
                     required
                   />
                 </div>
@@ -121,7 +121,7 @@ export default function ContactUs() {
                   placeholder="example@email.com"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-500"
                   required
                 />
               </div>
@@ -136,7 +136,7 @@ export default function ContactUs() {
                   placeholder="xxx-xxx-xxxx"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-500"
                 />
               </div>
 
@@ -150,7 +150,7 @@ export default function ContactUs() {
                   value={formData.message}
                   onChange={handleInputChange}
                   rows={6}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-vertical"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-vertical placeholder-gray-500"
                   required
                 />
               </div>
@@ -161,7 +161,7 @@ export default function ContactUs() {
               >
                 Submit
               </button>
-            </div>
+            </form>
           </div>
         </div>
       </div>
