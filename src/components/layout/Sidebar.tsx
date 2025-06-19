@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { 
   Bars3Icon, 
   XMarkIcon,
@@ -24,13 +25,14 @@ interface SidebarProps {
 
 export default function Sidebar({ user, onLogout }: SidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   const navigation = [
-    { name: 'Dashboard', href: '/employer/dashboard', icon: ChartBarIcon, current: true },
-    { name: 'Job Postings', href: '/employer/jobs', icon: BriefcaseIcon, current: false },
-    { name: 'Applicants', href: '/employer/applicants', icon: UserGroupIcon, current: false },
-    { name: 'Reports', href: '/employer/reports', icon: DocumentTextIcon, current: false },
-    { name: 'Settings', href: '/employer/settings', icon: CogIcon, current: false },
+    { name: 'Dashboard', href: '/employer/dashboard', icon: ChartBarIcon },
+    { name: 'Job Postings', href: '/employer/jobs', icon: BriefcaseIcon },
+    { name: 'Applicants', href: '/employer/applicants', icon: UserGroupIcon },
+    { name: 'Reports', href: '/employer/reports', icon: DocumentTextIcon },
+    { name: 'Settings', href: '/employer/settings', icon: CogIcon },
   ];
 
   return (
@@ -80,27 +82,28 @@ export default function Sidebar({ user, onLogout }: SidebarProps) {
               </div>
             </div>
           </div>
-        )}
-
-        {/* Navigation */}
+        )}        {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-2">
-          {navigation.map((item) => (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`
-                group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
-                ${item.current
-                  ? 'bg-[#0077B6] text-white'
-                  : 'text-[#90E0EF] hover:bg-[#0077B6]/50 hover:text-white'
-                }
-              `}
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
-              {item.name}
-            </Link>
-          ))}
+          {navigation.map((item) => {
+            const isActive = pathname === item.href || (item.href === '/employer/jobs' && pathname?.startsWith('/employer/jobs'));
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`
+                  group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-200
+                  ${isActive
+                    ? 'bg-[#0077B6] text-white'
+                    : 'text-[#90E0EF] hover:bg-[#0077B6]/50 hover:text-white'
+                  }
+                `}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                {item.name}
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Logout Button */}
