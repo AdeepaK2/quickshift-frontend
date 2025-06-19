@@ -138,7 +138,7 @@ export default function JobsPage() {
         staggerChildren: 0.12
       }
     }
-  };
+    };
   
   const item = {
     hidden: { opacity: 0, y: 20 },
@@ -146,9 +146,9 @@ export default function JobsPage() {
       opacity: 1, 
       y: 0, 
       transition: { 
-        type: "spring", 
+        type: "spring" as const, 
         stiffness: 100, 
-        damping: 12 
+        damping: 12
       } 
     }
   };
