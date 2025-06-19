@@ -108,17 +108,16 @@ export default function LoginPage() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 I am a
-              </label>
-              <select
+              </label>              <select
                 name="userType"
                 value={formData.userType}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 bg-white"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 bg-white text-gray-900"
                 disabled={loading}
               >
-                <option value="user">Student/Job Seeker</option>
-                <option value="employer">Employer</option>
-                <option value="admin">Administrator</option>
+                <option value="user" className="text-gray-900 bg-white">Student/Job Seeker</option>
+                <option value="employer" className="text-gray-900 bg-white">Employer</option>
+                <option value="admin" className="text-gray-900 bg-white">Administrator</option>
               </select>
             </div>
 
