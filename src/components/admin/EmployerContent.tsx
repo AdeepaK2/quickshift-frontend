@@ -361,12 +361,9 @@ export default function EmployerContent() {
   if (error) {
     const isConnectionError =
       error.includes("Failed to fetch") ||
-      error.includes("Network Error") ||
-      error.includes("Backend API failed");
+      error.includes("Network Error") ||      error.includes("Backend API failed");
     const errorMessage = isConnectionError
-      ? `Unable to connect to backend API. Please ensure the backend server is running at ${
-          process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api"
-        }`
+      ? `Unable to connect to backend API. Please ensure the backend server is running at https://quickshift-9qjun.ondigitalocean.app/api`
       : error;
 
     return (

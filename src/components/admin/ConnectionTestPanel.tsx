@@ -30,10 +30,9 @@ export function ConnectionTestPanel() {
         <div>
           <h3 className="text-lg font-semibold text-gray-900">
             Backend Connection Test
-          </h3>
-          <p className="text-sm text-gray-500">
+          </h3>          <p className="text-sm text-gray-500">
             Test connection to:{" "}
-            {process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000"}
+            https://quickshift-9qjun.ondigitalocean.app
           </p>
         </div>
         <Button

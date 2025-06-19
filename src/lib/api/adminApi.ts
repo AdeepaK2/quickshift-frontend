@@ -2,8 +2,7 @@
  * Admin API - Centralized API calls for admin-specific operations
  */
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+const API_BASE_URL = "https://quickshift-9qjun.ondigitalocean.app";
 
 // Consistent ApiResponse interface
 export interface ApiResponse<T> {

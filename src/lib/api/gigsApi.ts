@@ -4,8 +4,7 @@
  * Uses environment variable for API base URL configuration
  */
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
+const API_BASE_URL = "https://quickshift-9qjun.ondigitalocean.app";
 
 export interface ApiResponse<T> {
   success: boolean;

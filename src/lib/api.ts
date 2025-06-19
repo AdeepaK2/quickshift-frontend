@@ -3,9 +3,7 @@
  * Centralized API calls with error handling and loading states
  */
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
-const LOCAL_API_BASE_URL = "/api";
+const API_BASE_URL = "https://quickshift-9qjun.ondigitalocean.app/" ;
 
 // Environment check
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -30,7 +28,7 @@ export interface ApiResponse<T> {
 }
 
 /**
- * Generic API call function with fallback to local API
+ * Generic API call function using deployed API
  */
 async function apiCall<T>(
   endpoint: string,
@@ -54,44 +52,29 @@ async function apiCall<T>(
     headers,
   };
 
+  const apiUrl = `${API_BASE_URL}${endpoint}`;
+  
+  if (isDevelopment) {
+    console.log(`API Call: ${requestOptions.method || "GET"} ${apiUrl}`);
+  }
+
   let response: Response;
 
   try {
-    // Try backend API first
-    const backendUrl = `${API_BASE_URL}${endpoint}`;
-    if (isDevelopment) {
-      console.log(`API Call: ${requestOptions.method || "GET"} ${backendUrl}`);
-    }
-
-    response = await fetch(backendUrl, requestOptions);
+    response = await fetch(apiUrl, requestOptions);
 
     if (!response.ok) {
-      throw new Error(`Backend API returned ${response.status}`);
-    }
-  } catch (backendError) {
-    // Backend failed (network error or HTTP error), try local API
-    console.warn(
-      `Backend API failed, trying local API...`,
-      backendError instanceof Error ? backendError.message : backendError
-    );
-
-    try {
-      const localUrl = `${LOCAL_API_BASE_URL}${endpoint}`;
-      response = await fetch(localUrl, requestOptions);
-
-      if (!response.ok) {
-        throw new ApiError(
-          `Both backend and local API failed. Local API status: ${response.status}`
-        );
-      }
-    } catch (localError) {
-      console.error(`Local API also failed for ${endpoint}:`, localError);
       throw new ApiError(
-        `Both backend and local API failed: ${
-          localError instanceof Error ? localError.message : "Unknown error"
-        }`
+        `API request failed with status ${response.status}: ${response.statusText}`
       );
     }
+  } catch (error) {
+    console.error(`API call failed for ${endpoint}:`, error);
+    throw new ApiError(
+      `API request failed: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 
   try {
