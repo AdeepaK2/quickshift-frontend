@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { authService } from '@/services/authService';
 import Sidebar from '@/components/layout/Sidebar';
+import { JobProvider } from '@/contexts/JobContext';
 
 interface EmployerUser {
   companyName?: string;
@@ -57,13 +58,14 @@ export default function EmployerLayout({
       </div>
     );
   }
-
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar user={user as EmployerUser} onLogout={handleLogout} />
-      <main className="flex-1 p-6">
-        {children}
-      </main>
-    </div>
+    <JobProvider>
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar user={user as EmployerUser} onLogout={handleLogout} />
+        <main className="flex-1 p-6">
+          {children}
+        </main>
+      </div>
+    </JobProvider>
   );
 }

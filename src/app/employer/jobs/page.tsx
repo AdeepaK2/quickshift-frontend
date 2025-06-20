@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { Job } from '@/types/employer';
 import JobCard from '@/components/employer/JobCard';
 import Button from "@/components/ui/button";
+import { useJobs } from '@/contexts/JobContext';
 import { 
   BriefcaseIcon, 
   PlusIcon, 
@@ -19,11 +20,12 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function JobsPage() {
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const { jobs, updateJob, deleteJob } = useJobs();
   const [isLoaded, setIsLoaded] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [animateHeader, setAnimateHeader] = useState(false);
+  const [newJobIds, setNewJobIds] = useState<string[]>([]);
 
   useEffect(() => {
     // Simulate loading from API
@@ -42,85 +44,33 @@ export default function JobsPage() {
     };
   }, []);
 
-  // Sample jobs for demo - replaced this with your existing effect
+  // Track new jobs for highlight animation
   useEffect(() => {
-    const sampleJobs: Job[] = [
-      {
-        id: '1',
-        title: 'Frontend Developer',
-        description: 'We are looking for an experienced frontend developer proficient in React and TypeScript.',
-        location: 'Remote',
-        type: 'full-time',
-        createdAt: new Date('2023-05-01'),
-        updatedAt: new Date('2023-05-01'),
-        status: 'active',
-        applicantCount: 12,
-        salary: {
-          min: 80000,
-          max: 120000,
-          currency: 'USD'
-        },
-        requirements: [
-          'React', 
-          'TypeScript', 
-          '3+ years experience'
-        ]
-      },
-      {
-        id: '2',
-        title: 'UX Designer',
-        description: 'Looking for a talented UX designer to join our product team.',
-        location: 'New York, NY',
-        type: 'contract',
-        createdAt: new Date('2023-05-03'),
-        updatedAt: new Date('2023-05-03'),
-        status: 'closed',
-        applicantCount: 8,
-        salary: {
-          min: 90000,
-          max: 130000,
-          currency: 'USD'
-        },
-        requirements: [
-          'Figma', 
-          'User Research', 
-          '2+ years experience'
-        ]
-      },
-      {
-        id: '3',
-        title: 'Project Manager',
-        description: 'Seeking an experienced project manager for our engineering team.',
-        location: 'San Francisco, CA',
-        type: 'full-time',
-        createdAt: new Date('2023-05-07'),
-        updatedAt: new Date('2023-05-07'),
-        status: 'draft',
-        applicantCount: 0,
-        salary: {
-          min: 100000,
-          max: 150000,
-          currency: 'USD'
-        },
-        requirements: [
-          'Agile methodologies', 
-          'Jira', 
-          '5+ years experience'
-        ]
-      }
-    ];
+    const currentJobIds = jobs.map(job => job.id);
+    const previousJobIds = JSON.parse(localStorage.getItem('previousJobIds') || '[]');
     
-    setJobs(sampleJobs);
-  }, []);
+    // Find newly added jobs
+    const newIds = currentJobIds.filter(id => !previousJobIds.includes(id));
+    
+    if (newIds.length > 0) {
+      setNewJobIds(newIds);
+      
+      // Remove highlight after 3 seconds
+      setTimeout(() => {
+        setNewJobIds([]);
+      }, 3000);
+    }
+    
+    // Store current job IDs for next comparison
+    localStorage.setItem('previousJobIds', JSON.stringify(currentJobIds));
+  }, [jobs]);
 
   const handleDeleteJob = (jobId: string) => {
-    setJobs(jobs.filter(job => job.id !== jobId));
+    deleteJob(jobId);
   };
 
   const handleCloseJob = (jobId: string) => {
-    setJobs(jobs.map(job => 
-      job.id === jobId ? { ...job, status: 'closed' } : job
-    ));
+    updateJob(jobId, { status: 'closed' });
   };
 
   const filteredJobs = jobs.filter(job => {
@@ -542,14 +492,54 @@ export default function JobsPage() {
                 </div>
               )}
             </motion.div>
-          ) : (
-            filteredJobs.map((job) => (
+          ) : (            filteredJobs.map((job) => (
               <motion.div 
                 key={job.id} 
                 variants={item}
                 whileHover={{ y: -5, transition: { duration: 0.2 } }}
-                className="group"
+                className="group relative"
+                initial={newJobIds.includes(job.id) ? { scale: 0.95, opacity: 0.7 } : false}
+                animate={newJobIds.includes(job.id) ? { scale: 1, opacity: 1 } : {}}
+                transition={{ duration: 0.5, ease: "easeOut" }}
               >
+                {/* New job shimmer background */}
+                {newJobIds.includes(job.id) && (
+                  <motion.div
+                    className="absolute inset-0 rounded-lg bg-gradient-to-r from-green-100 via-green-50 to-green-100 opacity-30 -z-10"
+                    animate={{
+                      backgroundPosition: ['0% 50%', '100% 50%', '0% 50%'],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    style={{
+                      backgroundSize: '200% 200%',
+                    }}
+                  />
+                )}
+                
+                {/* New job ring effect */}
+                {newJobIds.includes(job.id) && (
+                  <div className="absolute inset-0 rounded-lg ring-2 ring-green-300 ring-opacity-40 shadow-lg shadow-green-100/50 -z-10" />
+                )}
+                
+                {/* New job indicator */}
+                {newJobIds.includes(job.id) && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="absolute -top-2 -left-2 z-10"
+                  >
+                    <div className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium shadow-lg flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
+                      New
+                    </div>
+                  </motion.div>
+                )}
+                
                 <JobCard
                   job={job}
                   onDelete={handleDeleteJob}
@@ -560,13 +550,12 @@ export default function JobsPage() {
           )}
         </motion.div>
       )}
-      
-      {/* Enhanced Loading skeleton */}
+        {/* Enhanced Loading skeleton */}
       {!isLoaded && (
         <div className="space-y-6">
           {[1, 2, 3].map((i) => (
             <div key={i} className="bg-white rounded-lg p-6 border border-gray-200 relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/70 to-transparent skeleton-wave"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/70 to-transparent animate-pulse"></div>
               <div className="animate-pulse flex flex-col">
                 <div className="h-7 bg-gray-200 rounded w-3/4 mb-4"></div>
                 <div className="h-4 bg-gray-200 rounded w-1/3 mb-6"></div>
@@ -581,15 +570,6 @@ export default function JobsPage() {
               </div>
             </div>
           ))}
-          <style jsx>{`
-            @keyframes skeletonWave {
-              0% { transform: translateX(-100%); }
-              50%, 100% { transform: translateX(100%); }
-            }
-            .skeleton-wave {
-              animation: skeletonWave 1.5s infinite;
-            }
-          `}</style>
         </div>
       )}
       
@@ -619,8 +599,7 @@ export default function JobsPage() {
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
               <span className="text-sm text-gray-600">Closed: <span className="font-medium">{jobs.filter(job => job.status === 'closed').length}</span></span>
-            </div>
-          </div>
+            </div>          </div>
         </motion.div>
       )}
     </div>
