@@ -238,7 +238,7 @@ export default function QuickShiftLandingPage() {
             />
           </div>
           <div className="ml-5 w-6/12 max-md:ml-0 max-md:w-full">
-            <div className="flex flex-col mt-28 w-full max-md:mt-10 max-md:max-w-full">
+            <div className="flex flex-col mt-20 w-full max-md:mt-10 max-md:max-w-full">
               <div className="flex gap-1.5 self-start text-lg leading-loose text-cyan-500 uppercase">
                 <Image
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/d08d92b7d1e75018b774046dc399ea474fcd93a6?placeholderIfAbsent=true"
@@ -250,10 +250,10 @@ export default function QuickShiftLandingPage() {
                 <div>about us</div>
               </div>
               <div className="flex flex-col items-start pl-1.5 mt-8 max-md:max-w-full">
-                <div className="text-5xl font-bold leading-[50px] text-sky-950 max-md:max-w-full max-md:text-4xl max-md:leading-[49px]">
+                <div className="text-4xl font-bold leading-[50px] text-sky-950 max-md:max-w-full max-md:text-4xl max-md:leading-[49px]">
                   Connecting Students with Perfect Part-Time Opportunities
                 </div>
-                <div className="self-stretch mt-7 text-lg leading-8 text-neutral-600 max-md:max-w-full">
+                <div className="self-stretch mt-7 text-base leading-8 text-neutral-600 max-md:max-w-full">
                   At QuickShift, we understand that university life requires financial flexibility. Our platform connects ambitious students with part-time job opportunities that fit their schedules. Whether you&apos;re looking to earn through tutoring, freelancing, delivery services, promotional work, or handbill distribution, we make it easy to find legitimate, student-friendly employment that works around your studies.
                 </div>
                 <button
@@ -315,9 +315,9 @@ export default function QuickShiftLandingPage() {
                   </div>
                   <button
                     onClick={handleFindJobs}
-                    className="flex gap-3.5 px-5 py-6 mt-11 max-w-full text-base tracking-normal leading-4 text-white bg-gradient-to-r from-sky-600 to-blue-600 rounded-[200px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:from-sky-700 hover:to-blue-700 transition-all duration-300 hover:scale-105 w-[156px] max-md:mt-10"
+                    className="flex gap-3.5 px-7 py-6 mt-11 max-w-full text-base tracking-normal leading-4 text-white bg-gradient-to-r from-sky-600 to-blue-600 rounded-[200px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:from-sky-700 hover:to-blue-700 transition-all duration-300 hover:scale-105 w-[156px] max-md:mt-10"
                   >
-                    <div>view details</div>
+                    <div>View Details</div>
                     <Image
                       src="https://cdn.builder.io/api/v1/image/assets/TEMP/5fa84eddbccfb8e58a2c48fc7fbe7610e214c7dd?placeholderIfAbsent=true"
                       className="object-contain shrink-0 aspect-[1.21] w-[17px]"
