@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import Image from "next/image";
 import toast, { Toaster } from "react-hot-toast";
 import {
   Search,
@@ -13,17 +14,27 @@ import {
   Shield,
   Calendar,
   MapPin,
+  Building,
 } from "lucide-react";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Select from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { useApi, useMutation } from "@/lib/hooks";
-import { employersApi } from "@/lib/api";
+import { employersApi, type Employer } from "@/lib/api";
 import { formatDateTime, getInitials } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingSpinner } from "@/components/ui/loading";
-import Image from "next/image";
 
 // Debounce utility function
 function debounce<T extends (...args: unknown[]) => unknown>(
@@ -36,144 +47,6 @@ function debounce<T extends (...args: unknown[]) => unknown>(
     timeout = setTimeout(() => func(...args), wait);
   };
 }
-
-// Define types for our employer data (matching backend API)
-type Employer = {
-  _id: string;
-  companyName: string;
-  email: string;
-  phone?: string;
-  location?: string;
-  isVerified: boolean;
-  verified: boolean;
-  ratings: {
-    averageRating: number;
-    totalReviews: number;
-  };
-  lastLoginAt?: string;
-  profilePicture?: string;
-  companyDescription?: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-// Badge component (if not available from shadcn/ui)
-const Badge = ({
-  children,
-  variant = "default",
-  className = "",
-  onClick,
-}: {
-  children: React.ReactNode;
-  variant?: "default" | "success" | "warning" | "destructive";
-  className?: string;
-  onClick?: () => void;
-}) => {
-  const variants = {
-    default: "bg-gray-100 text-gray-800",
-    success: "bg-green-100 text-green-800",
-    warning: "bg-yellow-100 text-yellow-800",
-    destructive: "bg-red-100 text-red-800",
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]} ${className}`}
-      onClick={onClick}
-    >
-      {children}
-    </span>
-  );
-};
-
-// Avatar component (if not available from shadcn/ui)
-const Avatar = ({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <div
-    className={`relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full ${className}`}
-  >
-    {children}
-  </div>
-);
-
-const AvatarImage = ({ src, alt }: { src: string; alt: string }) => (
-  <Image
-    className="aspect-square h-full w-full object-cover"
-    src={src}
-    alt={alt}
-    width={112}
-    height={112}
-  />
-);
-
-const AvatarFallback = ({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <div
-    className={`flex h-full w-full items-center justify-center rounded-full bg-muted ${className}`}
-  >
-    {children}
-  </div>
-);
-
-// Dialog component (simplified version)
-const Dialog = ({
-  open,
-  onOpenChange,
-  children,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  children: React.ReactNode;
-}) => {
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="fixed inset-0 bg-black/50"
-        onClick={() => onOpenChange(false)}
-      />
-      <div className="relative z-50 bg-white rounded-lg shadow-lg max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-        {children}
-      </div>
-    </div>
-  );
-};
-
-const DialogContent = ({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => <div className={`p-6 ${className}`}>{children}</div>;
-
-const DialogHeader = ({ children }: { children: React.ReactNode }) => (
-  <div className="mb-4">{children}</div>
-);
-
-const DialogTitle = ({ children }: { children: React.ReactNode }) => (
-  <h2 className="text-lg font-semibold">{children}</h2>
-);
-
-const DialogDescription = ({ children }: { children: React.ReactNode }) => (
-  <p className="text-sm text-gray-600 mt-2">{children}</p>
-);
-
-// Separator component
-const Separator = ({ className = "" }: { className?: string }) => (
-  <hr className={`border-gray-200 ${className}`} />
-);
 
 // LoadingState component for consistency
 const LoadingState = ({ message }: { message: string }) => (
@@ -361,7 +234,8 @@ export default function EmployerContent() {
   if (error) {
     const isConnectionError =
       error.includes("Failed to fetch") ||
-      error.includes("Network Error") ||      error.includes("Backend API failed");
+      error.includes("Network Error") ||
+      error.includes("Backend API failed");
     const errorMessage = isConnectionError
       ? `Unable to connect to backend API. Please ensure the backend server is running at https://quickshift-9qjun.ondigitalocean.app/api`
       : error;
@@ -389,7 +263,9 @@ export default function EmployerContent() {
               type="text"
               placeholder="Search by company name or email..."
               className="pl-10"
-              onChange={(e) => debouncedSearch(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                debouncedSearch(e.target.value)
+              }
             />
           </div>
         </div>

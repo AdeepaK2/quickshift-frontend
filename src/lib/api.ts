@@ -3,7 +3,10 @@
  * Centralized API calls with error handling and loading states
  */
 
-const API_BASE_URL = "https://quickshift-9qjun.ondigitalocean.app/" ;
+const API_BASE_URL =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:5000"
+    : "https://quickshift-9qjun.ondigitalocean.app";
 
 // Environment check
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -53,7 +56,7 @@ async function apiCall<T>(
   };
 
   const apiUrl = `${API_BASE_URL}${endpoint}`;
-  
+
   if (isDevelopment) {
     console.log(`API Call: ${requestOptions.method || "GET"} ${apiUrl}`);
   }
@@ -112,6 +115,39 @@ export type Employer = {
   updatedAt: string;
 };
 
+// Define Undergraduate type here for API typing
+export type Undergraduate = {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  fullName?: string;
+  email: string;
+  phone?: string;
+  profilePicture?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  university?: string;
+  faculty?: string;
+  yearOfStudy?: number;
+  studentIdVerified: boolean;
+  bio?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  role: string;
+  isActive: boolean;
+  isVerified: boolean;
+  lastLoginAt?: string;
+  skillsAndInterests?: string[];
+  documentsUploaded?: string[];
+  gpa?: number;
+  createdAt: string;
+  updatedAt: string;
+  // Computed fields for compatibility
+  accountStatus?: string;
+  verificationStatus?: string;
+};
+
 /**
  * Employers API
  */
@@ -137,7 +173,6 @@ export const employersApi = {
 /**
  * Students/Undergraduates API
  */
-import type { Undergraduate } from "@/lib/api/undergraduateApi";
 
 export const studentsApi = {
   getAll: async (): Promise<ApiResponse<Undergraduate[]>> => {
@@ -213,11 +248,14 @@ export const undergraduatesApi = {
     });
   },
   activate: async (id: string): Promise<ApiResponse<Undergraduate>> => {
-    return apiCall(`${API_ENDPOINTS.USERS}/${id}/verify`, {
+    return apiCall(`${API_ENDPOINTS.USERS}/${id}/activate`, {
       method: "PATCH",
     });
   },
-  update: async (id: string, data: Partial<Undergraduate>): Promise<ApiResponse<Undergraduate>> => {
+  update: async (
+    id: string,
+    data: Partial<Undergraduate>
+  ): Promise<ApiResponse<Undergraduate>> => {
     return apiCall(`${API_ENDPOINTS.USERS}/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -234,7 +272,9 @@ export const undergraduatesApi = {
  * Analytics API
  */
 export const analyticsApi = {
-  getDashboardStats: async (): Promise<ApiResponse<Record<string, unknown>>> => {
+  getDashboardStats: async (): Promise<
+    ApiResponse<Record<string, unknown>>
+  > => {
     return apiCall(`${API_ENDPOINTS.ANALYTICS}/dashboard`);
   },
   getUserStats: async (): Promise<ApiResponse<Record<string, unknown>>> => {
