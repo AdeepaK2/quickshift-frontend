@@ -112,22 +112,27 @@ export default function QuickShiftLandingPage() {
         </div>
 
         {/* Hero Section */}
-        <div className="self-end mt-24 w-full max-w-[1339px] max-md:mt-10 max-md:max-w-full">
+        <div className="self-end mt-15 w-full max-w-[1339px] max-md:mt-10 max-md:max-w-full">
           <div className="flex gap-5 max-md:flex-col max-md:">
             <div className="w-6/12 max-md:ml-0 max-md:w-full">
-              <div className="flex flex-col pb-8 mt-16 w-full max-md:mt-10 max-md:max-w-full">
+              <div className="flex flex-col pb-3 mt-16 w-full max-md:mt-10 max-md:max-w-full ">
                 <div className="max-md:max-w-full">
                   <div className={`text-5xl font-bold text-stone-900 max-md:max-w-full max-md:text-4xl transition-all duration-700 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
                     Find Your Perfect Part-Time Job Today!
                   </div>
-                  <div className={`mt-10 text-2xl text-black max-md:max-w-full transition-all duration-700 delay-200 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
-                    <span className="text-4xl font-bold">
+                  <div className={`mt-10 pb-10 text-2xl text-black max-md:max-w-full transition-all duration-700 delay-200 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
+                    <p className="text-4xl font-bold mb-10">
                       Work. Earn. Succeed.
-                    </span>
-                    <br />
+                    </p>
+                 
+                    <div className={"mt-0"}>
+                    
                     <span className="text-base">
                       Connect with flexible job opportunities perfect for university students - from tutoring and freelancing to delivery and promotional work.
                     </span>
+
+                    </div>
+                   
                   </div>
                 </div>
                 
@@ -144,19 +149,13 @@ export default function QuickShiftLandingPage() {
                   </svg>
                 </button>
 
-                <Image
-                  src="https://cdn.builder.io/api/v1/image/assets/TEMP/73a9136882a46ffb2c0990fdb50c7a3d45d94cd0?placeholderIfAbsent=true"
-                  alt="Step 1 icon"
-                  className="object-contain z-10 self-center mt-0 w-9 aspect-square"
-                  width={36}
-                  height={36}
-                />
+              
               </div>
             </div>
             <div className="ml-5 w-6/12 max-md:ml-0 max-md:w-full">
               <Image
-                src="/Girl 2.png"
-                className={`object-contain grow w-full aspect-[0.87] max-md:mt-10 max-md:max-w-full transition-all duration-700 delay-300 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}
+                src="/Girl photo.png"
+                className={`grow w-full aspect-[0.98] max-md:mt-10 max-md:max-w-full transition-all duration-700 delay-300 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}
                 alt="A girl working on a laptop"
                 width={600}
                 height={690}
