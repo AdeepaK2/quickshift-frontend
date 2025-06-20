@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import {
   Search,
@@ -106,22 +106,44 @@ export default function UndergraduatesContent() {
     yearOfStudy: null,
     verificationStatus: null,
     accountStatus: null,
-  }); // API calls
+  }); // API calls with explicit function
+  const fetchUndergraduates = useCallback(() => {
+    console.log("Fetching undergraduates...");
+    return undergraduatesApi.getAll();
+  }, []);
+
   const {
     data: undergraduatesResponse,
     loading,
     error,
     refetch,
-  } = useApi(() => undergraduatesApi.getAll());
+  } = useApi(fetchUndergraduates);
   const verifyUndergraduateMutation = useMutation();
   const suspendUndergraduateMutation = useMutation();
   const activateUndergraduateMutation = useMutation();
 
-  // Move undergraduates initialization inside useMemo to fix react-hooks/exhaustive-deps warnings
-  const undergraduates = useMemo(
-    () => undergraduatesResponse || [],
-    [undergraduatesResponse]
-  );
+  // Debug logging
+  useEffect(() => {
+    console.log("UndergraduatesContent Debug:", {
+      loading,
+      error,
+      undergraduatesResponse,
+      dataLength: undergraduatesResponse?.length || 0,
+    });
+  }, [loading, error, undergraduatesResponse]); // Move undergraduates initialization inside useMemo to fix react-hooks/exhaustive-deps warnings
+  const undergraduates = useMemo(() => {
+    // Handle both direct array and API response with data property
+    if (Array.isArray(undergraduatesResponse)) {
+      return undergraduatesResponse as Undergraduate[];
+    }
+    if (
+      (undergraduatesResponse as any)?.data &&
+      Array.isArray((undergraduatesResponse as any).data)
+    ) {
+      return (undergraduatesResponse as any).data as Undergraduate[];
+    }
+    return [] as Undergraduate[];
+  }, [undergraduatesResponse]);
 
   // Extract unique universities for filter dropdown
   const availableUniversities = useMemo(() => {
@@ -330,8 +352,8 @@ export default function UndergraduatesContent() {
               value={filters.university}
               onChange={(value: string) => updateFilter("university", value)}
               options={availableUniversities.map((university) => ({
-                value: university,
-                label: university,
+                value: university as string,
+                label: university as string,
               }))}
             />
           </div>
@@ -444,7 +466,7 @@ export default function UndergraduatesContent() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {filteredUndergraduates.map((undergraduate) => (
+                {filteredUndergraduates.map((undergraduate: Undergraduate) => (
                   <tr key={undergraduate._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Avatar>

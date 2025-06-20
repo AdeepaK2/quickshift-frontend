@@ -57,14 +57,25 @@ async function apiCall<T>(
 
   const apiUrl = `${API_BASE_URL}${endpoint}`;
 
+  // Add debugging for development
   if (isDevelopment) {
     console.log(`API Call: ${requestOptions.method || "GET"} ${apiUrl}`);
+    console.log("API Base URL:", API_BASE_URL);
+    console.log("Environment:", process.env.NODE_ENV);
   }
-
   let response: Response;
 
   try {
-    response = await fetch(apiUrl, requestOptions);
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    response = await fetch(apiUrl, {
+      ...requestOptions,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new ApiError(
@@ -73,6 +84,11 @@ async function apiCall<T>(
     }
   } catch (error) {
     console.error(`API call failed for ${endpoint}:`, error);
+
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ApiError("Request timed out - please check your connection");
+    }
+
     throw new ApiError(
       `API request failed: ${
         error instanceof Error ? error.message : "Unknown error"
