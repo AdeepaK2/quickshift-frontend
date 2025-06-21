@@ -52,7 +52,7 @@ export default function Page() {
                 </div>
                 <div>
                   <a href="tel:484.324.2400" className="text-lg text-gray-700 hover:text-blue-500 transition-colors">
-                    484.324.2400
+                    +94 11 225 9674
                   </a>
                 </div>
               </div>
@@ -62,8 +62,8 @@ export default function Page() {
                   <Mail className="w-6 h-6 text-blue-500" />
                 </div>
                 <div>
-                  <a href="mailto:info@mediaproper.com" className="text-lg text-gray-700 hover:text-blue-500 transition-colors">
-                    info@mediaproper.com
+                  <a href="mailto:info@quickshift.com" className="text-lg text-gray-700 hover:text-blue-500 transition-colors">
+                    info@quickshift.com
                   </a>
                 </div>
               </div>
@@ -74,8 +74,8 @@ export default function Page() {
                 </div>
                 <div>
                   <div className="text-lg text-gray-700">
-                    15 West 3rd St.<br />
-                    Media, Pa. 19063
+                    15 Walukarama Road.<br />
+                    Colombo 7
                   </div>
                 </div>
               </div>
