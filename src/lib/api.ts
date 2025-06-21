@@ -3,7 +3,10 @@
  * Centralized API calls with error handling and loading states
  */
 
-const API_BASE_URL = "https://quickshift-9qjun.ondigitalocean.app/" ;
+const API_BASE_URL =
+  process.env.NODE_ENV === "development"
+    ? "http://localhost:5000"
+    : "https://quickshift-9qjun.ondigitalocean.app";
 
 // Environment check
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -53,15 +56,26 @@ async function apiCall<T>(
   };
 
   const apiUrl = `${API_BASE_URL}${endpoint}`;
-  
+
+  // Add debugging for development
   if (isDevelopment) {
     console.log(`API Call: ${requestOptions.method || "GET"} ${apiUrl}`);
+    console.log("API Base URL:", API_BASE_URL);
+    console.log("Environment:", process.env.NODE_ENV);
   }
-
   let response: Response;
 
   try {
-    response = await fetch(apiUrl, requestOptions);
+    // Add timeout to prevent hanging requests
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+    response = await fetch(apiUrl, {
+      ...requestOptions,
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new ApiError(
@@ -70,6 +84,11 @@ async function apiCall<T>(
     }
   } catch (error) {
     console.error(`API call failed for ${endpoint}:`, error);
+
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new ApiError("Request timed out - please check your connection");
+    }
+
     throw new ApiError(
       `API request failed: ${
         error instanceof Error ? error.message : "Unknown error"
@@ -112,6 +131,39 @@ export type Employer = {
   updatedAt: string;
 };
 
+// Define Undergraduate type here for API typing
+export type Undergraduate = {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  fullName?: string;
+  email: string;
+  phone?: string;
+  profilePicture?: string;
+  dateOfBirth?: string;
+  gender?: string;
+  university?: string;
+  faculty?: string;
+  yearOfStudy?: number;
+  studentIdVerified: boolean;
+  bio?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  role: string;
+  isActive: boolean;
+  isVerified: boolean;
+  lastLoginAt?: string;
+  skillsAndInterests?: string[];
+  documentsUploaded?: string[];
+  gpa?: number;
+  createdAt: string;
+  updatedAt: string;
+  // Computed fields for compatibility
+  accountStatus?: string;
+  verificationStatus?: string;
+};
+
 /**
  * Employers API
  */
@@ -137,7 +189,6 @@ export const employersApi = {
 /**
  * Students/Undergraduates API
  */
-import type { Undergraduate } from "@/lib/api/undergraduateApi";
 
 export const studentsApi = {
   getAll: async (): Promise<ApiResponse<Undergraduate[]>> => {
@@ -213,11 +264,14 @@ export const undergraduatesApi = {
     });
   },
   activate: async (id: string): Promise<ApiResponse<Undergraduate>> => {
-    return apiCall(`${API_ENDPOINTS.USERS}/${id}/verify`, {
+    return apiCall(`${API_ENDPOINTS.USERS}/${id}/activate`, {
       method: "PATCH",
     });
   },
-  update: async (id: string, data: Partial<Undergraduate>): Promise<ApiResponse<Undergraduate>> => {
+  update: async (
+    id: string,
+    data: Partial<Undergraduate>
+  ): Promise<ApiResponse<Undergraduate>> => {
     return apiCall(`${API_ENDPOINTS.USERS}/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -234,7 +288,9 @@ export const undergraduatesApi = {
  * Analytics API
  */
 export const analyticsApi = {
-  getDashboardStats: async (): Promise<ApiResponse<Record<string, unknown>>> => {
+  getDashboardStats: async (): Promise<
+    ApiResponse<Record<string, unknown>>
+  > => {
     return apiCall(`${API_ENDPOINTS.ANALYTICS}/dashboard`);
   },
   getUserStats: async (): Promise<ApiResponse<Record<string, unknown>>> => {

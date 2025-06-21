@@ -1,13 +1,13 @@
 // Core UI Components
-export { default as Card } from './card';
-export { default as Button } from './button';
-export { default as Input } from './input';
+export { default as Card } from "./card";
+export { default as Button } from "./button";
+export { default as Input } from "./input";
 
 // Badge component
-export { Badge, badgeVariants } from './badge';
+export { Badge, badgeVariants } from "./badge";
 
-// Avatar components  
-export { Avatar, AvatarImage, AvatarFallback } from './avatar';
+// Avatar components
+export { Avatar, AvatarImage, AvatarFallback } from "./avatar";
 
 // Dialog components
 export {
@@ -21,7 +21,7 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-} from './dialog';
+} from "./dialog";
 
 // Other UI components
-export { default as Switch } from './Switch';
+export { default as Switch } from "./Switch";
