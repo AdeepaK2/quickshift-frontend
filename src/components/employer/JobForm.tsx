@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import Card from '@/components/ui/card';
+import { useJobs } from '@/contexts/JobContext';
+import { Job } from '@/types/employer';
 import { 
   BriefcaseIcon, 
   MapPinIcon, 
@@ -17,6 +19,7 @@ import {
 
 export default function JobForm() {
   const router = useRouter();
+  const { addJob } = useJobs();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -29,17 +32,45 @@ export default function JobForm() {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentSection, setCurrentSection] = useState(0);
-  const [showConfetti, setShowConfetti] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const [showConfetti, setShowConfetti] = useState(false);  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     // Simulate API call
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Create the new job object
+      const newJob = {
+        title: formData.title,
+        description: formData.description,
+        location: formData.location,
+        type: formData.type as Job['type'],
+        status: 'active' as const,
+        salary: {
+          min: parseInt(formData.minSalary) || 0,
+          max: parseInt(formData.maxSalary) || 0,
+          currency: 'USD'
+        },
+        requirements: formData.requirements.split(',').map(req => req.trim()).filter(req => req)
+      };
+      
+      // Add job to context
+      addJob(newJob);
+      
       setShowConfetti(true);
-      console.log('Job posted:', formData);
+      console.log('Job posted:', newJob);
+      
+      // Reset form for potential reuse
+      setFormData({
+        title: '',
+        description: '',
+        location: '',
+        type: 'full-time',
+        minSalary: '',
+        maxSalary: '',
+        requirements: '',
+      });
       
       setTimeout(() => {
         router.push('/employer/jobs');
