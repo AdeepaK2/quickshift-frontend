@@ -334,7 +334,7 @@ export default function UndergraduatesContent() {
             Filters
           </h2>
           <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />{" "}
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
               label="Search Users"
               placeholder={LABELS.SEARCH_PLACEHOLDER}
@@ -412,7 +412,7 @@ export default function UndergraduatesContent() {
             />
           </div>
         </div>
-      </div>{" "}
+      </div>
       {/* Results Summary */}
       <div className="flex justify-between items-center">
         <p className="text-sm text-gray-600">
@@ -421,7 +421,7 @@ export default function UndergraduatesContent() {
             filteredUndergraduates.length.toString()
           ).replace("{total}", (undergraduates?.length || 0).toString())}
         </p>
-      </div>{" "}
+      </div>
       {/* Users Table */}
       {filteredUndergraduates.length === 0 ? (
         <EmptyState
@@ -434,7 +434,7 @@ export default function UndergraduatesContent() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                {" "}
+                
                 <tr className="bg-gray-50 text-left">
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {TABLE_HEADERS.PROFILE}
@@ -470,7 +470,7 @@ export default function UndergraduatesContent() {
                   <tr key={undergraduate._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Avatar>
-                        {" "}
+                        
                         <AvatarImage
                           src={undergraduate.profilePicture || undefined}
                           alt={getFullName(undergraduate)}
@@ -479,13 +479,13 @@ export default function UndergraduatesContent() {
                           {getInitials(getFullName(undergraduate))}
                         </AvatarFallback>
                       </Avatar>
-                    </td>{" "}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {" "}
+                      
                       <div className="font-medium text-gray-900">
                         {getFullName(undergraduate)}
                       </div>
-                    </td>{" "}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {undergraduate.email || "N/A"}
                     </td>
@@ -507,9 +507,9 @@ export default function UndergraduatesContent() {
                           ? "Verified"
                           : "Not Verified"}
                       </Badge>
-                    </td>{" "}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {" "}
+                      
                       <Badge
                         variant={getStatusVariant(
                           getVerificationStatus(undergraduate)
@@ -519,7 +519,7 @@ export default function UndergraduatesContent() {
                       </Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {" "}
+                      
                       <Badge
                         variant={getStatusVariant(
                           getAccountStatus(undergraduate)
@@ -530,7 +530,7 @@ export default function UndergraduatesContent() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center space-x-2">
-                        {" "}
+                        
                         <Button
                           variant="outline"
                           size="sm"
@@ -554,7 +554,7 @@ export default function UndergraduatesContent() {
                             <ShieldCheck className="h-4 w-4 mr-1" />
                             {ACTIONS.VERIFY}
                           </Button>
-                        )}{" "}
+                        )}
                         {getAccountStatus(undergraduate) === "active" && (
                           <Button
                             variant="outline"
@@ -623,15 +623,15 @@ export default function UndergraduatesContent() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    {" "}
+                    
                     <h3 className="text-xl font-semibold">
                       {selectedUndergraduate.fullName || "N/A"}
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       {selectedUndergraduate.email || "N/A"}
-                    </p>{" "}
+                    </p>
                     <div className="mt-1 flex items-center space-x-2">
-                      {" "}
+                      
                       <Badge
                         variant={getStatusVariant(
                           selectedUndergraduate.accountStatus
@@ -659,9 +659,9 @@ export default function UndergraduatesContent() {
 
                   <div className="grid grid-cols-1 gap-3">
                     <div className="flex items-start">
-                      <Phone className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />{" "}
+                      <Phone className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                       <div>
-                        {" "}
+                        
                         <p className="text-sm font-medium text-gray-500">
                           {FIELD_LABELS.PHONE}
                         </p>
@@ -672,7 +672,7 @@ export default function UndergraduatesContent() {
                     <div className="flex items-start">
                       <UserIcon className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                       <div>
-                        {" "}
+                        
                         <p className="text-sm font-medium text-gray-500">
                           Gender
                         </p>
@@ -681,7 +681,7 @@ export default function UndergraduatesContent() {
                     </div>
 
                     <div className="flex items-start">
-                      <Calendar className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />{" "}
+                      <Calendar className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-gray-500">
                           Date of Birth
@@ -699,7 +699,7 @@ export default function UndergraduatesContent() {
                       <div>
                         <p className="text-sm font-medium text-gray-500">
                           Address
-                        </p>{" "}
+                        </p>
                         <p>
                           {[
                             selectedUndergraduate.address,
@@ -721,7 +721,7 @@ export default function UndergraduatesContent() {
 
                   <div className="grid grid-cols-1 gap-3">
                     <div className="flex items-start">
-                      <School className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />{" "}
+                      <School className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-gray-500">
                           {FIELD_LABELS.UNIVERSITY}
@@ -731,7 +731,7 @@ export default function UndergraduatesContent() {
                     </div>
 
                     <div className="flex items-start">
-                      <BookOpen className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />{" "}
+                      <BookOpen className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
                       <div>
                         <p className="text-sm font-medium text-gray-500">
                           {FIELD_LABELS.FACULTY}
@@ -797,7 +797,7 @@ export default function UndergraduatesContent() {
                           {FIELD_LABELS.JOIN_DATE}
                         </p>
                         <p>
-                          {" "}
+                          
                           {selectedUndergraduate.createdAt
                             ? formatDate(selectedUndergraduate.createdAt)
                             : "N/A"}
@@ -812,7 +812,7 @@ export default function UndergraduatesContent() {
                           {FIELD_LABELS.LAST_LOGIN}
                         </p>
                         <p>
-                          {" "}
+                          
                           {selectedUndergraduate.lastLoginAt
                             ? formatDate(selectedUndergraduate.lastLoginAt)
                             : "N/A"}
@@ -825,7 +825,7 @@ export default function UndergraduatesContent() {
                       <div>
                         <p className="text-sm font-medium text-gray-500">
                           {FIELD_LABELS.VERIFICATION_STATUS}
-                        </p>{" "}
+                        </p>
                         <Badge
                           variant={getStatusVariant(
                             selectedUndergraduate.verificationStatus
