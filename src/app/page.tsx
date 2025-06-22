@@ -1,170 +1,66 @@
-"use client";
 
-import React, { useState } from 'react';
-import { Phone, Mail, MapPin } from 'lucide-react';
 
-export default function Page() {
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    message: ''
-  });
+import React from "react";
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Handle form submission here
-    alert('Thank you for your message! We\'ll get back to you soon.');
-  };
-
+const AboutUs: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <section className="min-h-screen bg-white py-12 px-6 md:px-20 text-gray-800">
       <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Left side - Contact Info */}
-          <div className="space-y-8">
-            <div>
-              <img
-                src="https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&w=600&q=80"
-                alt="University student smiling with laptop"
-                className="w-full h-64 object-cover rounded-lg mb-8 shadow-md"
-              />
-              <h1 className="text-5xl font-bold text-gray-900 mb-6">Contact Us</h1>
-              <p className="text-lg text-gray-600 leading-relaxed">
-                Feel free to use the form or drop us an email. Old-fashioned phone calls work too.
-              </p>
-            </div>
+        <h1 className="text-4xl md:text-5xl font-bold mb-6 text-center text-blue-700">
+          About QuickShift 🚀
+        </h1>
 
-            <div className="space-y-6">
-              <div className="flex items-center space-x-4">
-                <div className="flex-shrink-0">
-                  <Phone className="w-6 h-6 text-blue-500" />
-                </div>
-                <div>
-                  <a href="tel:484.324.2400" className="text-lg text-gray-700 hover:text-blue-500 transition-colors">
-                    484.324.2400
-                  </a>
-                </div>
-              </div>
+        <p className="text-lg text-center text-gray-700 mb-10">
+          QuickShift is a student-driven initiative from the University of Moratuwa designed to empower the gig economy in Sri Lanka. Our mission is to connect students with reliable, short-term job opportunities while helping businesses find responsible temporary workers with ease.
+        </p>
 
-              <div className="flex items-center space-x-4">
-                <div className="flex-shrink-0">
-                  <Mail className="w-6 h-6 text-blue-500" />
-                </div>
-                <div>
-                  <a href="mailto:info@mediaproper.com" className="text-lg text-gray-700 hover:text-blue-500 transition-colors">
-                    info@mediaproper.com
-                  </a>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-4">
-                <div className="flex-shrink-0 mt-1">
-                  <MapPin className="w-6 h-6 text-blue-500" />
-                </div>
-                <div>
-                  <div className="text-lg text-gray-700">
-                    15 West 3rd St.<br />
-                    Media, Pa. 19063
-                  </div>
-                </div>
-              </div>
-            </div>
+        <div className="grid md:grid-cols-2 gap-10">
+          <div>
+            <h2 className="text-2xl font-semibold mb-4 text-gray-900">Our Purpose</h2>
+            <p className="text-gray-700 leading-relaxed">
+              Youth unemployment in Sri Lanka remains above 26%. Many undergraduates struggle to find flexible work that fits their schedules. On the other side, small businesses and service providers often need temporary help for tasks like handbill distribution and event staffing. QuickShift bridges this gap by offering a trusted, mobile-first platform that matches gig workers with short-term jobs in their area.
+            </p>
           </div>
 
-          {/* Right side - Form */}
-          <div className="bg-white rounded-lg shadow-lg p-8">
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Name
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    name="firstName"
-                    placeholder="First"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-500"
-                    required
-                  />
-                  <input
-                    type="text"
-                    name="lastName"
-                    placeholder="Last"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  placeholder="example@email.com"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-500"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Phone (optional)
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  placeholder="xxx-xxx-xxxx"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder-gray-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Message
-                </label>
-                <textarea
-                  name="message"
-                  placeholder="Type your message ..."
-                  value={formData.message}
-                  onChange={handleInputChange}
-                  rows={6}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-vertical placeholder-gray-500"
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-4 px-8 rounded-lg transition-colors duration-200 transform hover:scale-105"
-              >
-                Submit
-              </button>
-            </form>
+          <div>
+            <h2 className="text-2xl font-semibold mb-4 text-gray-900">Our Impact</h2>
+            <ul className="list-disc pl-5 text-gray-700 space-y-2">
+              <li>Reduces youth unemployment through real-time access to income opportunities.</li>
+              <li>Streamlines hiring for businesses needing short-term staff quickly.</li>
+              <li>Fosters social equity and inclusivity through open platform access.</li>
+              <li>Promotes micro-employment to enhance economic resilience.</li>
+            </ul>
           </div>
         </div>
+
+        <div className="mt-14">
+          <h2 className="text-2xl font-semibold mb-4 text-gray-900 text-center">Why QuickShift Stands Out</h2>
+          <div className="grid md:grid-cols-2 gap-8 text-gray-700">
+            <ul className="list-disc pl-5 space-y-2">
+              <li>📍 Hyperlocal job targeting using location-based filtering.</li>
+              <li>⚡ Instant apply and auto-matching with available workers nearby.</li>
+              <li>📱 Mobile-first design ideal for on-the-go users and students.</li>
+            </ul>
+            <ul className="list-disc pl-5 space-y-2">
+              <li>⭐ Rating & review system to ensure accountability and trust.</li>
+              <li>🧠 Simple onboarding with a focus on quick, low-barrier jobs.</li>
+              <li>🔒 Strong data privacy and secure user authentication.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="mt-16 text-center">
+          <h3 className="text-xl font-semibold text-gray-800 mb-4">
+            Built with ❤️ by Team Xtruders – University of Moratuwa
+          </h3>
+          <p className="text-base text-gray-600">
+            We're on a mission to revolutionize flexible work in Sri Lanka. <br />
+            Join us in empowering the next generation of gig workers. 💼🎓
+          </p>
+        </div>
       </div>
-    </div>
+    </section>
   );
-}
+};
+
+export default AboutUs;
