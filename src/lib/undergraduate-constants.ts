@@ -36,13 +36,14 @@ export const UNDERGRADUATE_CONSTANTS = {
     STATUS: "Status",
     ACTIONS: "Actions",
   },
-
   // Action labels
   ACTIONS: {
     VIEW: "View",
     VERIFY: "Verify",
     SUSPEND: "Suspend",
     ACTIVATE: "Activate",
+    REFRESH: "Refresh",
+    EXPORT: "Export CSV",
   },
 
   // Sheet sections

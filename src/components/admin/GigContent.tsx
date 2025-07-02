@@ -40,11 +40,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { useApi, useMutation } from "@/lib/hooks";
-import { gigsApi, Gig, ApiError } from "@/lib/api/gigsApi";
 import { formatDate, getStatusVariant, debounce } from "@/lib/utils";
-import { LoadingState } from "@/components/ui/loading";
-import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
 
 // TypeScript interfaces for filtering
@@ -57,6 +53,323 @@ interface FilterState {
   deadlineStart: string;
   deadlineEnd: string;
 }
+
+// Gig interface for mock data
+interface Gig {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  category: string;
+  city: string;
+  payRate: {
+    type: 'hourly' | 'fixed' | 'daily';
+    amount?: number;
+    min?: number;
+    max?: number;
+    currency: string;
+  };
+  totalPositions: number;
+  filledPositions: number;
+  applicationDeadline: string;
+  createdAt: string;
+  updatedAt: string;
+  isAcceptingApplications: boolean;
+  employer?: {
+    name: string;
+    email: string;
+  };
+  location?: {
+    address: string;
+    city: string;
+    postalCode: string;
+  };
+  timeSlots?: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+    peopleNeeded: number;
+    peopleAssigned: number;
+  }>;
+  skills?: string[];
+  experience?: string;
+  dressCode?: string;
+  equipment?: string;
+  applicants?: Array<{
+    id: string;
+    name: string;
+    status: string;
+    appliedAt: string;
+  }>;
+}
+
+// Mock data
+const mockGigs: Gig[] = [
+  {
+    id: "1",
+    title: "Event Setup Staff Needed",
+    description: "Help set up tables, chairs, and decorations for a corporate event. Must be able to lift 25lbs and work in a team environment.",
+    status: "open",
+    category: "Event Staff",
+    city: "Toronto",
+    payRate: {
+      type: "hourly",
+      min: 18,
+      max: 22,
+      currency: "$"
+    },
+    totalPositions: 8,
+    filledPositions: 3,
+    applicationDeadline: "2025-07-15T23:59:59Z",
+    createdAt: "2025-06-15T10:00:00Z",
+    updatedAt: "2025-06-20T14:30:00Z",
+    isAcceptingApplications: true,
+    employer: {
+      name: "EventPro Solutions",
+      email: "contact@eventpro.com"
+    },
+    location: {
+      address: "123 Convention Center Drive",
+      city: "Toronto",
+      postalCode: "M5V 3A8"
+    },
+    timeSlots: [
+      {
+        date: "2025-07-20T00:00:00Z",
+        startTime: "08:00",
+        endTime: "16:00",
+        peopleNeeded: 4,
+        peopleAssigned: 2
+      },
+      {
+        date: "2025-07-21T00:00:00Z",
+        startTime: "09:00",
+        endTime: "17:00",
+        peopleNeeded: 4,
+        peopleAssigned: 1
+      }
+    ],
+    skills: ["Physical fitness", "Team work", "Attention to detail"],
+    experience: "No prior experience required",
+    dressCode: "Black pants, comfortable shoes",
+    equipment: "Company will provide all tools",
+    applicants: [
+      {
+        id: "a1",
+        name: "John Smith",
+        status: "accepted",
+        appliedAt: "2025-06-16T09:00:00Z"
+      },
+      {
+        id: "a2",
+        name: "Sarah Johnson",
+        status: "pending",
+        appliedAt: "2025-06-17T14:30:00Z"
+      }
+    ]
+  },
+  {
+    id: "2",
+    title: "Campus Tour Guide",
+    description: "Lead prospective students and their families on informative campus tours. Must be knowledgeable about university programs and facilities.",
+    status: "draft",
+    category: "Campus Tours",
+    city: "Vancouver",
+    payRate: {
+      type: "fixed",
+      amount: 150,
+      currency: "$"
+    },
+    totalPositions: 3,
+    filledPositions: 0,
+    applicationDeadline: "2025-07-10T23:59:59Z",
+    createdAt: "2025-06-18T11:00:00Z",
+    updatedAt: "2025-06-22T09:15:00Z",
+    isAcceptingApplications: false,
+    employer: {
+      name: "University of British Columbia",
+      email: "tours@ubc.ca"
+    },
+    location: {
+      address: "2329 West Mall",
+      city: "Vancouver",
+      postalCode: "V6T 1Z4"
+    },
+    timeSlots: [
+      {
+        date: "2025-07-25T00:00:00Z",
+        startTime: "10:00",
+        endTime: "15:00",
+        peopleNeeded: 3,
+        peopleAssigned: 0
+      }
+    ],
+    skills: ["Public speaking", "University knowledge", "Customer service"],
+    experience: "Current student preferred",
+    dressCode: "Business casual",
+    equipment: "Campus map and information packet provided",
+    applicants: []
+  },
+  {
+    id: "3",
+    title: "Warehouse Package Handler",
+    description: "Sort, scan, and load packages in a fast-paced warehouse environment. Must be able to work efficiently and accurately.",
+    status: "in_progress",
+    category: "Warehouse",
+    city: "Calgary",
+    payRate: {
+      type: "hourly",
+      min: 16,
+      max: 19,
+      currency: "$"
+    },
+    totalPositions: 12,
+    filledPositions: 8,
+    applicationDeadline: "2025-06-30T23:59:59Z",
+    createdAt: "2025-06-10T08:00:00Z",
+    updatedAt: "2025-06-21T16:45:00Z",
+    isAcceptingApplications: true,
+    employer: {
+      name: "FastShip Logistics",
+      email: "hr@fastship.ca"
+    },
+    location: {
+      address: "4567 Industrial Blvd",
+      city: "Calgary",
+      postalCode: "T2E 7Y6"
+    },
+    timeSlots: [
+      {
+        date: "2025-07-01T00:00:00Z",
+        startTime: "06:00",
+        endTime: "14:00",
+        peopleNeeded: 6,
+        peopleAssigned: 4
+      },
+      {
+        date: "2025-07-01T00:00:00Z",
+        startTime: "14:00",
+        endTime: "22:00",
+        peopleNeeded: 6,
+        peopleAssigned: 4
+      }
+    ],
+    skills: ["Physical stamina", "Attention to detail", "Time management"],
+    experience: "1+ years warehouse experience preferred",
+    dressCode: "Steel-toed boots, safety vest provided",
+    equipment: "Scanner and safety equipment provided",
+    applicants: [
+      {
+        id: "a3",
+        name: "Mike Wilson",
+        status: "accepted",
+        appliedAt: "2025-06-11T10:30:00Z"
+      },
+      {
+        id: "a4",
+        name: "Lisa Chen",
+        status: "accepted",
+        appliedAt: "2025-06-12T13:15:00Z"
+      },
+      {
+        id: "a5",
+        name: "David Brown",
+        status: "pending",
+        appliedAt: "2025-06-20T11:00:00Z"
+      }
+    ]
+  },
+  {
+    id: "4",
+    title: "Food Service Assistant",
+    description: "Assist with food preparation, serving, and cleanup at a busy restaurant. Food handling certification required.",
+    status: "completed",
+    category: "Food Service",
+    city: "Montreal",
+    payRate: {
+      type: "hourly",
+      min: 15,
+      max: 17,
+      currency: "$"
+    },
+    totalPositions: 5,
+    filledPositions: 5,
+    applicationDeadline: "2025-06-01T23:59:59Z",
+    createdAt: "2025-05-20T12:00:00Z",
+    updatedAt: "2025-06-15T18:20:00Z",
+    isAcceptingApplications: false,
+    employer: {
+      name: "Bistro Montreal",
+      email: "jobs@bistromontreal.com"
+    },
+    location: {
+      address: "789 Rue Sainte-Catherine",
+      city: "Montreal",
+      postalCode: "H3B 1Y5"
+    },
+    timeSlots: [
+      {
+        date: "2025-06-10T00:00:00Z",
+        startTime: "11:00",
+        endTime: "19:00",
+        peopleNeeded: 5,
+        peopleAssigned: 5
+      }
+    ],
+    skills: ["Food handling", "Customer service", "Multitasking"],
+    experience: "Food handling certification required",
+    dressCode: "Black pants, non-slip shoes, uniform provided",
+    equipment: "All kitchen equipment provided",
+    applicants: [
+      {
+        id: "a6",
+        name: "Emma Dubois",
+        status: "completed",
+        appliedAt: "2025-05-21T09:00:00Z"
+      },
+      {
+        id: "a7",
+        name: "Pierre Laval",
+        status: "completed",
+        appliedAt: "2025-05-22T14:30:00Z"
+      }
+    ]
+  },
+  {
+    id: "5",
+    title: "Administrative Support",
+    description: "Provide administrative support including data entry, filing, and phone support. Must have excellent organizational skills.",
+    status: "cancelled",
+    category: "Administrative",
+    city: "Ottawa",
+    payRate: {
+      type: "daily",
+      amount: 120,
+      currency: "$"
+    },
+    totalPositions: 2,
+    filledPositions: 0,
+    applicationDeadline: "2025-06-25T23:59:59Z",
+    createdAt: "2025-06-12T14:00:00Z",
+    updatedAt: "2025-06-19T10:30:00Z",
+    isAcceptingApplications: false,
+    employer: {
+      name: "Capital Office Solutions",
+      email: "admin@capitaloffice.ca"
+    },
+    location: {
+      address: "456 Sparks Street",
+      city: "Ottawa",
+      postalCode: "K1P 5E2"
+    },
+    timeSlots: [],
+    skills: ["Microsoft Office", "Data entry", "Phone etiquette"],
+    experience: "2+ years office experience",
+    dressCode: "Business professional",
+    equipment: "Computer and phone provided",
+    applicants: []
+  }
+];
 
 // Constants for filter options
 const GIG_STATUSES = ["draft", "open", "in_progress", "completed", "cancelled"];
@@ -73,17 +386,9 @@ const GIG_CATEGORIES = [
 ];
 
 export default function GigContent() {
-  // API hooks for data fetching
-  const {
-    data: gigsResponse,
-    loading: gigsLoading,
-    error: gigsError,
-    refetch,
-  } = useApi(() => gigsApi.getAll());
-
-  // Mutation hooks for API operations
-  const { mutate: updateGig, loading: updateLoading } = useMutation();
-  const { mutate: deleteGig, loading: deleteLoading } = useMutation();
+  // State management for mock data
+  const [gigs, setGigs] = useState<Gig[]>(mockGigs);
+  const [loading, setLoading] = useState(false);
 
   // State management
   const [filters, setFilters] = useState<FilterState>({
@@ -95,35 +400,18 @@ export default function GigContent() {
     deadlineStart: "",
     deadlineEnd: "",
   });
-
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
   const [gigToDelete, setGigToDelete] = useState<string | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false); // Extract gigs data - handle both direct array and wrapped response
-  const gigs: Gig[] = useMemo(() => {
-    if (!gigsResponse) return [];
-
-    // If response has a data property, use it; otherwise assume direct array
-    if ((gigsResponse as unknown as { data?: unknown }).data) {
-      const data = (gigsResponse as unknown as { data?: unknown }).data;
-      return Array.isArray(data) ? (data as Gig[]) : [];
-    }
-
-    // If response is directly an array
-    if (Array.isArray(gigsResponse)) {
-      return gigsResponse as Gig[];
-    }
-
-    // Fallback to empty array
-    return [];
-  }, [gigsResponse]);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
   // Debounced search function
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedSearch = useCallback(
-    debounce((searchTerm: unknown) => {
+  const debouncedSearch = useCallback(    debounce((searchTerm: unknown) => {
       setFilters((prev) => ({ ...prev, search: searchTerm as string }));
     }, 300),
     []
   );
+  
   // Filter gigs based on current filters
   const filteredGigs = useMemo(() => {
     return gigs.filter((gig: Gig) => {
@@ -160,11 +448,10 @@ export default function GigContent() {
         matchesDeadlineEnd
       );
     });
-  }, [gigs, filters]);
-  // Extract unique values for filter dropdowns
+  }, [gigs, filters]);  // Extract unique values for filter dropdowns
   const uniqueEmployers = useMemo(
     () => [
-      ...new Set(gigs.map((gig: Gig) => gig.employer?.name).filter(Boolean)),
+      ...new Set(gigs.map((gig: Gig) => gig.employer?.name).filter((name): name is string => Boolean(name))),
     ],
     [gigs]
   );
@@ -188,53 +475,85 @@ export default function GigContent() {
       deadlineStart: "",
       deadlineEnd: "",
     });
-  }; // Handle status updates with proper error handling and toast feedback
+  };  // Handle status updates with mock data
   const handleStatusUpdate = async (gigId: string, newStatus: string) => {
     try {
+      setLoading(true);
       const loadingToast = toast.loading("Updating gig status...");
 
-      await updateGig(
-        (params: unknown) => {
-          const { id, status } = params as { id: string; status: string };
-          return gigsApi.updateStatus(id, status);
-        },
-        { id: gigId, status: newStatus }
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Update the gig status in mock data
+      setGigs(prevGigs => 
+        prevGigs.map(gig => 
+          gig.id === gigId 
+            ? { ...gig, status: newStatus, updatedAt: new Date().toISOString() }
+            : gig
+        )
       );
 
       toast.dismiss(loadingToast);
       toast.success(`Gig status updated to ${newStatus}`);
-
-      // Refresh the data to show changes
-      await refetch();
+      setLoading(false);
     } catch (error) {
+      setLoading(false);
       toast.error(
         `Failed to update gig status: ${
-          error instanceof ApiError ? error.message : "Unknown error"
+          error instanceof Error ? error.message : "Unknown error"
         }`
       );
     }
-  }; // Handle gig deletion with proper error handling and user feedback
+  };
+
+  // Handle gig deletion with mock data
   const handleDeleteGig = async () => {
     if (!gigToDelete) return;
 
     try {
+      setLoading(true);
       const loadingToast = toast.loading("Deleting gig...");
 
-      await deleteGig((params: unknown) => gigsApi.delete(params as string), gigToDelete);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // Remove the gig from mock data
+      setGigs(prevGigs => prevGigs.filter(gig => gig.id !== gigToDelete));
 
       toast.dismiss(loadingToast);
       toast.success("Gig deleted successfully");
 
-      // Close dialog and refresh data
+      // Close dialog and reset state
       setShowDeleteDialog(false);
       setGigToDelete(null);
-      await refetch();
+      setLoading(false);
     } catch (error) {
+      setLoading(false);
       toast.error(
         `Failed to delete gig: ${
-          error instanceof ApiError ? error.message : "Unknown error"
+          error instanceof Error ? error.message : "Unknown error"
         }`
       );
+    }
+  };
+
+  // Mock refresh function
+  const handleRefresh = async () => {
+    try {
+      setLoading(true);
+      toast.loading("Refreshing gigs...", { id: "refresh" });
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Reset to original mock data
+      setGigs(mockGigs);
+      
+      toast.success("Gigs refreshed successfully", { id: "refresh" });
+      setLoading(false);
+    } catch {
+      setLoading(false);
+      toast.error("Failed to refresh gigs", { id: "refresh" });
     }
   };
 
@@ -249,7 +568,7 @@ export default function GigContent() {
 
   const handleReject = async (gigId: string) => {
     await handleStatusUpdate(gigId, "cancelled");
-  }; // Format pay rate for display
+  };  // Format pay rate for display
   const formatPayRate = (payRate: Gig["payRate"]) => {
     if (!payRate) {
       return "Pay rate not specified";
@@ -264,35 +583,21 @@ export default function GigContent() {
     }
     return "Pay rate not specified";
   };
-  // Loading state with consistent UI pattern
-  if (gigsLoading) {
-    return <LoadingState message="Loading gigs..." />;
-  }
-  // Error state with retry functionality
-  if (gigsError) {
+
+  // Loading state
+  if (loading) {
     return (
-      <ErrorState
-        title="Failed to load gigs"
-        message={
-          typeof gigsError === "string"
-            ? gigsError
-            : "An error occurred while loading gigs."
-        }
-        onRetry={async () => {
-          try {
-            toast.loading("Retrying...", { id: "retry" });
-            await refetch();
-            toast.success("Gigs loaded successfully", { id: "retry" });
-          } catch {
-            toast.error("Failed to load gigs", { id: "retry" });
-          }
-        }}
-      />
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="flex items-center gap-2">
+          <RefreshCw className="h-6 w-6 animate-spin" />
+          <span>Loading gigs...</span>
+        </div>
+      </div>
     );
   }
 
-  // Empty state when no gigs are available
-  if (!gigsLoading && gigs.length === 0) {
+  // Empty state when no gigs are available  
+  if (!loading && gigs.length === 0) {
     return (
       <div className="space-y-6">
         {/* Header */}
@@ -302,22 +607,13 @@ export default function GigContent() {
             <p className="text-gray-600">
               Manage and monitor all gigs posted by employers
             </p>
-          </div>
-          <Button
-            onClick={async () => {
-              try {
-                toast.loading("Refreshing gigs...", { id: "refresh" });
-                await refetch();
-                toast.success("Gigs refreshed successfully", { id: "refresh" });
-              } catch {
-                toast.error("Failed to refresh gigs", { id: "refresh" });
-              }
-            }}
+          </div>          <Button
+            onClick={handleRefresh}
             className="flex items-center gap-2"
-            disabled={gigsLoading}
+            disabled={loading}
           >
             <RefreshCw
-              className={`h-4 w-4 ${gigsLoading ? "animate-spin" : ""}`}
+              className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
             />
             Refresh
           </Button>
@@ -325,11 +621,10 @@ export default function GigContent() {
 
         <EmptyState
           title="No gigs found"
-          description="No gigs have been posted yet. They will appear here once employers start posting gigs."
-          action={{
-            label: "Refresh",
-            onClick: refetch,
-          }}
+          description="No gigs have been posted yet. They will appear here once employers start posting gigs."            action={{
+              label: "Refresh",
+              onClick: handleRefresh,
+            }}
         />
 
         {/* Toast Notifications */}
@@ -367,23 +662,14 @@ export default function GigContent() {
           <h1 className="text-2xl font-bold text-gray-900">Gig Management</h1>
           <p className="text-gray-600">
             Manage and monitor all gigs posted by employers
-          </p>
-        </div>{" "}
+          </p>        </div>{" "}
         <Button
-          onClick={async () => {
-            try {
-              toast.loading("Refreshing gigs...", { id: "refresh" });
-              await refetch();
-              toast.success("Gigs refreshed successfully", { id: "refresh" });
-            } catch {
-              toast.error("Failed to refresh gigs", { id: "refresh" });
-            }
-          }}
+          onClick={handleRefresh}
           className="flex items-center gap-2"
-          disabled={gigsLoading}
+          disabled={loading}
         >
           <RefreshCw
-            className={`h-4 w-4 ${gigsLoading ? "animate-spin" : ""}`}
+            className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
           />
           Refresh
         </Button>
@@ -391,7 +677,7 @@ export default function GigContent() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg border p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Gigs</p>
@@ -401,7 +687,7 @@ export default function GigContent() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Open Gigs</p>
@@ -413,19 +699,19 @@ export default function GigContent() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">In Progress</p>
-              <p className="text-2xl font-bold text-yellow-900">
+              <p className="text-2xl font-bold text-purple-900">
                 {gigs.filter((g: Gig) => g.status === "in_progress").length}
               </p>
             </div>
-            <Clock className="h-8 w-8 text-yellow-600" />
+            <Clock className="h-8 w-8 text-purple-600" />
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Completed</p>
@@ -439,7 +725,7 @@ export default function GigContent() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg border p-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center gap-4 mb-4">
           <Filter className="h-5 w-5 text-gray-500" />
           <h3 className="text-lg font-medium">Filters</h3>
@@ -517,7 +803,7 @@ export default function GigContent() {
       </div>
 
       {/* Gigs List */}
-      <div className="bg-white rounded-lg border">
+      <div className="bg-white rounded-lg border border-gray-200">
         {" "}
         {filteredGigs.length === 0 ? (
           <EmptyState
@@ -609,12 +895,11 @@ export default function GigContent() {
                     />
                     {/* Quick Actions for Draft Status */}
                     {gig.status === "draft" && (
-                      <>
-                        <Button
+                      <>                        <Button
                           variant="primary"
                           size="sm"
                           onClick={() => handleApprove(gig.id)}
-                          disabled={updateLoading}
+                          disabled={loading}
                           className="bg-green-600 hover:bg-green-700"
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
@@ -624,7 +909,7 @@ export default function GigContent() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleReject(gig.id)}
-                          disabled={updateLoading}
+                          disabled={loading}
                           className="text-red-600 border-red-300 hover:bg-red-50"
                         >
                           <XCircle className="h-4 w-4 mr-1" />
@@ -632,11 +917,10 @@ export default function GigContent() {
                         </Button>
                       </>
                     )}
-                    {/* Delete */}
-                    <Button
+                    {/* Delete */}                    <Button
                       variant="outline"
                       onClick={() => confirmDelete(gig.id)}
-                      disabled={deleteLoading}
+                      disabled={loading}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -804,8 +1088,7 @@ export default function GigContent() {
               <div className="space-y-4">
                 <h4 className="font-medium text-gray-900">
                   Applicants ({selectedGig.applicants?.length || 0})
-                </h4>
-                {selectedGig.applicants?.length > 0 ? (
+                </h4>                {(selectedGig.applicants && selectedGig.applicants.length > 0) ? (
                   <div className="space-y-3">
                     {selectedGig.applicants.map((applicant) => (
                       <div
@@ -846,13 +1129,12 @@ export default function GigContent() {
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button
+            </DialogClose>            <Button
               variant="primary"
               onClick={handleDeleteGig}
-              disabled={deleteLoading}
+              disabled={loading}
             >
-              {deleteLoading ? "Deleting..." : "Delete"}
+              {loading ? "Deleting..." : "Delete"}
             </Button>{" "}
           </DialogFooter>
         </DialogContent>

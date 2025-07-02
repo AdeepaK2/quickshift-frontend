@@ -32,20 +32,20 @@ const CardTitle = ({ children, className = "" }: CardProps) => (
   <h3 className={`text-lg font-semibold ${className}`}>{children}</h3>
 );
 
-const CardDescription = ({ children }: { children: React.ReactNode }) => (
-  <p className="text-sm text-gray-600">{children}</p>
+const CardDescription = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
+  <p className={`text-sm text-slate-600 ${className}`}>{children}</p>
 );
 
 const Badge = ({ children, variant = "default" }: { children: React.ReactNode; variant?: string }) => {
   const variantClasses = {
-    default: "bg-gray-100 text-gray-800",
-    success: "bg-green-100 text-green-800",
-    warning: "bg-yellow-100 text-yellow-800",
-    error: "bg-red-100 text-red-800",
+    default: "bg-slate-100 text-slate-800 border border-slate-300",
+    success: "bg-green-100 text-green-800 border border-green-300 shadow-sm",
+    warning: "bg-blue-100 text-blue-800 border border-blue-300 shadow-sm",
+    error: "bg-red-100 text-red-800 border border-red-300 shadow-sm",
   };
   
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variantClasses[variant as keyof typeof variantClasses] || variantClasses.default}`}>
+    <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold ${variantClasses[variant as keyof typeof variantClasses] || variantClasses.default}`}>
       {children}
     </span>
   );
@@ -118,16 +118,15 @@ export default function DashboardContent() {
       trend: "+23% from last month",
       trendPositive: true,
       Icon: UserPlus,
-      iconColor: "text-orange-500",
-      bgColor: "bg-orange-50",
+      iconColor: "text-purple-500",
+      bgColor: "bg-purple-50",
     },
   ];
-
   const recentActivity: RecentActivityItem[] = [
     {
       id: "1",
-      title: "Software Developer Intern",
-      company: "TechCorp",
+      title: "Full-Stack Developer Intern",
+      company: "TechCorp Solutions",
       location: "Colombo",
       date: "2 hours ago",
       status: "active",
@@ -135,8 +134,8 @@ export default function DashboardContent() {
     },
     {
       id: "2",
-      title: "Marketing Assistant",
-      company: "Creative Agency",
+      title: "Digital Marketing Assistant",
+      company: "Creative Agency Lanka",
       location: "Kandy",
       date: "5 hours ago",
       status: "completed",
@@ -144,15 +143,32 @@ export default function DashboardContent() {
     },
     {
       id: "3",
-      title: "Data Entry Clerk",
-      company: "Business Solutions",
+      title: "Data Analysis Intern",
+      company: "Business Solutions Ltd",
       location: "Galle",
       date: "1 day ago",
       status: "in_progress",
       payment: "$200",
     },
+    {
+      id: "4",
+      title: "UI/UX Design Assistant",
+      company: "Design Studio Pro",
+      location: "Negombo",
+      date: "2 days ago",
+      status: "pending",
+      payment: "$400",
+    },
+    {
+      id: "5",
+      title: "Content Writer",
+      company: "Media House Inc",
+      location: "Matara",
+      date: "3 days ago",
+      status: "open",
+      payment: "$250",
+    },
   ];
-
   const topPerformers: TopPerformer[] = [
     {
       type: "student",
@@ -170,22 +186,47 @@ export default function DashboardContent() {
       gigsPosted: 45,
       industry: "Technology",
     },
+    {
+      type: "student",
+      id: "3",
+      name: "Nimali Fernando",
+      rating: 4.7,
+      gigsCompleted: 18,
+      specialization: "Digital Marketing",
+    },
+    {
+      type: "employer",
+      id: "4",
+      name: "Creative Solutions Inc",
+      rating: 4.6,
+      gigsPosted: 32,
+      industry: "Design & Media",
+    },
   ];
-
   const getStatusBadge = (status: RecentActivityItem["status"]) => {
     const statusMap = {
       completed: "success",
-      in_progress: "warning",
+      in_progress: "default", 
       active: "success",
-      pending: "warning",
+      pending: "default",
       cancelled: "error",
       open: "default",
       draft: "default",
     };
     
+    const statusText = {
+      completed: "✅ Completed",
+      in_progress: "🔄 In Progress",
+      active: "🟢 Active",
+      pending: "⏳ Pending",
+      cancelled: "❌ Cancelled",
+      open: "📢 Open",
+      draft: "📝 Draft",
+    };
+    
     return (
       <Badge variant={statusMap[status]}>
-        {status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ")}
+        {statusText[status] || status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ")}
       </Badge>
     );
   };
@@ -193,125 +234,153 @@ export default function DashboardContent() {
   const handleRefresh = () => {
     setLastUpdated(new Date().toLocaleString());
     // Here you would refetch data from APIs
-  };
-
-  return (
-    <div className="space-y-6 p-6">
+  };  return (
+    <div className="p-6 space-y-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
-        <div className="mt-2 sm:mt-0 flex items-center gap-4">
-          <p className="text-sm text-gray-600">Last updated: {lastUpdated}</p>
+        <div>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard Overview</h1>
+          <p className="text-lg text-gray-700 font-medium">Welcome to your admin control center</p>
+        </div>
+        <div className="mt-4 sm:mt-0 flex items-center gap-4">
+          <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg font-medium border">
+            🕒 Last updated: {lastUpdated}
+          </p>
           <button
             onClick={handleRefresh}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
           >
             <RefreshCw className="h-4 w-4" />
-            Refresh
+            Refresh Data
           </button>
         </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      </div>      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
-          <Card key={index} className={`${stat.bgColor} border-none`}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-gray-700">
+          <Card key={index} className={`${stat.bgColor} border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+              <CardTitle className="text-sm font-bold text-gray-900 uppercase tracking-wide">
                 {stat.title}
               </CardTitle>
-              <stat.Icon className={`h-5 w-5 ${stat.iconColor}`} />
+              <div className={`p-2 rounded-full ${stat.bgColor.replace('bg-', 'bg-').replace('50', '100')}`}>
+                <stat.Icon className={`h-6 w-6 ${stat.iconColor}`} />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-900">
+              <div className="text-3xl font-bold text-gray-900 mb-2">
                 {stat.value}
               </div>
-              <p className="text-xs text-gray-600">{stat.subtitle}</p>
+              <p className="text-sm text-gray-800 font-semibold mb-2">{stat.subtitle}</p>
               {stat.trend && (
-                <p className={`text-xs mt-1 ${stat.trendPositive ? "text-green-600" : "text-red-600"}`}>
-                  {stat.trend}
+                <p className={`text-sm font-bold ${stat.trendPositive ? "text-green-700" : "text-red-700"}`}>
+                  📈 {stat.trend}
                 </p>
               )}
             </CardContent>
           </Card>
         ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Recent Gig Activity</CardTitle>
-            <CardDescription>
-              Overview of the latest gig postings and statuses.
+      </div><div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 shadow-lg border-l-4 border-l-blue-500">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
+            <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Briefcase className="h-6 w-6 text-blue-600" />
+              Recent Gig Activity
+            </CardTitle>
+            <CardDescription className="text-base text-gray-800 font-medium">
+              Latest gig postings and their current status updates.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="bg-white">
             {recentActivity.length > 0 ? (
               <div className="space-y-4">
                 {recentActivity.map((activityItem) => (
-                  <div key={activityItem.id} className="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
+                  <div key={activityItem.id} className="flex items-center justify-between p-5 border-2 border-gray-300 rounded-xl hover:border-blue-400 hover:shadow-lg transition-all duration-200 bg-white">
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-900">{activityItem.title}</h4>
-                      <p className="text-sm text-gray-600">{activityItem.company}</p>
-                      <p className="text-xs text-gray-500">{activityItem.date}</p>
+                      <h4 className="font-bold text-lg text-gray-900 mb-1">{activityItem.title}</h4>
+                      <p className="text-base text-gray-800 font-semibold">{activityItem.company}</p>
+                      <p className="text-sm text-gray-700 mt-1 font-medium">📍 {activityItem.location}</p>
+                      <p className="text-sm text-blue-700 font-semibold">🕒 {activityItem.date}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right space-y-2">
                       {getStatusBadge(activityItem.status)}
-                      <p className="text-sm font-medium text-gray-900 mt-1">{activityItem.payment}</p>
+                      <p className="text-lg font-bold text-green-600">{activityItem.payment}</p>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">
-                No recent gig activity to display.
-              </p>
+              <div className="text-center py-8">
+                <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-lg text-gray-500 font-medium">
+                  No recent gig activity to display.
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Top Performers</CardTitle>
-            <CardDescription>
-              Students and employers with notable contributions.
+        <Card className="shadow-lg border-l-4 border-l-green-500">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
+            <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Users className="h-6 w-6 text-green-600" />
+              Top Performers
+            </CardTitle>
+            <CardDescription className="text-base text-gray-700">
+              Outstanding students and employers on the platform.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 bg-white">
             {topPerformers.length > 0 ? (
               topPerformers.map((performer) => (
                 <div
                   key={performer.id}
-                  className="flex items-center space-x-3 p-3 bg-gray-50 rounded-md"
+                  className="flex items-center space-x-4 p-4 bg-gradient-to-r from-gray-50 to-green-50 rounded-xl border-2 border-gray-200 hover:border-green-300 hover:shadow-md transition-all duration-200"
                 >
                   <div
-                    className={`p-2 rounded-full ${
+                    className={`p-3 rounded-full shadow-md ${
                       performer.type === "student"
-                        ? "bg-blue-100 text-blue-600"
-                        : "bg-green-100 text-green-600"
+                        ? "bg-gradient-to-r from-blue-400 to-blue-600 text-white"
+                        : "bg-gradient-to-r from-green-400 to-green-600 text-white"
                     }`}
                   >
                     {performer.type === "student" ? (
-                      <Users className="h-5 w-5" />
+                      <Users className="h-6 w-6" />
                     ) : (
-                      <Briefcase className="h-5 w-5" />
+                      <Briefcase className="h-6 w-6" />
                     )}
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">
+                  <div className="flex-1">
+                    <p className="text-base font-bold text-gray-900 mb-1">
                       {performer.name}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      {performer.type === "student"
-                        ? `${performer.gigsCompleted} gigs completed`
-                        : `${performer.gigsPosted} gigs posted`}
-                      {" • "}Rating: {performer.rating.toFixed(1)}
-                    </p>
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-700 font-medium">
+                        {performer.type === "student"
+                          ? `🎯 ${performer.gigsCompleted} gigs completed`
+                          : `📝 ${performer.gigsPosted} gigs posted`}
+                      </p>
+                      <p className="text-sm text-blue-600 font-semibold">
+                        ⭐ Rating: {performer.rating.toFixed(1)}/5.0
+                      </p>
+                      {performer.specialization && (
+                        <p className="text-xs text-blue-600 bg-blue-100 rounded-full px-2 py-1 inline-block">
+                          {performer.specialization}
+                        </p>
+                      )}
+                      {performer.industry && (
+                        <p className="text-xs text-green-600 bg-green-100 rounded-full px-2 py-1 inline-block">
+                          {performer.industry}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-sm text-gray-500">
-                No top performers data available yet.
-              </p>
+              <div className="text-center py-8">
+                <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-lg text-gray-500 font-medium">
+                  No top performers data available yet.
+                </p>
+              </div>
             )}
           </CardContent>
         </Card>

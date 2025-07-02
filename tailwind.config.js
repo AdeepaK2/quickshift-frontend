@@ -41,12 +41,26 @@ const config = {
           foreground: "hsl(var(--card-foreground))"
         },
 
-        'quickshift-primary': '#0077B6',
-        'quickshift-secondary': '#00B4D8',
-        'quickshift-tertiary': '#90E0EF',
-        'quickshift-quaternary': '#CAF0F8',
-        'quickshift-dark': '#03045E',
-        'quickshift-bg': '#F8FAFC',      },
+        // QuickShift Brand Colors - Updated for consistency
+        'quickshift': {
+          'primary': '#0077B6',
+          'secondary': '#00B4D8', 
+          'tertiary': '#90E0EF',
+          'quaternary': '#CAF0F8',
+          'dark': '#03045E',
+          'darker': '#02024A',
+          'bg': '#F8FAFC',
+          'light': '#E6F3FF',
+        },
+        
+        // Dashboard-specific colors
+        'dashboard': {
+          'sidebar': '#03045E',
+          'sidebar-hover': '#0505A0',
+          'active': '#0077B6',
+          'card': '#FFFFFF',
+          'bg': '#F8FAFC',
+        },      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

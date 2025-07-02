@@ -1,12 +1,19 @@
 // app/admin/layout.tsx
-export default function AdminLayout({
+"use client";
+
+import React from 'react';
+
+function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="admin-layout bg-gray-50">
+    <div className="dashboard-container">
       {children}
     </div>
   );
 }
+
+// Export directly since middleware handles all auth protection
+export default AdminLayout;

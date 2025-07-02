@@ -194,8 +194,7 @@ function VerifyOTPForm() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-4 text-center">
                 Verification Code
-              </label>
-              <div className="flex justify-center space-x-3 mb-4">
+              </label>              <div className="flex justify-center space-x-3 mb-4">
                 {otp.map((digit, index) => (
                   <input
                     key={index}                    ref={(el) => {
@@ -208,7 +207,7 @@ function VerifyOTPForm() {
                     value={digit}
                     onChange={(e) => handleOtpChange(index, e.target.value.replace(/\D/g, ''))}
                     onKeyDown={(e) => handleKeyDown(index, e)}
-                    className="w-12 h-12 text-center text-lg font-semibold border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200"
+                    className="w-12 h-12 text-center text-lg font-bold text-gray-900 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 bg-white"
                     autoComplete="off"
                   />
                 ))}

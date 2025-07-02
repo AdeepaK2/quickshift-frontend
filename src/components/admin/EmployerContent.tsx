@@ -72,7 +72,7 @@ const Badge = ({
   const variants = {
     default: "bg-gray-100 text-gray-800",
     success: "bg-green-100 text-green-800",
-    warning: "bg-yellow-100 text-yellow-800",
+    warning: "bg-blue-100 text-blue-800",
     destructive: "bg-red-100 text-red-800",
   };
 
@@ -101,29 +101,62 @@ const Avatar = ({
   </div>
 );
 
-const AvatarImage = ({ src, alt }: { src: string; alt: string }) => (
-  <Image
-    className="aspect-square h-full w-full object-cover"
-    src={src}
-    alt={alt}
-    width={112}
-    height={112}
-  />
-);
+const AvatarImage = ({ src, alt }: { src: string; alt: string }) => {
+  // Only show image if src is not empty (for uploaded profile pictures)
+  if (!src) {
+    return null; // This will cause fallback to show
+  }
+  
+  return (
+    <Image
+      className="aspect-square h-full w-full object-cover"
+      src={src}
+      alt={alt}
+      width={112}
+      height={112}
+      onError={(e) => {
+        // Hide broken image and show fallback
+        (e.target as HTMLImageElement).style.display = 'none';
+      }}
+    />
+  );
+};
 
 const AvatarFallback = ({
   children,
   className = "",
+  companyName = "",
 }: {
   children: React.ReactNode;
   className?: string;
-}) => (
-  <div
-    className={`flex h-full w-full items-center justify-center rounded-full bg-muted ${className}`}
-  >
-    {children}
-  </div>
-);
+  companyName?: string;
+}) => {
+  // Generate a consistent color based on company name
+  const getCompanyColor = (name: string) => {
+    const colors = [
+      'bg-blue-500 text-white',
+      'bg-green-500 text-white',
+      'bg-purple-500 text-white',
+      'bg-red-500 text-white',
+      'bg-indigo-500 text-white',
+      'bg-pink-500 text-white',
+      'bg-slate-500 text-white',
+      'bg-teal-500 text-white',
+      'bg-cyan-500 text-white',
+      'bg-emerald-500 text-white'
+    ];
+    const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    return colors[index];
+  };
+
+  return (
+    <div
+      className={`flex h-full w-full items-center justify-center rounded-full font-semibold ${getCompanyColor(companyName)} ${className}`}
+    >
+      {children}
+    </div>
+  );
+};
 
 // Dialog component (simplified version)
 const Dialog = ({
@@ -162,12 +195,24 @@ const DialogHeader = ({ children }: { children: React.ReactNode }) => (
   <div className="mb-4">{children}</div>
 );
 
-const DialogTitle = ({ children }: { children: React.ReactNode }) => (
-  <h2 className="text-lg font-semibold">{children}</h2>
+const DialogTitle = ({ 
+  children, 
+  className = "" 
+}: { 
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <h2 className={`text-lg font-semibold ${className}`}>{children}</h2>
 );
 
-const DialogDescription = ({ children }: { children: React.ReactNode }) => (
-  <p className="text-sm text-gray-600 mt-2">{children}</p>
+const DialogDescription = ({ 
+  children, 
+  className = "" 
+}: { 
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <p className={`text-sm text-gray-600 mt-2 ${className}`}>{children}</p>
 );
 
 // Separator component
@@ -182,6 +227,13 @@ const LoadingState = ({ message }: { message: string }) => (
     <p className="mt-4 text-gray-600">{message}</p>
   </div>
 );
+
+// Function to generate sample company logos/images
+const getSampleCompanyImage = (): string => {
+  // Return empty string to always use colorful fallback avatars
+  // This avoids Next.js Image configuration issues with external URLs
+  return '';
+};
 
 // Verification statuses for the filter
 const verificationStatuses = ["All", "Verified", "Not Verified"];
@@ -374,108 +426,106 @@ export default function EmployerContent() {
         title="Failed to load employers"
         message={errorMessage}
         onRetry={refetch}
-      />
-    );
+      />    );
   }
-  return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Employer Management</h1>
 
+  return (
+    <div className="p-6">
+      <h1 className="text-3xl font-bold mb-6 text-gray-900">Employer Management</h1>
+      
       <div className="bg-white rounded-lg shadow p-6 mb-6">
         {/* Search Bar */}
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-semibold">Employers</h2>
-          <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <Input
-              label="Search Employers"
-              type="text"
-              placeholder="Search by company name or email..."
-              className="pl-10"
-              onChange={(e) => debouncedSearch(e.target.value)}
-            />
-          </div>
-        </div>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Employers</h2>
+            <div className="relative w-full max-w-md">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4 z-10" />
+                <Input
+                  label=""
+                  type="text"
+                  placeholder="Search by company name or email..."
+                  className="pl-10 pr-4 w-full text-gray-900 placeholder-gray-500 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onChange={(e) => debouncedSearch(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>{/* Filter Options */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Location</label>
+              <Select
+                value={locationFilter}
+                onChange={(value: string) => setLocationFilter(value)}
+                options={availableLocations.map((loc) => ({
+                  value: loc,
+                  label: loc,
+                }))}
+              />
+            </div>
 
-        {/* Filter Options */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Location</label>{" "}
-            <Select
-              value={locationFilter}
-              onChange={(value: string) => setLocationFilter(value)}
-              options={availableLocations.map((loc) => ({
-                value: loc,
-                label: loc,
-              }))}
-            />
-          </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Verification Status</label>
+              <Select
+                value={verificationFilter}
+                onChange={(value: string) => setVerificationFilter(value)}
+                options={verificationStatuses.map((status) => ({
+                  value: status,
+                  label: status,
+                }))}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Verification Status</label>
-            <Select
-              value={verificationFilter}
-              onChange={(value: string) => setVerificationFilter(value)}
-              options={verificationStatuses.map((status) => ({
-                value: status,
-                label: status,
-              }))}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Rating</label>
-            <Select
-              value={ratingFilter}
-              onChange={(value: string) => setRatingFilter(value)}
-              options={ratingRanges.map((range) => ({
-                value: range.value,
-                label: range.label,
-              }))}
-            />
-          </div>
-        </div>
-
-        {/* Employers Table */}
-        <div className="overflow-x-auto">
-          {filteredEmployers.length > 0 ? (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Company Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Phone Number
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Location
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Account Verified
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rating
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>{" "}
-              <tbody className="divide-y divide-gray-200 bg-white">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Rating</label>
+              <Select
+                value={ratingFilter}
+                onChange={(value: string) => setRatingFilter(value)}
+                options={ratingRanges.map((range) => ({
+                  value: range.value,
+                  label: range.label,
+                }))}
+              />
+            </div>
+          </div>          <div className="overflow-x-auto">
+            {filteredEmployers.length > 0 ? (
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Company Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Phone Number
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Location
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Account Verified
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Rating
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
                 {filteredEmployers.map((employer: Employer) => (
-                  <tr key={employer._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <Avatar className="h-8 w-8 mr-3">
+                  <tr key={employer._id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">                        <Avatar className="h-8 w-8 mr-3">
                           <AvatarImage
-                            src={employer.profilePicture || ""}
+                            src={employer.profilePicture || getSampleCompanyImage()}
                             alt={employer.companyName}
                           />
-                          <AvatarFallback className="bg-blue-100 text-blue-800">
+                          <AvatarFallback 
+                            className="text-sm font-bold"
+                            companyName={employer.companyName}
+                          >
                             {getInitials(employer.companyName)}
                           </AvatarFallback>
                         </Avatar>
@@ -484,13 +534,13 @@ export default function EmployerContent() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {employer.email}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {employer.phone || "Not provided"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {employer.location || "Not provided"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -500,18 +550,18 @@ export default function EmployerContent() {
                         {employer.verified ? "Verified" : "Not Verified"}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex items-center">
-                        <Star className="h-4 w-4 text-yellow-400 mr-1" />
+                        <Star className="h-4 w-4 text-blue-400 mr-1" />
                         <span>{employer.ratings.averageRating.toFixed(1)}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    </td>                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex space-x-2">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleViewEmployer(employer)}
+                          className="bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100 font-medium"
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           View
@@ -539,53 +589,50 @@ export default function EmployerContent() {
                             <AlertTriangle className="h-4 w-4 mr-1" />
                             Suspend
                           </Button>
-                        )}
-                      </div>
+                        )}                      </div>
                     </td>
                   </tr>
                 ))}
-              </tbody>
-            </table>
-          ) : (
-            <EmptyState
-              title="No employers found"
-              description="Try adjusting your search criteria or filters to find employers."
-              action={{
-                label: "Clear Filters",
-                onClick: clearFilters,
-              }}
-            />
-          )}
+                </tbody>
+              </table>
+            ) : (
+              <EmptyState
+                title="No employers found"
+                description="Try adjusting your search criteria or filters to find employers."
+                action={{
+                  label: "Clear Filters",
+                  onClick: clearFilters,
+                }}
+              />
+            )}
+          </div>
         </div>
-      </div>
 
       {/* Employer Detail Modal */}
       {selectedEmployer && (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
-              <DialogTitle>Employer Details</DialogTitle>
-              <DialogDescription>
+          <DialogContent className="max-w-3xl">            <DialogHeader>
+              <DialogTitle className="text-gray-900 font-semibold text-xl">Employer Details</DialogTitle>
+              <DialogDescription className="text-gray-700 font-medium">
                 Detailed information about {selectedEmployer.companyName}
               </DialogDescription>
-            </DialogHeader>
-            <div className="mt-4">
-              {/* Company Profile Header */}{" "}
-              <div className="flex items-center space-x-4 mb-6">
-                <Avatar className="h-16 w-16">
+            </DialogHeader><div className="mt-4">
+              {/* Company Profile Header */}              <div className="flex items-center space-x-4 mb-6">                <Avatar className="h-16 w-16">
                   <AvatarImage
-                    src={selectedEmployer.profilePicture || ""}
+                    src={selectedEmployer.profilePicture || getSampleCompanyImage()}
                     alt={selectedEmployer.companyName}
                   />
-                  <AvatarFallback className="text-lg bg-blue-100 text-blue-800">
+                  <AvatarFallback 
+                    className="text-lg font-bold"
+                    companyName={selectedEmployer.companyName}
+                  >
                     {getInitials(selectedEmployer.companyName)}
                   </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="text-xl font-semibold">
+                </Avatar><div>
+                  <h3 className="text-xl font-semibold text-gray-900">
                     {selectedEmployer.companyName}
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-700 font-medium">
                     {selectedEmployer.email}
                   </p>
                   <div className="mt-1 flex items-center space-x-2">
@@ -613,43 +660,42 @@ export default function EmployerContent() {
               <Separator className="my-4" />
               {/* Company Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500">
+                <div className="space-y-4">                  <div>
+                    <h4 className="text-sm font-semibold text-gray-800 mb-2">
                       Contact Information
                     </h4>
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center">
-                        <Mail className="h-4 w-4 text-gray-500 mr-2" />
-                        <span>{selectedEmployer.email}</span>
+                        <Mail className="h-4 w-4 text-gray-600 mr-2" />
+                        <span className="text-gray-800 font-medium">{selectedEmployer.email}</span>
                       </div>
                       <div className="flex items-center">
-                        <Phone className="h-4 w-4 text-gray-500 mr-2" />
-                        <span>{selectedEmployer.phone || "Not provided"}</span>
+                        <Phone className="h-4 w-4 text-gray-600 mr-2" />
+                        <span className="text-gray-800 font-medium">{selectedEmployer.phone || "Not provided"}</span>
                       </div>
                       <div className="flex items-center">
-                        <MapPin className="h-4 w-4 text-gray-500 mr-2" />
-                        <span>{selectedEmployer.location}</span>
+                        <MapPin className="h-4 w-4 text-gray-600 mr-2" />
+                        <span className="text-gray-800 font-medium">{selectedEmployer.location}</span>
                       </div>
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-2">
                       Account Statistics
                     </h4>
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center">
-                        <Star className="h-4 w-4 text-yellow-400 mr-2" />
-                        <span>
+                        <Star className="h-4 w-4 text-blue-400 mr-2" />
+                        <span className="text-gray-800 font-medium">
                           Average Rating:{" "}
                           {selectedEmployer.ratings.averageRating.toFixed(1)} (
                           {selectedEmployer.ratings.totalReviews} reviews)
                         </span>
                       </div>
                       <div className="flex items-center">
-                        <Calendar className="h-4 w-4 text-gray-500 mr-2" />
-                        <span>
+                        <Calendar className="h-4 w-4 text-gray-600 mr-2" />
+                        <span className="text-gray-800 font-medium">
                           Last Login:{" "}
                           {formatDateTime(
                             selectedEmployer.lastLoginAt ||
@@ -659,42 +705,40 @@ export default function EmployerContent() {
                       </div>
                     </div>
                   </div>
-                </div>
-
-                <div className="space-y-4">
+                </div>                <div className="space-y-4">
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-2">
                       Company Description
                     </h4>
-                    <p className="mt-2 text-sm text-gray-700">
+                    <p className="mt-2 text-sm text-gray-800 font-medium">
                       {selectedEmployer.companyDescription ||
                         "No description provided"}
                     </p>
                   </div>
 
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-2">
                       Account Information
                     </h4>
                     <div className="mt-2 space-y-2">
                       <div className="flex items-center">
-                        <Calendar className="h-4 w-4 text-gray-500 mr-2" />
-                        <span>
+                        <Calendar className="h-4 w-4 text-gray-600 mr-2" />
+                        <span className="text-gray-800 font-medium">
                           Created: {formatDateTime(selectedEmployer.createdAt)}
                         </span>
                       </div>
                       <div className="flex items-center">
-                        <Calendar className="h-4 w-4 text-gray-500 mr-2" />
-                        <span>
+                        <Calendar className="h-4 w-4 text-gray-600 mr-2" />
+                        <span className="text-gray-800 font-medium">
                           Updated: {formatDateTime(selectedEmployer.updatedAt)}
                         </span>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
+                </div></div>
               <Separator className="my-4" />
-              {/* Action Buttons */}{" "}
+              
+              {/* Action Buttons */}
               <div className="flex justify-end space-x-3">
                 {!selectedEmployer.verified ? (
                   <Button
@@ -720,10 +764,9 @@ export default function EmployerContent() {
                   >
                     <AlertTriangle className="h-4 w-4 mr-2" />
                     Suspend Account
-                  </Button>
-                )}
+                  </Button>                )}
               </div>
-            </div>{" "}
+            </div>
           </DialogContent>
         </Dialog>
       )}
@@ -742,10 +785,8 @@ export default function EmployerContent() {
             style: {
               background: "#10b981",
             },
-          },
-          error: {
-            duration: 4000,
-            style: {
+          },          error: {
+            duration: 4000,            style: {
               background: "#ef4444",
             },
           },

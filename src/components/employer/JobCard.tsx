@@ -14,7 +14,7 @@ export default function JobCard({ job, onDelete, onClose }: JobCardProps) {
   const statusColors = {
     active: 'bg-green-100 text-green-800 border border-green-200',
     closed: 'bg-red-100 text-red-800 border border-red-200',
-    draft: 'bg-amber-100 text-amber-800 border border-amber-200',
+    draft: 'bg-orange-100 text-orange-800 border border-orange-200',
   };
 
   const formatStatus = (status: string) => {
@@ -84,7 +84,7 @@ export default function JobCard({ job, onDelete, onClose }: JobCardProps) {
             <Button 
               variant="outline" 
               size="sm" 
-              className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 transition-colors"
+              className="w-full border-orange-300 text-orange-700 hover:bg-orange-50 transition-colors"
               onClick={() => onClose(job.id)}
             >
               Close

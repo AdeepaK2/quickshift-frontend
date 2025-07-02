@@ -1,7 +1,7 @@
 import { Settings } from '@/types/settings';
 import { motion } from 'framer-motion';
 import { BellIcon, EnvelopeIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
-import Switch from '@/components/ui/Switch';
+import Switch from '@/components/ui/switch';
 
 interface NotificationSettingsProps {
   settings: Settings;

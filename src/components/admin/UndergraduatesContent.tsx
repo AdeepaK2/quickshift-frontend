@@ -16,10 +16,10 @@ import {
   Clock,
   UserCheck,
   Shield,
-  ShieldCheck,
+  ShieldCheck,  Download,
+  RefreshCw,
 } from "lucide-react";
 import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Select from "@/components/ui/select";
@@ -32,8 +32,6 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 
-import { useApi, useMutation } from "@/lib/hooks";
-import { undergraduatesApi } from "@/lib/api";
 import {
   formatDate,
   getStatusVariant,
@@ -44,6 +42,7 @@ import { LoadingState } from "@/components/ui/loading";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { UNDERGRADUATE_CONSTANTS } from "@/lib/undergraduate-constants";
+import { mockUndergraduates, mockUndergraduatesApi } from "@/lib/mock-data/undergraduates";
 
 // TypeScript interfaces for Undergraduate data
 interface Undergraduate {
@@ -97,6 +96,10 @@ export default function UndergraduatesContent() {
   const [selectedUndergraduate, setSelectedUndergraduate] =
     useState<Undergraduate | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [undergraduates, setUndergraduates] = useState<Undergraduate[]>(mockUndergraduates);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
   // Filter states
   const [filters, setFilters] = useState<FilterState>({
     search: "",
@@ -104,21 +107,25 @@ export default function UndergraduatesContent() {
     yearOfStudy: null,
     verificationStatus: null,
     accountStatus: null,
-  }); // API calls
-  const {
-    data: undergraduatesResponse,
-    loading,
-    error,
-    refetch,
-  } = useApi(() => undergraduatesApi.getAll());
-  const verifyUndergraduateMutation = useMutation();
-  const suspendUndergraduateMutation = useMutation();
-  const activateUndergraduateMutation = useMutation();
+  });
+  // Refetch function for mock data
+  const refetch = async () => {
+    setLoading(true);
+    try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setUndergraduates(mockUndergraduates);
+      setError(null);    } catch {
+      setError("Failed to fetch data");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Move undergraduates initialization inside useMemo to fix react-hooks/exhaustive-deps warnings
-  const undergraduates = useMemo(() => undergraduatesResponse || [], [
-    undergraduatesResponse,
-  ]);
+  // Mock mutation states
+  const [verifyLoading, setVerifyLoading] = useState(false);
+  const [suspendLoading, setSuspendLoading] = useState(false);
+  const [activateLoading, setActivateLoading] = useState(false);
 
   // Extract unique universities for filter dropdown
   const availableUniversities = useMemo(() => {
@@ -142,11 +149,18 @@ export default function UndergraduatesContent() {
       }, 300),
     []
   );
-
-  // Fix mutation usage by wrapping API calls with unknown
-  const verifyUndergraduate = (params: unknown) => undergraduatesApi.verify(params as string);
-  const suspendUndergraduate = (params: unknown) => undergraduatesApi.suspend(params as string);
-  const activateUndergraduate = (params: unknown) => undergraduatesApi.activate(params as string);
+  // Mock API functions
+  const verifyUndergraduate = async (id: string) => {
+    return await mockUndergraduatesApi.verify(id);
+  };
+  
+  const suspendUndergraduate = async (id: string) => {
+    return await mockUndergraduatesApi.suspend(id);
+  };
+  
+  const activateUndergraduate = async (id: string) => {
+    return await mockUndergraduatesApi.activate(id);
+  };
 
   // Filtered undergraduates with memoization for performance
   const filteredUndergraduates = useMemo(() => {
@@ -195,14 +209,21 @@ export default function UndergraduatesContent() {
   const handleViewUndergraduate = (undergraduate: Undergraduate) => {
     setSelectedUndergraduate(undergraduate);
     setIsSheetOpen(true);
-  };
-  // Handle verification action
+  };  // Handle verification action
   const handleVerifyUndergraduate = async (id: string) => {
+    setVerifyLoading(true);
     try {
-      const result = await verifyUndergraduateMutation.mutate(verifyUndergraduate, id);
+      const result = await verifyUndergraduate(id);
       if (result) {
         toast.success("Undergraduate verified successfully!");
-        await refetch();
+        // Update local state
+        setUndergraduates(prev => 
+          prev.map(undergraduate => 
+            undergraduate.id === id 
+              ? { ...undergraduate, verificationStatus: "verified" }
+              : undergraduate
+          )
+        );
         // Update selected undergraduate if it's currently viewed
         if (selectedUndergraduate && selectedUndergraduate.id === id) {
           setSelectedUndergraduate({
@@ -214,15 +235,24 @@ export default function UndergraduatesContent() {
     } catch (error) {
       console.error("Failed to verify undergraduate:", error);
       toast.error("Failed to verify undergraduate. Please try again.");
+    } finally {
+      setVerifyLoading(false);
     }
-  };
-  // Handle suspension action
+  };  // Handle suspension action
   const handleSuspendUndergraduate = async (id: string) => {
+    setSuspendLoading(true);
     try {
-      const result = await suspendUndergraduateMutation.mutate(suspendUndergraduate, id);
+      const result = await suspendUndergraduate(id);
       if (result) {
         toast.success("Undergraduate suspended successfully!");
-        await refetch();
+        // Update local state
+        setUndergraduates(prev => 
+          prev.map(undergraduate => 
+            undergraduate.id === id 
+              ? { ...undergraduate, accountStatus: "suspended" }
+              : undergraduate
+          )
+        );
         // Update selected undergraduate if it's currently viewed
         if (selectedUndergraduate && selectedUndergraduate.id === id) {
           setSelectedUndergraduate({
@@ -234,16 +264,25 @@ export default function UndergraduatesContent() {
     } catch (error) {
       console.error("Failed to suspend undergraduate:", error);
       toast.error("Failed to suspend undergraduate. Please try again.");
+    } finally {
+      setSuspendLoading(false);
     }
   };
-
   // Handle activation action
   const handleActivateUndergraduate = async (id: string) => {
+    setActivateLoading(true);
     try {
-      const result = await activateUndergraduateMutation.mutate(activateUndergraduate, id);
+      const result = await activateUndergraduate(id);
       if (result) {
         toast.success("Undergraduate activated successfully!");
-        await refetch();
+        // Update local state
+        setUndergraduates(prev => 
+          prev.map(undergraduate => 
+            undergraduate.id === id 
+              ? { ...undergraduate, accountStatus: "active" }
+              : undergraduate
+          )
+        );
         // Update selected undergraduate if it's currently viewed
         if (selectedUndergraduate && selectedUndergraduate.id === id) {
           setSelectedUndergraduate({
@@ -255,7 +294,43 @@ export default function UndergraduatesContent() {
     } catch (error) {
       console.error("Failed to activate undergraduate:", error);
       toast.error("Failed to activate undergraduate. Please try again.");
+    } finally {
+      setActivateLoading(false);
     }
+  };
+
+  // Export functionality
+  const handleExportData = () => {
+    const csvData = filteredUndergraduates.map(undergraduate => ({
+      'Full Name': undergraduate.fullName,
+      'Email': undergraduate.email,
+      'University': undergraduate.university,
+      'Faculty': undergraduate.faculty,
+      'Year of Study': undergraduate.yearOfStudy,
+      'Account Status': undergraduate.accountStatus,
+      'Verification Status': undergraduate.verificationStatus,
+      'Student ID Verified': undergraduate.studentIdVerified ? 'Yes' : 'No',
+      'Phone Number': undergraduate.phoneNumber,
+      'City': undergraduate.city,
+      'Join Date': formatDate(undergraduate.joinDate),
+      'Last Login': formatDate(undergraduate.lastLogin),
+      'GPA': undergraduate.gpa || 'N/A',
+    }));
+
+    const csvContent = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `undergraduates_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast.success('Data exported successfully!');
   };
 
   // Update search filter with debouncing
@@ -282,32 +357,31 @@ export default function UndergraduatesContent() {
         onRetry={refetch}
       />
     );
-  }
-  return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Undergraduate Users Management</h1>
-      {/* Filter Section */}
+  }  return (
+    <div className="p-6 space-y-6">
+      <h1 className="text-3xl font-bold text-gray-900">Undergraduate Users Management</h1>      {/* Filter Section */}
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <h2 className="text-lg font-semibold flex items-center">
-            <Filter className="mr-2 h-5 w-5" />
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+            <Filter className="mr-2 h-5 w-5 text-gray-700" />
             Filters
           </h2>
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />{" "}
-            <Input
-              label="Search Users"
-              placeholder={LABELS.SEARCH_PLACEHOLDER}
-              className="pl-10"
-              onChange={(e) => handleSearchChange(e.target.value)}
-            />
+          <div className="w-full lg:w-80">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-600 z-10" />
+              <input
+                type="text"
+                placeholder={LABELS.SEARCH_PLACEHOLDER}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-500"
+                onChange={(e) => handleSearchChange(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
         {/* Filter Options */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">University</label>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-800">University</label>
             <Select
               value={filters.university}
               onChange={(value: string) => updateFilter("university", value)}
@@ -315,7 +389,7 @@ export default function UndergraduatesContent() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Year of Study</label>
+            <label className="text-sm font-medium text-gray-800">Year of Study</label>
             <Select
               value={filters.yearOfStudy?.toString() || "all"}
               onChange={(value: string) => updateFilter("yearOfStudy", value === "all" ? null : parseInt(value))}
@@ -323,7 +397,7 @@ export default function UndergraduatesContent() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Verification Status</label>
+            <label className="text-sm font-medium text-gray-800">Verification Status</label>
             <Select
               value={filters.verificationStatus || "all"}
               onChange={(value: string) => updateFilter("verificationStatus", value === "all" ? null : value)}
@@ -334,7 +408,7 @@ export default function UndergraduatesContent() {
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Account Status</label>
+            <label className="text-sm font-medium text-gray-800">Account Status</label>
             <Select
               value={filters.accountStatus || "all"}
               onChange={(value: string) => updateFilter("accountStatus", value === "all" ? null : value)}
@@ -346,14 +420,37 @@ export default function UndergraduatesContent() {
           </div>
         </div>
       </div>{" "}
-      {/* Results Summary */}
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-600">
+      {/* Results Summary and Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">        <p className="text-sm text-gray-800 font-medium">
           {LABELS.SHOWING_RESULTS.replace(
             "{count}",
             filteredUndergraduates.length.toString()
           ).replace("{total}", (undergraduates?.length || 0).toString())}
         </p>
+        
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refetch}
+            disabled={loading}
+            className="flex items-center"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            {ACTIONS.REFRESH}
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportData}
+            disabled={filteredUndergraduates.length === 0}
+            className="flex items-center"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {ACTIONS.EXPORT}
+          </Button>
+        </div>
       </div>{" "}
       {/* Users Table */}
       {filteredUndergraduates.length === 0 ? (
@@ -422,14 +519,13 @@ export default function UndergraduatesContent() {
                       <div className="font-medium text-gray-900">
                         {undergraduate.fullName || "N/A"}
                       </div>
-                    </td>{" "}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    </td>{" "}                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
                       {undergraduate.email || "N/A"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
                       {undergraduate.university || "N/A"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
                       Year {undergraduate.yearOfStudy}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -474,15 +570,14 @@ export default function UndergraduatesContent() {
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           {ACTIONS.VIEW}
-                        </Button>
-                        {undergraduate.verificationStatus !== "verified" && (
+                        </Button>                        {undergraduate.verificationStatus !== "verified" && (
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() =>
                               handleVerifyUndergraduate(undergraduate.id)
                             }
-                            disabled={verifyUndergraduateMutation.loading}
+                            disabled={verifyLoading}
                             className="flex items-center"
                           >
                             <ShieldCheck className="h-4 w-4 mr-1" />
@@ -496,7 +591,7 @@ export default function UndergraduatesContent() {
                             onClick={() =>
                               handleSuspendUndergraduate(undergraduate.id)
                             }
-                            disabled={suspendUndergraduateMutation.loading}
+                            disabled={suspendLoading}
                             className="flex items-center text-red-600 hover:text-red-800"
                           >
                             <Shield className="h-4 w-4 mr-1" />
@@ -510,7 +605,7 @@ export default function UndergraduatesContent() {
                             onClick={() =>
                               handleActivateUndergraduate(undergraduate.id)
                             }
-                            disabled={activateUndergraduateMutation.loading}
+                            disabled={activateLoading}
                             className="flex items-center text-green-600 hover:text-green-800"
                           >
                             <UserCheck className="h-4 w-4 mr-1" />
@@ -560,8 +655,7 @@ export default function UndergraduatesContent() {
                     {" "}
                     <h3 className="text-xl font-semibold">
                       {selectedUndergraduate.fullName || "N/A"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
+                    </h3>                    <p className="text-sm text-gray-900 font-medium">
                       {selectedUndergraduate.email || "N/A"}
                     </p>{" "}
                     <div className="mt-1 flex items-center space-x-2">
@@ -591,36 +685,35 @@ export default function UndergraduatesContent() {
                     {SHEET_SECTIONS.PERSONAL_INFO}
                   </h4>
 
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="flex items-start">
-                      <Phone className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />{" "}
+                  <div className="grid grid-cols-1 gap-3">                    <div className="flex items-start">
+                      <Phone className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />{" "}
                       <div>
                         {" "}
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.PHONE}
                         </p>
-                        <p>{selectedUndergraduate.phoneNumber || "N/A"}</p>
+                        <p className="text-gray-900 font-medium">{selectedUndergraduate.phoneNumber || "N/A"}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <UserIcon className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <UserIcon className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
                         {" "}
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           Gender
                         </p>
-                        <p>{selectedUndergraduate.gender || "N/A"}</p>
+                        <p className="text-gray-900 font-medium">{selectedUndergraduate.gender || "N/A"}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <Calendar className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />{" "}
+                      <Calendar className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />{" "}
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           Date of Birth
                         </p>
-                        <p>
+                        <p className="text-gray-900 font-medium">
                           {selectedUndergraduate.dateOfBirth
                             ? formatDate(selectedUndergraduate.dateOfBirth)
                             : "N/A"}
@@ -629,12 +722,12 @@ export default function UndergraduatesContent() {
                     </div>
 
                     <div className="flex items-start">
-                      <MapPin className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <MapPin className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           Address
                         </p>{" "}
-                        <p>
+                        <p className="text-gray-900 font-medium">
                           {[
                             selectedUndergraduate.address,
                             selectedUndergraduate.city,
@@ -653,41 +746,40 @@ export default function UndergraduatesContent() {
                     {SHEET_SECTIONS.ACADEMIC_INFO}
                   </h4>
 
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="flex items-start">
-                      <School className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />{" "}
+                  <div className="grid grid-cols-1 gap-3">                    <div className="flex items-start">
+                      <School className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />{" "}
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.UNIVERSITY}
                         </p>
-                        <p>{selectedUndergraduate.university || "N/A"}</p>
+                        <p className="text-gray-900 font-medium">{selectedUndergraduate.university || "N/A"}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <BookOpen className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />{" "}
+                      <BookOpen className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />{" "}
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.FACULTY}
                         </p>
-                        <p>{selectedUndergraduate.faculty || "N/A"}</p>
+                        <p className="text-gray-900 font-medium">{selectedUndergraduate.faculty || "N/A"}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <UserCheck className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <UserCheck className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.YEAR_OF_STUDY}
                         </p>
-                        <p>Year {selectedUndergraduate.yearOfStudy}</p>
+                        <p className="text-gray-900 font-medium">Year {selectedUndergraduate.yearOfStudy}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <UserCheck className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <UserCheck className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.STUDENT_ID_VERIFICATION}
                         </p>
                         <Badge
@@ -704,14 +796,13 @@ export default function UndergraduatesContent() {
                       </div>
                     </div>
 
-                    {selectedUndergraduate.gpa && (
-                      <div className="flex items-start">
-                        <ClipboardCheck className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                    {selectedUndergraduate.gpa && (                      <div className="flex items-start">
+                        <ClipboardCheck className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                         <div>
-                          <p className="text-sm font-medium text-gray-500">
+                          <p className="text-sm font-medium text-gray-700">
                             {FIELD_LABELS.GPA}
                           </p>
-                          <p>{selectedUndergraduate.gpa}</p>
+                          <p className="text-gray-900 font-medium">{selectedUndergraduate.gpa}</p>
                         </div>
                       </div>
                     )}
@@ -723,14 +814,13 @@ export default function UndergraduatesContent() {
                     {SHEET_SECTIONS.ACCOUNT_INFO}
                   </h4>
 
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="flex items-start">
-                      <Calendar className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                  <div className="grid grid-cols-1 gap-3">                    <div className="flex items-start">
+                      <Calendar className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.JOIN_DATE}
                         </p>
-                        <p>
+                        <p className="text-gray-900 font-medium">
                           {selectedUndergraduate.joinDate
                             ? formatDate(selectedUndergraduate.joinDate)
                             : "N/A"}
@@ -739,23 +829,21 @@ export default function UndergraduatesContent() {
                     </div>
 
                     <div className="flex items-start">
-                      <Clock className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <Clock className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.LAST_LOGIN}
                         </p>
-                        <p>
+                        <p className="text-gray-900 font-medium">
                           {selectedUndergraduate.lastLogin
                             ? formatDate(selectedUndergraduate.lastLogin)
                             : "N/A"}
                         </p>
                       </div>
-                    </div>
-
-                    <div className="flex items-start">
-                      <ClipboardCheck className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                    </div>                    <div className="flex items-start">
+                      <ClipboardCheck className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.VERIFICATION_STATUS}
                         </p>{" "}
                         <Badge
@@ -771,13 +859,12 @@ export default function UndergraduatesContent() {
                     </div>
                   </div>
                 </div>
-                <Separator /> {/* Bio */}
-                {selectedUndergraduate.bio && (
+                <Separator /> {/* Bio */}                {selectedUndergraduate.bio && (
                   <div className="space-y-2">
                     <h4 className="text-lg font-medium">
                       {SHEET_SECTIONS.BIO}
                     </h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-800 leading-relaxed">
                       {selectedUndergraduate.bio}
                     </p>
                   </div>

@@ -84,7 +84,7 @@ function RegisterForm() {
   const getRedirectPath = (userType: string) => {
     switch (userType) {
       case 'employer':
-        return '/employer/dashboard';
+        return '/employer';
       default:
         return '/undergraduate';
     }
