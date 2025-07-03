@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { FaMoneyBillWave, FaCreditCard, FaCalendarAlt, FaCheckCircle, FaClock, FaDownload, FaEye, FaSearch } from 'react-icons/fa';
+import { gigCompletionService, GigCompletion } from '@/services/gigCompletionService';
+// import toast from 'react-hot-toast';
+import { format } from 'date-fns';
 
 interface Payment {
   id: string;
@@ -26,96 +29,108 @@ interface PaymentSummary {
   completedGigs: number;
 }
 
+// Convert GigCompletion to Payment interface
+const convertToPayment = (gigCompletion: GigCompletion): Payment => {
+  const gigRequest = typeof gigCompletion.gigRequest === 'string' 
+    ? { title: 'Unknown Job', employer: { companyName: 'Unknown Employer' } } 
+    : gigCompletion.gigRequest;
+  
+  // Map payment status
+  let status: 'pending' | 'paid' | 'processing' | 'failed';
+  switch (gigCompletion.paymentStatus) {
+    case 'paid': status = 'paid'; break;
+    case 'processing': status = 'processing'; break;
+    case 'failed': status = 'failed'; break;
+    default: status = 'pending';
+  }
+
+  return {
+    id: gigCompletion._id,
+    gigId: typeof gigRequest === 'string' ? gigRequest : (gigRequest as any)._id,
+    gigTitle: typeof gigRequest === 'string' ? 'Unknown Job' : gigRequest.title,
+    employerName: typeof gigRequest === 'string' ? 'Unknown Employer' : 
+      typeof gigRequest.employer === 'string' ? 'Unknown Employer' : gigRequest.employer.companyName,
+    amount: gigCompletion.paymentAmount,
+    currency: 'LKR',
+    status,
+    paymentDate: gigCompletion.paymentDate ? format(new Date(gigCompletion.paymentDate), 'yyyy-MM-dd') : undefined,
+    completionDate: format(new Date(gigCompletion.completionDate), 'yyyy-MM-dd'),
+    paymentMethod: 'bank_transfer',
+    transactionId: gigCompletion._id,
+    description: `Payment for ${typeof gigRequest === 'string' ? 'gig work' : gigRequest.title} (${gigCompletion.hoursWorked} hours)`,
+    invoiceUrl: undefined
+  };
+};
+
 const MyPayments: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [summary, setSummary] = useState<PaymentSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  // We'll use setError but not directly accessing error in this component
+  const [, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'processing' | 'failed'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    // Mock payment data
-    const mockPayments: Payment[] = [
-      {
-        id: '1',
-        gigId: 'gig1',
-        gigTitle: 'Research Data Entry',
-        employerName: 'Psychology Department',
-        amount: 4500,
-        currency: 'LKR',
-        status: 'paid',
-        paymentDate: '2024-01-15',
-        completionDate: '2024-01-12',
-        paymentMethod: 'bank_transfer',
-        transactionId: 'TXN001234567',
-        description: 'Payment for 15 hours of data entry work',
-        invoiceUrl: '/invoices/inv-001.pdf'
-      },
-      {
-        id: '2',
-        gigId: 'gig2',
-        gigTitle: 'Campus Event Setup',
-        employerName: 'UC Student Union',
-        amount: 2000,
-        currency: 'LKR',
-        status: 'paid',
-        paymentDate: '2024-01-10',
-        completionDate: '2024-01-08',
-        paymentMethod: 'mobile_payment',
-        transactionId: 'MOB987654321',
-        description: 'Event setup assistance for cultural festival'
-      },
-      {
-        id: '3',
-        gigId: 'gig3',
-        gigTitle: 'Library Book Sorting',
-        employerName: 'Colombo Public Library',
-        amount: 3000,
-        currency: 'LKR',
-        status: 'processing',
-        completionDate: '2024-01-18',
-        paymentMethod: 'bank_transfer',
-        description: 'Book sorting and organization during exam period'
-      },
-      {
-        id: '4',
-        gigId: 'gig4',
-        gigTitle: 'Tutoring Session',
-        employerName: 'Private Client',
-        amount: 2500,
-        currency: 'LKR',
-        status: 'pending',
-        completionDate: '2024-01-19',
-        paymentMethod: 'cash',
-        description: 'Mathematics tutoring for high school student'
-      },
-      {
-        id: '5',
-        gigId: 'gig5',
-        gigTitle: 'Food Delivery Helper',
-        employerName: 'Campus Eats',
-        amount: 1800,
-        currency: 'LKR',
-        status: 'failed',
-        completionDate: '2024-01-08',
-        paymentMethod: 'mobile_payment',
-        description: 'Food delivery assistance during lunch hours'
+    const fetchPayments = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Fetch gig completions as payments
+        const response = await gigCompletionService.getMyCompletions({
+          paymentStatus: filter === 'all' ? undefined : filter,
+          sortBy: 'completionDate',
+          sortOrder: 'desc'
+        });
+        
+        if (response.success && response.data?.completions) {
+          // Convert backend format to frontend format
+          const convertedPayments = response.data.completions.map(convertToPayment);
+          setPayments(convertedPayments);
+          
+          // Fetch payment stats
+          try {
+            const statsResponse = await gigCompletionService.getPaymentStats();
+            if (statsResponse.success && statsResponse.data) {
+              setSummary({
+                totalEarnings: statsResponse.data.totalPaid,
+                thisMonth: statsResponse.data.thisMonthEarnings,
+                pendingPayments: statsResponse.data.pendingAmount,
+                completedGigs: response.data.total
+              });
+            }
+          } catch (statsError) {
+            console.error('Error fetching payment stats:', statsError);
+            // Don't fail the whole page if stats don't load
+            
+            // Calculate basic stats from payments as fallback
+            const paid = convertedPayments.filter(p => p.status === 'paid')
+              .reduce((sum, payment) => sum + payment.amount, 0);
+            const pending = convertedPayments.filter(p => p.status === 'pending')
+              .reduce((sum, payment) => sum + payment.amount, 0);
+              
+            setSummary({
+              totalEarnings: paid,
+              thisMonth: paid, // simplified - would need date filtering for accuracy
+              pendingPayments: pending,
+              completedGigs: response.data.total
+            });
+          }
+        } else {
+          setPayments([]);
+          setError('Failed to load payment data');
+        }
+      } catch (error) {
+        console.error('Error fetching payments:', error);
+        setError('Error loading your payment data');
+      } finally {
+        setLoading(false);
       }
-    ];
-
-    const mockSummary: PaymentSummary = {
-      totalEarnings: 13800,
-      thisMonth: 13800,
-      pendingPayments: 5500,
-      completedGigs: 5
     };
 
-    setTimeout(() => {
-      setPayments(mockPayments);
-      setSummary(mockSummary);
-      setLoading(false);
-    }, 1000);
-  }, []);
+    fetchPayments();
+  }, [filter]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {

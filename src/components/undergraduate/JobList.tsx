@@ -2,7 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { FaMapMarkerAlt, FaClock, FaDollarSign, FaSearch } from 'react-icons/fa';
+import { gigRequestService, GigRequest } from '@/services/gigRequestService';
+// import toast from 'react-hot-toast';
+import { formatDistanceToNow } from 'date-fns';
 
+// Interface for frontend Job model
 interface Job {
   id: string;
   title: string;
@@ -24,179 +28,225 @@ interface JobListProps {
   selectedJobId?: string;
 }
 
+// Convert backend GigRequest to frontend Job format
+const convertToJob = (gigRequest: GigRequest): Job => {
+  const employer = typeof gigRequest.employer === 'string' 
+    ? { name: 'Unknown Employer', rating: 0 } 
+    : { name: gigRequest.employer.companyName, rating: 0 };
+  
+  // Calculate duration from timeSlots if available
+  let duration = 'Flexible';
+  if (gigRequest.timeSlots && gigRequest.timeSlots.length > 0) {
+    const totalHours = gigRequest.timeSlots.reduce((total, slot) => {
+      const start = new Date(slot.startTime).getTime();
+      const end = new Date(slot.endTime).getTime();
+      const hours = (end - start) / (1000 * 60 * 60);
+      return total + hours;
+    }, 0);
+    duration = `${Math.round(totalHours)} hours total`;
+  }
+  
+  // Format pay rate
+  const pay = `LKR ${gigRequest.payRate.amount} ${gigRequest.payRate.rateType === 'hourly' ? 'per hour' : 
+    gigRequest.payRate.rateType === 'daily' ? 'per day' : 'fixed'}`;
+  
+  // Calculate urgency based on application deadline
+  let urgency: 'low' | 'medium' | 'high' = 'medium';
+  if (gigRequest.applicationDeadline) {
+    const deadline = new Date(gigRequest.applicationDeadline);
+    const now = new Date();
+    const daysLeft = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+    
+    if (daysLeft <= 1) urgency = 'high';
+    else if (daysLeft <= 3) urgency = 'medium';
+    else urgency = 'low';
+  }
+  
+  return {
+    id: gigRequest._id,
+    title: gigRequest.title,
+    description: gigRequest.description,
+    location: typeof gigRequest.location === 'object' ? 
+      `${gigRequest.location.address}, ${gigRequest.location.city}` : 'Location not specified',
+    duration,
+    pay,
+    postedDate: formatDistanceToNow(new Date(gigRequest.createdAt), { addSuffix: true }),
+    category: gigRequest.category,
+    urgency,
+    employer
+  };
+};
+
 const JobList: React.FC<JobListProps> = ({ onJobSelect, selectedJobId }) => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [loading, setLoading] = useState(true);
-
-  // Mock data for now
-  useEffect(() => {
-    const mockJobs: Job[] = [
-      {
-        id: '1',
-        title: 'Campus Event Setup Assistant',
-        description: 'Help set up chairs, tables, and decorations for the annual university cultural festival.',
-        location: 'University of Colombo',
-        duration: '4 hours',
-        pay: 'LKR 2,000',
-        postedDate: '2 hours ago',
-        category: 'Event Support',
-        urgency: 'high',
-        employer: {
-          name: 'UC Student Union',
-          rating: 4.8
-        }
-      },
-      {
-        id: '2',
-        title: 'Library Book Sorting',
-        description: 'Organize and sort returned books in the main library during exam period.',
-        location: 'Central Library, Colombo',
-        duration: '6 hours',
-        pay: 'LKR 3,000',
-        postedDate: '5 hours ago',
-        category: 'Administrative',
-        urgency: 'medium',
-        employer: {
-          name: 'Colombo Public Library',
-          rating: 4.5
-        }
-      },
-      {
-        id: '3',
-        title: 'Food Delivery Helper',
-        description: 'Assist with food delivery during lunch hours near university campus.',
-        location: 'Nugegoda Area',
-        duration: '3 hours',
-        pay: 'LKR 1,800',
-        postedDate: '1 day ago',
-        category: 'Delivery',
-        urgency: 'low',
-        employer: {
-          name: 'Campus Eats',
-          rating: 4.2
-        }
-      }
-    ];
-    
-    setTimeout(() => {
-      setJobs(mockJobs);
-      setLoading(false);
-    }, 1000);
-  }, []);
-
-  const filteredJobs = jobs.filter(job => {
-    const matchesSearch = job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         job.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = filterCategory === 'all' || job.category === filterCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const getUrgencyColor = (urgency: string) => {
+  const [error, setError] = useState<string | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+  
+  // Get color based on urgency
+  const getUrgencyColor = (urgency: 'low' | 'medium' | 'high') => {
     switch (urgency) {
-      case 'high': return 'text-red-600 bg-red-100';
-      case 'medium': return 'text-orange-600 bg-orange-100';
-      default: return 'text-green-600 bg-green-100';
+      case 'high':
+        return 'bg-red-100 text-red-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'low':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-blue-100 text-blue-800';
     }
   };
+  
+  // Fetch jobs from backend
+  useEffect(() => {
+    const fetchJobs = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Construct filter params if needed
+        const filters = {
+          status: 'active' as const,
+          sortBy: 'createdAt' as const,
+          sortOrder: 'desc' as const,
+          page: 1,
+          limit: 20,
+          ...(searchTerm ? { search: searchTerm } : {}),
+          ...(filterCategory !== 'all' ? { category: filterCategory } : {})
+        };
+        
+        const response = await gigRequestService.getAllGigRequests(filters);
+        
+        if (response.success && response.data?.gigRequests) {
+          // Convert backend format to frontend format
+          const convertedJobs = response.data.gigRequests.map(convertToJob);
+          setJobs(convertedJobs);
+          
+          // Extract unique categories
+          const uniqueCategories = Array.from(
+            new Set(response.data.gigRequests.map(gig => gig.category))
+          );
+          setCategories(['all', ...uniqueCategories]);
+        } else {
+          setJobs([]);
+          setError('Failed to load jobs');
+        }
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
+        setError('Error loading jobs. Please try again.');
+        setJobs([]); // Clear jobs on error
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="bg-white rounded-lg shadow p-6 animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/2 mb-4"></div>
-            <div className="space-y-2">
-              <div className="h-3 bg-gray-200 rounded"></div>
-              <div className="h-3 bg-gray-200 rounded w-5/6"></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+    fetchJobs();
+  }, [searchTerm, filterCategory]);
 
+  // Filter jobs based on search term and category
+  const filteredJobs = jobs;
+  
   return (
-    <div className="space-y-6">
-      {/* Search and Filter */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="relative flex-1">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search jobs..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-quickshift-primary focus:border-transparent"
-            />
+    <div className="bg-white shadow rounded-lg p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">Available Jobs</h1>
+        <p className="text-gray-600">Find and apply for gig opportunities that match your schedule.</p>
+      </div>
+
+      {/* Search and filters */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FaSearch className="text-gray-400" />
           </div>
+          <input
+            type="text"
+            placeholder="Search jobs by title, description..."
+            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-full focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="w-full md:w-48">
           <select
+            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-quickshift-primary focus:border-transparent"
           >
-            <option value="all">All Categories</option>
-            <option value="Event Support">Event Support</option>
-            <option value="Administrative">Administrative</option>
-            <option value="Delivery">Delivery</option>
-            <option value="Tutoring">Tutoring</option>
-            <option value="Research">Research</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>
+                {category === 'all' ? 'All Categories' : category}
+              </option>
+            ))}
           </select>
         </div>
       </div>
 
-      {/* Job Listings */}
+      {/* Jobs list */}
       <div className="space-y-4">
-        {filteredJobs.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <FaSearch className="mx-auto text-gray-400 text-4xl mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No jobs found</h3>
-            <p className="text-gray-500">Try adjusting your search criteria or check back later.</p>
+        {loading ? (
+          <div className="text-center py-10">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-t-blue-500 border-r-transparent border-b-blue-500 border-l-transparent"></div>
+            <p className="mt-2 text-gray-600">Loading available jobs...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-10">
+            <p className="text-red-500">{error}</p>
+            <button 
+              className="mt-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </button>
+          </div>
+        ) : filteredJobs.length === 0 ? (
+          <div className="text-center py-10">
+            <p className="text-gray-600">No jobs found matching your criteria.</p>
           </div>
         ) : (
           filteredJobs.map(job => (
-            <div
+            <div 
               key={job.id}
-              onClick={() => onJobSelect?.(job)}
-              className={`bg-white rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer p-6 border-l-4 ${
-                selectedJobId === job.id 
-                  ? 'border-quickshift-primary bg-quickshift-light' 
-                  : 'border-gray-200 hover:border-quickshift-tertiary'
+              className={`border rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                selectedJobId === job.id ? 'border-blue-500 ring-2 ring-blue-200' : 'border-gray-200'
               }`}
+              onClick={() => onJobSelect && onJobSelect(job)}
             >
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">{job.title}</h3>
-                  <p className="text-sm text-gray-600">{job.employer.name} • ⭐ {job.employer.rating}</p>
-                </div>
-                <div className="flex items-center space-x-2">
+              <div className="flex justify-between items-start">
+                <h3 className="text-lg font-semibold text-gray-800">{job.title}</h3>
+                <div className="flex flex-col items-end">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getUrgencyColor(job.urgency)}`}>
-                    {job.urgency.toUpperCase()}
+                    {job.urgency === 'high' ? 'Urgent' : job.urgency === 'medium' ? 'Filling Fast' : 'Open'}
                   </span>
-                  <span className="text-xs text-gray-500">{job.postedDate}</span>
+                  <span className="text-xs text-gray-500 mt-1">{job.postedDate}</span>
                 </div>
               </div>
-
-              <p className="text-gray-700 mb-4 line-clamp-2">{job.description}</p>
-
-              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                <div className="flex items-center">
-                  <FaMapMarkerAlt className="mr-1" />
+              
+              <p className="text-gray-600 mt-2 line-clamp-2">{job.description}</p>
+              
+              <div className="flex flex-wrap gap-y-2 mt-3">
+                <div className="flex items-center text-sm text-gray-500 mr-4">
+                  <FaMapMarkerAlt className="mr-1 text-gray-400" />
                   {job.location}
                 </div>
-                <div className="flex items-center">
-                  <FaClock className="mr-1" />
+                <div className="flex items-center text-sm text-gray-500 mr-4">
+                  <FaClock className="mr-1 text-gray-400" />
                   {job.duration}
                 </div>
-                <div className="flex items-center font-semibold text-green-600">
-                  <FaDollarSign className="mr-1" />
+                <div className="flex items-center text-sm text-gray-500">
+                  <FaDollarSign className="mr-1 text-gray-400" />
                   {job.pay}
                 </div>
-                <span className="bg-gray-100 px-2 py-1 rounded text-xs">
+              </div>
+              
+              <div className="mt-3 flex justify-between items-center">
+                <span className="text-sm font-medium px-2 py-1 bg-gray-100 rounded-full text-gray-700">
                   {job.category}
+                </span>
+                <span className="text-sm text-gray-600">
+                  {job.employer.name} • {job.employer.rating > 0 ? `${job.employer.rating}★` : 'New'}
                 </span>
               </div>
             </div>

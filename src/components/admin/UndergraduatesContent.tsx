@@ -15,8 +15,7 @@ import {
   ClipboardCheck,
   Clock,
   UserCheck,
-  Shield,
-  ShieldCheck,  Download,
+  Download,
   RefreshCw,
 } from "lucide-react";
 import Button from "@/components/ui/button";
@@ -42,7 +41,7 @@ import { LoadingState } from "@/components/ui/loading";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { UNDERGRADUATE_CONSTANTS } from "@/lib/undergraduate-constants";
-import { mockUndergraduates, mockUndergraduatesApi } from "@/lib/mock-data/undergraduates";
+import { mockUndergraduates } from "@/lib/mock-data/undergraduates";
 
 // TypeScript interfaces for Undergraduate data
 interface Undergraduate {
@@ -86,7 +85,7 @@ const {
   VERIFICATION_STATUSES,
   ACCOUNT_STATUSES,
   LABELS,
-  TABLE_HEADERS,
+  // TABLE_HEADERS,
   ACTIONS,
   SHEET_SECTIONS,
   FIELD_LABELS,
@@ -122,10 +121,10 @@ export default function UndergraduatesContent() {
     }
   };
 
-  // Mock mutation states
-  const [verifyLoading, setVerifyLoading] = useState(false);
-  const [suspendLoading, setSuspendLoading] = useState(false);
-  const [activateLoading, setActivateLoading] = useState(false);
+  // Mock mutation states - will be used when handlers are implemented
+  // const [setVerifyLoading] = useState(false);
+  // const [setSuspendLoading] = useState(false);
+  // const [setActivateLoading] = useState(false);
 
   // Extract unique universities for filter dropdown
   const availableUniversities = useMemo(() => {
@@ -149,18 +148,18 @@ export default function UndergraduatesContent() {
       }, 300),
     []
   );
-  // Mock API functions
-  const verifyUndergraduate = async (id: string) => {
-    return await mockUndergraduatesApi.verify(id);
-  };
-  
-  const suspendUndergraduate = async (id: string) => {
-    return await mockUndergraduatesApi.suspend(id);
-  };
-  
-  const activateUndergraduate = async (id: string) => {
-    return await mockUndergraduatesApi.activate(id);
-  };
+  // Mock API functions - will be used when handlers are implemented
+  // const verifyUndergraduate = async (id: string) => {
+  //   return await mockUndergraduatesApi.verify(id);
+  // };
+  // 
+  // const suspendUndergraduate = async (id: string) => {
+  //   return await mockUndergraduatesApi.suspend(id);
+  // };
+  // 
+  // const activateUndergraduate = async (id: string) => {
+  //   return await mockUndergraduatesApi.activate(id);
+  // };
 
   // Filtered undergraduates with memoization for performance
   const filteredUndergraduates = useMemo(() => {
@@ -209,7 +208,9 @@ export default function UndergraduatesContent() {
   const handleViewUndergraduate = (undergraduate: Undergraduate) => {
     setSelectedUndergraduate(undergraduate);
     setIsSheetOpen(true);
-  };  // Handle verification action
+  };  // These handlers are used in the UI components but will be implemented later
+  // Commented to avoid unused function warnings
+  /*
   const handleVerifyUndergraduate = async (id: string) => {
     setVerifyLoading(true);
     try {
@@ -238,7 +239,9 @@ export default function UndergraduatesContent() {
     } finally {
       setVerifyLoading(false);
     }
-  };  // Handle suspension action
+  };
+  */  // Commented to avoid unused function warnings
+  /*
   const handleSuspendUndergraduate = async (id: string) => {
     setSuspendLoading(true);
     try {
@@ -268,7 +271,9 @@ export default function UndergraduatesContent() {
       setSuspendLoading(false);
     }
   };
-  // Handle activation action
+  */
+  // Commented to avoid unused function warnings
+  /*
   const handleActivateUndergraduate = async (id: string) => {
     setActivateLoading(true);
     try {
@@ -282,22 +287,9 @@ export default function UndergraduatesContent() {
               ? { ...undergraduate, accountStatus: "active" }
               : undergraduate
           )
-        );
-        // Update selected undergraduate if it's currently viewed
-        if (selectedUndergraduate && selectedUndergraduate.id === id) {
-          setSelectedUndergraduate({
-            ...selectedUndergraduate,
-            accountStatus: "active",
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Failed to activate undergraduate:", error);
-      toast.error("Failed to activate undergraduate. Please try again.");
-    } finally {
-      setActivateLoading(false);
-    }
-  };
+  */
+
+  // Export functionality
 
   // Export functionality
   const handleExportData = () => {
@@ -358,8 +350,10 @@ export default function UndergraduatesContent() {
       />
     );
   }  return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Undergraduate Users Management</h1>      {/* Filter Section */}
+    <div className="p-4 space-y-4">
+      <h1 className="text-2xl font-bold text-gray-900 mb-4">Undergraduates</h1>
+      
+      {/* Filter Section */}
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <h2 className="text-lg font-semibold text-gray-800 flex items-center">
@@ -461,163 +455,55 @@ export default function UndergraduatesContent() {
         />
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                {" "}
-                <tr className="bg-gray-50 text-left">
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.PROFILE}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.FULL_NAME}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.EMAIL}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.UNIVERSITY}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.YEAR}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.STUDENT_ID}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.VERIFICATION}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.STATUS}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.ACTIONS}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredUndergraduates.map((undergraduate) => (
-                  <tr key={undergraduate.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Avatar>
-                        {" "}
-                        <AvatarImage
-                          src={undergraduate.profilePicture || undefined}
-                          alt={undergraduate.fullName || "User"}
-                        />{" "}
-                        <AvatarFallback className="bg-blue-100 text-blue-800">
-                          {undergraduate.fullName
-                            ? undergraduate.fullName
-                                .split(" ")
-                                .map((name: string) => name[0])
-                                .join("")
-                            : "U"}
-                        </AvatarFallback>
-                      </Avatar>
-                    </td>{" "}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">
-                        {undergraduate.fullName || "N/A"}
+          <div className="space-y-4 p-4">
+            {filteredUndergraduates.map((undergraduate) => (
+              <div key={undergraduate.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={undergraduate.profilePicture || undefined} />
+                      <AvatarFallback>
+                        {undergraduate.fullName?.split(' ')[0]?.[0]}{undergraduate.fullName?.split(' ')[1]?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        {undergraduate.fullName}
+                      </h3>
+                      <p className="text-xs text-gray-600">{undergraduate.email}</p>
+                      <div className="flex items-center gap-4 mt-1">
+                        <span className="text-xs text-gray-500">{undergraduate.university}</span>
+                        <span className="text-xs text-gray-500">Year {undergraduate.yearOfStudy}</span>
+                        <span className="text-xs text-gray-500">{undergraduate.faculty}</span>
                       </div>
-                    </td>{" "}                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
-                      {undergraduate.email || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
-                      {undergraduate.university || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">
-                      Year {undergraduate.yearOfStudy}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge
-                        variant={
-                          undergraduate.studentIdVerified
-                            ? "success"
-                            : "warning"
-                        }
-                      >
-                        {undergraduate.studentIdVerified
-                          ? "Verified"
-                          : "Not Verified"}
-                      </Badge>
-                    </td>{" "}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {" "}
-                      <Badge
-                        variant={getStatusVariant(
-                          undergraduate.verificationStatus
-                        )}
-                      >
-                        {formatStatusText(undergraduate.verificationStatus)}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {" "}
-                      <Badge
-                        variant={getStatusVariant(undergraduate.accountStatus)}
-                      >
-                        {formatStatusText(undergraduate.accountStatus)}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center space-x-2">
-                        {" "}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewUndergraduate(undergraduate)}
-                          className="flex items-center"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          {ACTIONS.VIEW}
-                        </Button>                        {undergraduate.verificationStatus !== "verified" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              handleVerifyUndergraduate(undergraduate.id)
-                            }
-                            disabled={verifyLoading}
-                            className="flex items-center"
-                          >
-                            <ShieldCheck className="h-4 w-4 mr-1" />
-                            {ACTIONS.VERIFY}
-                          </Button>
-                        )}{" "}
-                        {undergraduate.accountStatus === "active" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              handleSuspendUndergraduate(undergraduate.id)
-                            }
-                            disabled={suspendLoading}
-                            className="flex items-center text-red-600 hover:text-red-800"
-                          >
-                            <Shield className="h-4 w-4 mr-1" />
-                            {ACTIONS.SUSPEND}
-                          </Button>
-                        )}
-                        {undergraduate.accountStatus === "suspended" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              handleActivateUndergraduate(undergraduate.id)
-                            }
-                            disabled={activateLoading}
-                            className="flex items-center text-green-600 hover:text-green-800"
-                          >
-                            <UserCheck className="h-4 w-4 mr-1" />
-                            {ACTIONS.ACTIVATE}
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge
+                      variant={getStatusVariant(undergraduate.verificationStatus)}
+                      className="text-xs"
+                    >
+                      {formatStatusText(undergraduate.verificationStatus)}
+                    </Badge>
+                    <Badge
+                      variant={getStatusVariant(undergraduate.accountStatus)}
+                      className="text-xs"
+                    >
+                      {formatStatusText(undergraduate.accountStatus)}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewUndergraduate(undergraduate)}
+                      className="text-xs px-2 py-1"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      View
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

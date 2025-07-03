@@ -13,8 +13,9 @@ import MyApplications from '@/components/undergraduate/MyApplications';
 import Profile from '@/components/undergraduate/Profile';
 import MyGigs from '@/components/undergraduate/MyGigs';
 import MyPayments from '@/components/undergraduate/MyPayments';
+import Dashboard from '@/components/undergraduate/Dashboard';
 
-type TabType = 'jobs' | 'applications' | 'gigs' | 'payments' | 'profile';
+type TabType = 'dashboard' | 'jobs' | 'applications' | 'gigs' | 'payments' | 'profile';
 
 interface Job {
   id: string;
@@ -33,6 +34,7 @@ interface Job {
 }
 
 const navigationItems = [
+  { id: 'dashboard', label: 'Dashboard', icon: FaUser },
   { id: 'jobs', label: 'Browse Jobs', icon: FaSearch },
   { id: 'applications', label: 'My Applications', icon: FaHistory, badge: '2' },
   { id: 'gigs', label: 'My Gigs', icon: FaBriefcase, badge: '2' },
@@ -48,11 +50,13 @@ const quickStats = [
 ];
 
 function UndergraduatePage() {
-  const [activeTab, setActiveTab] = useState<TabType>('jobs');
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'dashboard':
+        return <Dashboard />;
       case 'jobs':
         return selectedJob ? (
           <JobDetails job={selectedJob} onClose={() => setSelectedJob(null)} />
@@ -68,7 +72,7 @@ function UndergraduatePage() {
       case 'profile':
         return <Profile />;
       default:
-        return <JobList onJobSelect={setSelectedJob} />;
+        return <Dashboard />;
     }
   };
 

@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import {
   Users,
   Briefcase,
   CheckCircle,
   UserPlus,
-  RefreshCw,
 } from "lucide-react";
 
 // Simplified components for clean admin dashboard
@@ -15,25 +14,25 @@ interface CardProps {
   className?: string;
 }
 const Card = ({ children, className = "" }: CardProps) => (
-  <div className={`bg-white rounded-lg border shadow-sm ${className}`}>
+  <div className={`bg-white rounded-xl border shadow-lg hover:shadow-xl transition-shadow duration-300 ${className}`}>
     {children}
   </div>
 );
 
 const CardContent = ({ children, className = "" }: CardProps) => (
-  <div className={`p-6 ${className}`}>{children}</div>
+  <div className={`p-4 sm:p-6 ${className}`}>{children}</div>
 );
 
 const CardHeader = ({ children, className = "" }: CardProps) => (
-  <div className={`p-6 pb-3 ${className}`}>{children}</div>
+  <div className={`p-4 sm:p-6 pb-2 sm:pb-3 ${className}`}>{children}</div>
 );
 
 const CardTitle = ({ children, className = "" }: CardProps) => (
-  <h3 className={`text-lg font-semibold ${className}`}>{children}</h3>
+  <h3 className={`text-base sm:text-lg lg:text-xl font-semibold ${className}`}>{children}</h3>
 );
 
 const CardDescription = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
-  <p className={`text-sm text-slate-600 ${className}`}>{children}</p>
+  <p className={`text-sm sm:text-base text-slate-600 ${className}`}>{children}</p>
 );
 
 const Badge = ({ children, variant = "default" }: { children: React.ReactNode; variant?: string }) => {
@@ -73,10 +72,11 @@ interface TopPerformer {
 }
 
 export default function DashboardContent() {
-  const [lastUpdated, setLastUpdated] = useState("");
+  // Track last update time if needed for refresh features
+  // const [lastUpdated, setLastUpdated] = useState("");
 
   useEffect(() => {
-    setLastUpdated(new Date().toLocaleString());
+    // setLastUpdated(new Date().toLocaleString());
   }, []);
 
   // Mock data for dashboard - replace with real API calls when ready
@@ -231,77 +231,63 @@ export default function DashboardContent() {
     );
   };
 
-  const handleRefresh = () => {
-    setLastUpdated(new Date().toLocaleString());
-    // Here you would refetch data from APIs
-  };  return (
-    <div className="p-6 space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Dashboard Overview</h1>
-          <p className="text-lg text-gray-700 font-medium">Welcome to your admin control center</p>
-        </div>
-        <div className="mt-4 sm:mt-0 flex items-center gap-4">
-          <p className="text-sm text-gray-800 bg-gray-100 px-3 py-2 rounded-lg font-medium border">
-            🕒 Last updated: {lastUpdated}
-          </p>
-          <button
-            onClick={handleRefresh}
-            className="flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
-          >
-            <RefreshCw className="h-4 w-4" />
-            Refresh Data
-          </button>
-        </div>
-      </div>      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+  // const handleRefresh = () => {
+  //   setLastUpdated(new Date().toLocaleString());
+  //   // Here you would refetch data from APIs
+  // };
+  
+  return (
+    <div className="p-4 space-y-6">
+      <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((stat, index) => (
-          <Card key={index} className={`${stat.bgColor} border-2 border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1`}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-              <CardTitle className="text-sm font-bold text-gray-900 uppercase tracking-wide">
+          <Card key={index} className={`${stat.bgColor} border shadow-md hover:shadow-lg transition-all duration-300`}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-bold text-gray-900 uppercase tracking-wide">
                 {stat.title}
               </CardTitle>
-              <div className={`p-2 rounded-full ${stat.bgColor.replace('bg-', 'bg-').replace('50', '100')}`}>
-                <stat.Icon className={`h-6 w-6 ${stat.iconColor}`} />
+              <div className={`p-1.5 rounded-full ${stat.bgColor.replace('bg-', 'bg-').replace('50', '100')}`}>
+                <stat.Icon className={`h-4 w-4 ${stat.iconColor}`} />
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-gray-900 mb-2">
+            <CardContent className="pt-0 p-4">
+              <div className="text-xl font-bold text-gray-900 mb-1">
                 {stat.value}
               </div>
-              <p className="text-sm text-gray-800 font-semibold mb-2">{stat.subtitle}</p>
+              <p className="text-xs text-gray-800 font-semibold mb-1">{stat.subtitle}</p>
               {stat.trend && (
-                <p className={`text-sm font-bold ${stat.trendPositive ? "text-green-700" : "text-red-700"}`}>
+                <p className={`text-xs font-bold ${stat.trendPositive ? "text-green-700" : "text-red-700"}`}>
                   📈 {stat.trend}
                 </p>
               )}
             </CardContent>
           </Card>
         ))}
-      </div><div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 shadow-lg border-l-4 border-l-blue-500">
-          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-            <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Briefcase className="h-6 w-6 text-blue-600" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2 shadow-md border-l-4 border-l-blue-500">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4">
+            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Briefcase className="h-5 w-5 text-blue-600" />
               Recent Gig Activity
             </CardTitle>
-            <CardDescription className="text-base text-gray-800 font-medium">
-              Latest gig postings and their current status updates.
+            <CardDescription className="text-sm text-gray-800 font-medium">
+              Latest gig postings and status updates.
             </CardDescription>
           </CardHeader>
-          <CardContent className="bg-white">
+          <CardContent className="bg-white p-4">
             {recentActivity.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {recentActivity.map((activityItem) => (
-                  <div key={activityItem.id} className="flex items-center justify-between p-5 border-2 border-gray-300 rounded-xl hover:border-blue-400 hover:shadow-lg transition-all duration-200 bg-white">
+                  <div key={activityItem.id} className="flex items-center justify-between p-3 border rounded-lg hover:border-blue-400 hover:shadow-md transition-all duration-200 bg-white">
                     <div className="flex-1">
-                      <h4 className="font-bold text-lg text-gray-900 mb-1">{activityItem.title}</h4>
-                      <p className="text-base text-gray-800 font-semibold">{activityItem.company}</p>
-                      <p className="text-sm text-gray-700 mt-1 font-medium">📍 {activityItem.location}</p>
-                      <p className="text-sm text-blue-700 font-semibold">🕒 {activityItem.date}</p>
+                      <h4 className="font-bold text-sm text-gray-900 mb-1">{activityItem.title}</h4>
+                      <p className="text-sm text-gray-800 font-semibold">{activityItem.company}</p>
+                      <p className="text-xs text-gray-700 font-medium">📍 {activityItem.location} • 🕒 {activityItem.date}</p>
                     </div>
-                    <div className="text-right space-y-2">
+                    <div className="text-right space-y-1">
                       {getStatusBadge(activityItem.status)}
-                      <p className="text-lg font-bold text-green-600">{activityItem.payment}</p>
+                      <p className="text-sm font-bold text-green-600">{activityItem.payment}</p>
                     </div>
                   </div>
                 ))}
@@ -317,56 +303,56 @@ export default function DashboardContent() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-lg border-l-4 border-l-green-500">
-          <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
-            <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Users className="h-6 w-6 text-green-600" />
+        <Card className="shadow-md border-l-4 border-l-green-500">
+          <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 p-4">
+            <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <Users className="h-5 w-5 text-green-600" />
               Top Performers
             </CardTitle>
-            <CardDescription className="text-base text-gray-700">
-              Outstanding students and employers on the platform.
+            <CardDescription className="text-sm text-gray-700">
+              Outstanding students and employers.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4 bg-white">
+          <CardContent className="space-y-3 bg-white p-4">
             {topPerformers.length > 0 ? (
               topPerformers.map((performer) => (
                 <div
                   key={performer.id}
-                  className="flex items-center space-x-4 p-4 bg-gradient-to-r from-gray-50 to-green-50 rounded-xl border-2 border-gray-200 hover:border-green-300 hover:shadow-md transition-all duration-200"
+                  className="flex items-center space-x-3 p-3 bg-gradient-to-r from-gray-50 to-green-50 rounded-lg border hover:border-green-300 hover:shadow-md transition-all duration-200"
                 >
                   <div
-                    className={`p-3 rounded-full shadow-md ${
+                    className={`p-2 rounded-full shadow-sm ${
                       performer.type === "student"
                         ? "bg-gradient-to-r from-blue-400 to-blue-600 text-white"
                         : "bg-gradient-to-r from-green-400 to-green-600 text-white"
                     }`}
                   >
                     {performer.type === "student" ? (
-                      <Users className="h-6 w-6" />
+                      <Users className="h-4 w-4" />
                     ) : (
-                      <Briefcase className="h-6 w-6" />
+                      <Briefcase className="h-4 w-4" />
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="text-base font-bold text-gray-900 mb-1">
+                    <p className="text-sm font-bold text-gray-900 mb-1">
                       {performer.name}
                     </p>
                     <div className="space-y-1">
-                      <p className="text-sm text-gray-700 font-medium">
+                      <p className="text-xs text-gray-700 font-medium">
                         {performer.type === "student"
                           ? `🎯 ${performer.gigsCompleted} gigs completed`
                           : `📝 ${performer.gigsPosted} gigs posted`}
                       </p>
-                      <p className="text-sm text-blue-600 font-semibold">
-                        ⭐ Rating: {performer.rating.toFixed(1)}/5.0
+                      <p className="text-xs text-blue-600 font-semibold">
+                        ⭐ {performer.rating.toFixed(1)}/5.0
                       </p>
                       {performer.specialization && (
-                        <p className="text-xs text-blue-600 bg-blue-100 rounded-full px-2 py-1 inline-block">
+                        <p className="text-xs text-blue-600 bg-blue-100 rounded-full px-2 py-0.5 inline-block">
                           {performer.specialization}
                         </p>
                       )}
                       {performer.industry && (
-                        <p className="text-xs text-green-600 bg-green-100 rounded-full px-2 py-1 inline-block">
+                        <p className="text-xs text-green-600 bg-green-100 rounded-full px-2 py-0.5 inline-block">
                           {performer.industry}
                         </p>
                       )}

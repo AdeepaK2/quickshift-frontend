@@ -430,10 +430,10 @@ export default function EmployerContent() {
   }
 
   return (
-    <div className="p-6">
-      <h1 className="text-3xl font-bold mb-6 text-gray-900">Employer Management</h1>
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4 text-gray-900">Employers</h1>
       
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
+      <div className="bg-white rounded-lg shadow p-4 mb-4">
         {/* Search Bar */}
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-semibold text-gray-900">Employers</h2>
@@ -486,115 +486,83 @@ export default function EmployerContent() {
                 }))}
               />
             </div>
-          </div>          <div className="overflow-x-auto">
+          </div>          <div className="space-y-4 p-4">
             {filteredEmployers.length > 0 ? (
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Company Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Email
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Phone Number
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Location
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Account Verified
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Rating
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                {filteredEmployers.map((employer: Employer) => (
-                  <tr key={employer._id} className="hover:bg-gray-50"><td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">                        <Avatar className="h-8 w-8 mr-3">
-                          <AvatarImage
-                            src={employer.profilePicture || getSampleCompanyImage()}
-                            alt={employer.companyName}
-                          />
-                          <AvatarFallback 
-                            className="text-sm font-bold"
-                            companyName={employer.companyName}
-                          >
-                            {getInitials(employer.companyName)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="font-medium text-gray-900">
+              filteredEmployers.map((employer: Employer) => (
+                <div key={employer._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage
+                          src={employer.profilePicture || getSampleCompanyImage()}
+                          alt={employer.companyName}
+                        />
+                        <AvatarFallback 
+                          className="text-sm font-bold"
+                          companyName={employer.companyName}
+                        >
+                          {getInitials(employer.companyName)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-sm font-semibold text-gray-900">
                           {employer.companyName}
+                        </h3>
+                        <p className="text-xs text-gray-600">{employer.email}</p>
+                        <div className="flex items-center gap-4 mt-1">
+                          <span className="text-xs text-gray-500">{employer.phone || "No phone"}</span>
+                          <span className="text-xs text-gray-500">{employer.location || "No location"}</span>
+                          <div className="flex items-center">
+                            <Star className="h-3 w-3 text-blue-400 mr-1" />
+                            <span className="text-xs text-gray-500">{employer.ratings.averageRating.toFixed(1)}</span>
+                          </div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {employer.email}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {employer.phone || "Not provided"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {employer.location || "Not provided"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    </div>
+                    <div className="flex items-center space-x-2">
                       <Badge
                         variant={employer.verified ? "success" : "warning"}
+                        className="text-xs"
                       >
                         {employer.verified ? "Verified" : "Not Verified"}
                       </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="flex items-center">
-                        <Star className="h-4 w-4 text-blue-400 mr-1" />
-                        <span>{employer.ratings.averageRating.toFixed(1)}</span>
-                      </div>
-                    </td>                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewEmployer(employer)}
+                        className="text-xs px-2 py-1 bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100 font-medium"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
+                      </Button>
+                      {!employer.verified && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleViewEmployer(employer)}
-                          className="bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100 font-medium"
+                          onClick={() => handleVerifyEmployer(employer._id)}
+                          disabled={verifyLoading}
+                          className="text-xs px-2 py-1 bg-green-50 text-green-800 border-green-200 hover:bg-green-100"
                         >
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
+                          <Check className="h-3 w-3 mr-1" />
+                          Verify
                         </Button>
-                        {!employer.verified && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleVerifyEmployer(employer._id)}
-                            disabled={verifyLoading}
-                            className="bg-green-50 text-green-800 border-green-200 hover:bg-green-100"
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Verify
-                          </Button>
-                        )}
-                        {employer.verified && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleSuspendEmployer(employer._id)}
-                            disabled={suspendLoading}
-                            className="bg-red-50 text-red-800 border-red-200 hover:bg-red-100"
-                          >
-                            <AlertTriangle className="h-4 w-4 mr-1" />
-                            Suspend
-                          </Button>
-                        )}                      </div>
-                    </td>
-                  </tr>
-                ))}
-                </tbody>
-              </table>
+                      )}
+                      {employer.verified && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSuspendEmployer(employer._id)}
+                          disabled={suspendLoading}
+                          className="text-xs px-2 py-1 bg-red-50 text-red-800 border-red-200 hover:bg-red-100"
+                        >
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Suspend
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))
             ) : (
               <EmptyState
                 title="No employers found"

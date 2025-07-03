@@ -45,7 +45,7 @@ function DashboardLayout({
   userType,
   activeTab,
   setActiveTab,
-  navigationItems,
+  // navigationItems, // Commented out as it's not used
   quickStats
 }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
@@ -65,7 +65,7 @@ function DashboardLayout({
     toast.dismiss();
     
     const confirmLogout = await new Promise((resolve) => {
-      const toastId = toast((t) => (
+      toast((t) => (
         <div className="flex flex-col gap-2">
           <span className="font-medium">Are you sure you want to logout?</span>
           <div className="flex gap-2">
@@ -169,7 +169,7 @@ function DashboardLayout({
               firstName: user?.firstName || displayUser.firstName,
               lastName: user?.lastName || displayUser.lastName,
               email: user?.email || displayUser.email,
-              companyName: user?.companyName || (displayUser as any).companyName,
+              companyName: user?.companyName || (displayUser as {companyName?: string}).companyName,
               role: user?.role || displayUser.role
             }}
             onLogout={handleLogout}
@@ -192,14 +192,14 @@ function DashboardLayout({
         {/* Main Content */}
         <div className="flex-1 main-content">
           {/* Header */}
-          <div className="sticky top-0 z-40 bg-white border-b border-slate-200">
+          <div className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
             <DashboardHeader
               user={{
                 _id: user?.id || displayUser.id,
                 firstName: user?.firstName || displayUser.firstName,
                 lastName: user?.lastName || displayUser.lastName,
                 email: user?.email || displayUser.email,
-                companyName: user?.companyName || (displayUser as any).companyName,
+                companyName: user?.companyName || (displayUser as {companyName?: string}).companyName,
                 role: user?.role || displayUser.role
               }}
               userType={userType === 'user' ? 'undergraduate' : userType as 'admin' | 'employer' | 'undergraduate'}
@@ -208,8 +208,8 @@ function DashboardLayout({
           </div>
 
           {/* Page Content */}
-          <main className="flex-1 p-1 lg:p-2 overflow-y-auto bg-white">
-            <div className="max-w-6xl mx-auto">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto bg-slate-50 min-h-screen">
+            <div className="max-w-7xl mx-auto">
               {children}
             </div>
           </main>

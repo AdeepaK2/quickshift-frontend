@@ -4,7 +4,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, UserType, AuthTokens } from '@/types/auth';
 import { authService } from '@/services/authService';
-import toast from 'react-hot-toast';
+// Using notification system for auth events
+// import toast from 'react-hot-toast';
 
 interface AuthContextType {
   user: User | null;

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { withAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import FloatingActionButton from '@/components/shared/FloatingActionButton';
 import { FaChartBar, FaUsers, FaBriefcase, FaCog, FaPlus, FaUserTie } from 'react-icons/fa';

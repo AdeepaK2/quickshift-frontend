@@ -24,4 +24,4 @@ export {
 } from './dialog';
 
 // Other UI components
-export { default as Switch } from './switch';
+export { default as Switch } from './Switch';

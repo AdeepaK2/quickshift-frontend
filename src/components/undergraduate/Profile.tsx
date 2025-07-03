@@ -2,78 +2,171 @@
 
 import React, { useState, useEffect } from 'react';
 import { FaUser, FaEdit, FaSave, FaTimes, FaGraduationCap, FaPhone, FaEnvelope, FaMapMarkerAlt, FaIdCard, FaUniversity } from 'react-icons/fa';
+import { userService, UserProfile as BackendUserProfile } from '@/services/userService';
+import toast from 'react-hot-toast';
 
-interface UserProfile {
+// Interface that combines backend data with UI-specific fields
+interface UserProfileUI extends Omit<BackendUserProfile, '_id'> {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  university: string;
   studentId: string;
   year: string;
-  faculty: string;
   skills: string[];
-  bio: string;
-  address: string;
   emergencyContact: {
     name: string;
     relationship: string;
     phone: string;
   };
-  profilePicture?: string;
   joinedDate: string;
   completedGigs: number;
   rating: number;
 }
 
+// Convert from backend to UI format
+const convertToUIFormat = (backendProfile: BackendUserProfile): UserProfileUI => {
+  return {
+    id: backendProfile._id,
+    firstName: backendProfile.firstName,
+    lastName: backendProfile.lastName,
+    email: backendProfile.email,
+    phone: backendProfile.phone || '',
+    profilePicture: backendProfile.profilePicture,
+    university: backendProfile.university || '',
+    faculty: backendProfile.faculty || '',
+    studentId: '', // Not in the backend model - will need to be added or handled separately
+    year: backendProfile.yearOfStudy ? `${backendProfile.yearOfStudy}${getOrdinalSuffix(backendProfile.yearOfStudy)} Year` : '',
+    bio: backendProfile.bio || '',
+    address: backendProfile.address || '',
+    city: backendProfile.city || '',
+    postalCode: backendProfile.postalCode || '',
+    coordinates: backendProfile.coordinates,
+    skills: [], // Not in the backend model - will need to be added or handled separately
+    emergencyContact: {
+      name: '',
+      relationship: '',
+      phone: ''
+    },
+    joinedDate: backendProfile.createdAt,
+    completedGigs: 0, // Will be updated from stats
+    rating: 0, // Will be updated from stats
+    isActive: backendProfile.isActive,
+    isVerified: backendProfile.isVerified,
+    createdAt: backendProfile.createdAt,
+    updatedAt: backendProfile.updatedAt,
+    dateOfBirth: backendProfile.dateOfBirth,
+    gender: backendProfile.gender,
+    studentIdVerified: backendProfile.studentIdVerified
+  };
+};
+
+// Convert from UI format to backend update format
+const convertToBackendUpdateFormat = (uiProfile: UserProfileUI) => {
+  return {
+    firstName: uiProfile.firstName,
+    lastName: uiProfile.lastName,
+    phone: uiProfile.phone,
+    dateOfBirth: uiProfile.dateOfBirth,
+    gender: uiProfile.gender,
+    university: uiProfile.university,
+    faculty: uiProfile.faculty,
+    yearOfStudy: parseInt(uiProfile.year.split(/[^\d]/)[0]) || undefined,
+    bio: uiProfile.bio,
+    address: uiProfile.address,
+    city: uiProfile.city,
+    postalCode: uiProfile.postalCode,
+    coordinates: uiProfile.coordinates
+  };
+};
+
+// Helper function for ordinal suffixes (1st, 2nd, 3rd, etc.)
+const getOrdinalSuffix = (num: number): string => {
+  const j = num % 10;
+  const k = num % 100;
+  if (j === 1 && k !== 11) {
+    return 'st';
+  }
+  if (j === 2 && k !== 12) {
+    return 'nd';
+  }
+  if (j === 3 && k !== 13) {
+    return 'rd';
+  }
+  return 'th';
+};
+
 const Profile: React.FC = () => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profile, setProfile] = useState<UserProfileUI | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [editedProfile, setEditedProfile] = useState<UserProfile | null>(null);
+  const [editedProfile, setEditedProfile] = useState<UserProfileUI | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Mock profile data
-    const mockProfile: UserProfile = {
-      id: '1',
-      firstName: 'Kasun',
-      lastName: 'Perera',
-      email: 'kasun.perera@stu.ucolombo.lk',
-      phone: '+94 77 123 4567',
-      university: 'University of Colombo',
-      studentId: 'CS/2021/123',
-      year: '3rd Year',
-      faculty: 'Faculty of Science',
-      skills: ['Event Management', 'Data Entry', 'Customer Service', 'Photography', 'Tutoring'],
-      bio: 'Computer Science undergraduate with experience in part-time work and event coordination. Looking for flexible opportunities to gain experience while studying.',
-      address: 'No. 45, Galle Road, Colombo 03',
-      emergencyContact: {
-        name: 'Sunil Perera',
-        relationship: 'Father',
-        phone: '+94 71 234 5678'
-      },
-      joinedDate: '2024-01-01',
-      completedGigs: 12,
-      rating: 4.8
+    const fetchProfileData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // Get user profile
+        const profileResponse = await userService.getProfile();
+        if (!profileResponse.success || !profileResponse.data) {
+          setError('Failed to load profile data');
+          return;
+        }
+        
+        // Convert to UI format
+        const uiProfile = convertToUIFormat(profileResponse.data);
+        
+        // Get user stats
+        try {
+          const statsResponse = await userService.getStats();
+          if (statsResponse.success && statsResponse.data) {
+            uiProfile.completedGigs = statsResponse.data.completedGigs;
+            uiProfile.rating = statsResponse.data.rating;
+          }
+        } catch (statsError) {
+          console.error('Error fetching user stats:', statsError);
+          // Don't fail if stats can't be loaded
+        }
+        
+        setProfile(uiProfile);
+        setEditedProfile(uiProfile);
+      } catch (error) {
+        console.error('Error fetching profile data:', error);
+        setError('Error loading your profile data');
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setTimeout(() => {
-      setProfile(mockProfile);
-      setEditedProfile(mockProfile);
-      setLoading(false);
-    }, 1000);
+    fetchProfileData();
   }, []);
 
   const handleEdit = () => {
     setIsEditing(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (editedProfile) {
-      setProfile(editedProfile);
-      setIsEditing(false);
-      // Here you would typically make an API call to save the profile
+      try {
+        setLoading(true);
+        const updateData = convertToBackendUpdateFormat(editedProfile);
+        
+        const response = await userService.updateProfile(updateData);
+        
+        if (response.success) {
+          // Update the displayed profile
+          setProfile(editedProfile);
+          setIsEditing(false);
+          toast.success('Profile updated successfully!');
+        } else {
+          toast.error('Failed to update profile');
+        }
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        toast.error('An error occurred while updating your profile');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -138,7 +231,7 @@ const Profile: React.FC = () => {
       <div className="bg-white rounded-lg shadow p-12 text-center">
         <FaUser className="mx-auto text-gray-400 text-4xl mb-4" />
         <h3 className="text-lg font-medium text-gray-900 mb-2">Profile not found</h3>
-        <p className="text-gray-500">Unable to load your profile information.</p>
+        <p className="text-gray-500">{error || 'Unable to load your profile information.'}</p>
       </div>
     );
   }
@@ -150,9 +243,17 @@ const Profile: React.FC = () => {
         <div className="p-6">
           <div className="flex justify-between items-start mb-6">
             <div className="flex items-center space-x-4">
-              <div className="w-20 h-20 bg-quickshift-primary rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
-              </div>
+              {profile.profilePicture ? (
+                <img 
+                  src={profile.profilePicture} 
+                  alt={`${profile.firstName} ${profile.lastName}`}
+                  className="w-20 h-20 object-cover rounded-full"
+                />
+              ) : (
+                <div className="w-20 h-20 bg-quickshift-primary rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                  {profile.firstName.charAt(0)}{profile.lastName.charAt(0)}
+                </div>
+              )}
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">
                   {profile.firstName} {profile.lastName}
@@ -198,7 +299,7 @@ const Profile: React.FC = () => {
               <div className="text-sm text-gray-600">Completed Gigs</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{profile.rating}</div>
+              <div className="text-2xl font-bold text-blue-600">{profile.rating.toFixed(1)}</div>
               <div className="text-sm text-gray-600">Average Rating</div>
             </div>
             <div className="text-center">
@@ -270,7 +371,7 @@ const Profile: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 ) : (
-                  <p className="text-gray-900">{profile.phone}</p>
+                  <p className="text-gray-900">{profile.phone || 'Not provided'}</p>
                 )}
               </div>
             </div>
@@ -289,7 +390,7 @@ const Profile: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 ) : (
-                  <p className="text-gray-900">{profile.university}</p>
+                  <p className="text-gray-900">{profile.university || 'Not provided'}</p>
                 )}
               </div>
               <div>
@@ -305,7 +406,7 @@ const Profile: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 ) : (
-                  <p className="text-gray-900">{profile.studentId}</p>
+                  <p className="text-gray-900">{profile.studentId || 'Not provided'}</p>
                 )}
               </div>
               <div>
@@ -331,7 +432,9 @@ const Profile: React.FC = () => {
                     />
                   </div>
                 ) : (
-                  <p className="text-gray-900">{profile.year} • {profile.faculty}</p>
+                  <p className="text-gray-900">
+                    {profile.year ? (profile.year + (profile.faculty ? ` • ${profile.faculty}` : '')) : 'Not provided'}
+                  </p>
                 )}
               </div>
               <div>
@@ -347,7 +450,7 @@ const Profile: React.FC = () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 ) : (
-                  <p className="text-gray-900">{profile.address}</p>
+                  <p className="text-gray-900">{profile.address || 'Not provided'}</p>
                 )}
               </div>
             </div>
@@ -372,14 +475,16 @@ const Profile: React.FC = () => {
                 />
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {profile.skills.map((skill, index) => (
+                  {profile.skills.length > 0 ? profile.skills.map((skill, index) => (
                     <span
                       key={index}
                       className="bg-quickshift-light text-quickshift-primary px-3 py-1 rounded-full text-sm"
                     >
                       {skill}
                     </span>
-                  ))}
+                  )) : (
+                    <p className="text-gray-500">No skills added yet</p>
+                  )}
                 </div>
               )}
             </div>
@@ -394,7 +499,7 @@ const Profile: React.FC = () => {
                   placeholder="Tell employers about yourself..."
                 />
               ) : (
-                <p className="text-gray-700">{profile.bio}</p>
+                <p className="text-gray-700">{profile.bio || 'No bio provided yet.'}</p>
               )}
             </div>
           </div>
@@ -416,7 +521,7 @@ const Profile: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               ) : (
-                <p className="text-gray-900">{profile.emergencyContact.name}</p>
+                <p className="text-gray-900">{profile.emergencyContact.name || 'Not provided'}</p>
               )}
             </div>
             <div>
@@ -429,7 +534,7 @@ const Profile: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               ) : (
-                <p className="text-gray-900">{profile.emergencyContact.relationship}</p>
+                <p className="text-gray-900">{profile.emergencyContact.relationship || 'Not provided'}</p>
               )}
             </div>
             <div>
@@ -442,7 +547,7 @@ const Profile: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               ) : (
-                <p className="text-gray-900">{profile.emergencyContact.phone}</p>
+                <p className="text-gray-900">{profile.emergencyContact.phone || 'Not provided'}</p>
               )}
             </div>
           </div>

@@ -1,4 +1,48 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { analyticsService, EmployerAnalytics } from '@/services/analyticsService';
+import { CircleNotch } from "@phosphor-icons/react";
+
 export default function Analytics() {
+  const [analyticsData, setAnalyticsData] = useState<EmployerAnalytics | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchAnalyticsData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await analyticsService.getAggregatedEmployerAnalytics();
+        setAnalyticsData(data);
+      } catch (error) {
+        console.error('Error fetching analytics data:', error);
+        setError('Failed to load analytics data. Please try again.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAnalyticsData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <CircleNotch size={32} className="animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md">
+        <h3 className="font-semibold">Error</h3>
+        <p>{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-8">
@@ -13,19 +57,19 @@ export default function Analytics() {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Applications This Month</span>
-              <span className="text-2xl font-bold text-[#0077B6]">47</span>
+              <span className="text-2xl font-bold text-[#0077B6]">{analyticsData?.applicationsThisMonth || 0}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Interviews Conducted</span>
-              <span className="text-2xl font-bold text-[#0077B6]">12</span>
+              <span className="text-2xl font-bold text-[#0077B6]">{analyticsData?.interviewsConducted || 0}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Successful Hires</span>
-              <span className="text-2xl font-bold text-[#0077B6]">8</span>
+              <span className="text-2xl font-bold text-[#0077B6]">{analyticsData?.successfulHires || 0}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Conversion Rate</span>
-              <span className="text-2xl font-bold text-green-600">17%</span>
+              <span className="text-2xl font-bold text-green-600">{analyticsData?.conversionRate || 0}%</span>
             </div>
           </div>
         </div>
@@ -36,19 +80,19 @@ export default function Analytics() {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Total Spent This Month</span>
-              <span className="text-2xl font-bold text-[#0077B6]">LKR 65,000</span>
+              <span className="text-2xl font-bold text-[#0077B6]">LKR {analyticsData?.totalSpentThisMonth?.toLocaleString() || 0}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Average Cost per Hire</span>
-              <span className="text-2xl font-bold text-[#0077B6]">LKR 8,125</span>
+              <span className="text-2xl font-bold text-[#0077B6]">LKR {analyticsData?.averageCostPerHire?.toLocaleString() || 0}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Job Posting Fees</span>
-              <span className="text-2xl font-bold text-[#0077B6]">LKR 15,000</span>
+              <span className="text-2xl font-bold text-[#0077B6]">LKR {analyticsData?.jobPostingFees?.toLocaleString() || 0}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-gray-600">Worker Payments</span>
-              <span className="text-2xl font-bold text-[#0077B6]">LKR 50,000</span>
+              <span className="text-2xl font-bold text-[#0077B6]">LKR {analyticsData?.workerPayments?.toLocaleString() || 0}</span>
             </div>
           </div>
         </div>
@@ -69,30 +113,37 @@ export default function Analytics() {
               </tr>
             </thead>
             <tbody>
-              {[
-                { title: "Event Staff Needed", applications: 18, views: 245, conversion: "7.3%", status: "Active" },
-                { title: "Marketing Assistant", applications: 12, views: 189, conversion: "6.3%", status: "Active" },
-                { title: "Delivery Driver", applications: 24, views: 356, conversion: "6.7%", status: "Closed" },
-                { title: "Customer Service Rep", applications: 8, views: 123, conversion: "6.5%", status: "Active" }
-              ].map((job, index) => (
-                <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">{job.title}</td>
-                  <td className="py-3 px-4">{job.applications}</td>
-                  <td className="py-3 px-4">{job.views}</td>
-                  <td className="py-3 px-4">
-                    <span className={`font-semibold ${parseFloat(job.conversion) > 6.5 ? 'text-green-600' : 'text-orange-600'}`}>
-                      {job.conversion}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      job.status === 'Active' ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-700'
-                    }`}>
-                      {job.status}
-                    </span>
+              {analyticsData && analyticsData.jobs && analyticsData.jobs.length > 0 ? (
+                analyticsData.jobs.map((job, index) => (
+                  <tr key={job._id || index} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4">{job.title}</td>
+                    <td className="py-3 px-4">{job.applications}</td>
+                    <td className="py-3 px-4">{job.views}</td>
+                    <td className="py-3 px-4">
+                      <span className={`font-semibold ${
+                        parseFloat(String(job.conversion).replace('%', '')) > 6.5 
+                        ? 'text-green-600' 
+                        : 'text-orange-600'
+                      }`}>
+                        {job.conversion}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        job.status === 'Active' ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-700'
+                      }`}>
+                        {job.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-gray-500">
+                    No job performance data available
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

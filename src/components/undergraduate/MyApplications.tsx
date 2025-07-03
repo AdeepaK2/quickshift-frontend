@@ -2,6 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { FaClipboardList, FaClock, FaCheckCircle, FaTimesCircle, FaEye, FaMapMarkerAlt } from 'react-icons/fa';
+import { gigApplicationService, GigApplication } from '@/services/gigApplicationService';
+import toast from 'react-hot-toast';
+import { formatDistanceToNow } from 'date-fns';
 
 interface Application {
   id: string;
@@ -16,13 +19,96 @@ interface Application {
   interviewDate?: string;
 }
 
+// Convert backend GigApplication to frontend Application format
+const convertToApplication = (gigApplication: GigApplication): Application => {
+  // Extract job details
+  const gigRequest = typeof gigApplication.gigRequest === 'string' 
+    ? { title: 'Unknown Job', employer: { companyName: 'Unknown Employer' }, location: { address: 'Unknown', city: '' }, payRate: { amount: 0, rateType: 'hourly' } } 
+    : gigApplication.gigRequest;
+
+  // Map statuses from backend to frontend format
+  let status: 'pending' | 'accepted' | 'rejected' | 'interview' = 'pending';
+  switch (gigApplication.status) {
+    case 'applied': status = 'pending'; break;
+    case 'shortlisted': status = 'interview'; break; 
+    case 'hired': status = 'accepted'; break;
+    case 'rejected': status = 'rejected'; break;
+  }
+  
+  // Format pay information
+  const payRate = typeof gigRequest === 'string' ? 'Unknown' : 
+    `LKR ${gigRequest.payRate.amount} ${gigRequest.payRate.rateType === 'hourly' ? 'per hour' : 
+    gigRequest.payRate.rateType === 'daily' ? 'per day' : 'fixed'}`;
+  
+  // Format location
+  const location = typeof gigRequest === 'string' ? 'Unknown location' : 
+    typeof gigRequest.location === 'object' ? 
+    `${gigRequest.location.address}, ${gigRequest.location.city}` : 'Location not specified';
+  
+  return {
+    id: gigApplication._id,
+    jobId: typeof gigRequest === 'string' ? gigRequest : (gigRequest as any)._id,
+    jobTitle: typeof gigRequest === 'string' ? 'Unknown Job' : gigRequest.title,
+    employerName: typeof gigRequest === 'string' ? 'Unknown Employer' : 
+      typeof gigRequest.employer === 'string' ? 'Unknown Employer' : gigRequest.employer.companyName,
+    appliedDate: formatDistanceToNow(new Date(gigApplication.appliedAt), { addSuffix: true }),
+    status,
+    location,
+    pay: payRate,
+    message: gigApplication.employerFeedback,
+    interviewDate: gigApplication.interviewDetails?.date
+  };
+};
+
 const MyApplications: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected' | 'interview'>('all');
-
+  
   useEffect(() => {
-    // Mock data for applications
+    // Fetch applications from backend
+    const fetchApplications = async () => {
+      try {
+        setLoading(true);
+        
+        // Map frontend filter to backend filter
+        let statusFilter: 'applied' | 'shortlisted' | 'hired' | 'rejected' | 'all' = 'all';
+        switch (filter) {
+          case 'pending': statusFilter = 'applied'; break;
+          case 'interview': statusFilter = 'shortlisted'; break;
+          case 'accepted': statusFilter = 'hired'; break;
+          case 'rejected': statusFilter = 'rejected'; break;
+          default: statusFilter = 'all'; break;
+        }
+        
+        const response = await gigApplicationService.getMyApplications({
+          status: statusFilter === 'all' ? undefined : statusFilter,
+          sortBy: 'appliedAt',
+          sortOrder: 'desc'
+        });
+        
+        if (response.success && response.data?.applications) {
+          // Convert backend format to frontend format
+          const convertedApplications = response.data.applications.map(convertToApplication);
+          setApplications(convertedApplications);
+        } else {
+          setApplications([]);
+          toast.error('Failed to load applications');
+        }
+      } catch (error) {
+        console.error('Error fetching applications:', error);
+        toast.error('Error loading your applications');
+        setApplications([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchApplications();
+  }, [filter]);
+
+  // Mock data for development
+  React.useEffect(() => {
     const mockApplications: Application[] = [
       {
         id: '1',
@@ -30,7 +116,7 @@ const MyApplications: React.FC = () => {
         jobTitle: 'Campus Event Setup Assistant',
         employerName: 'UC Student Union',
         appliedDate: '2024-01-15',
-        status: 'accepted',
+        status: 'accepted' as const,
         location: 'University of Colombo',
         pay: 'LKR 2,000',
         message: 'Great application! Please arrive 30 minutes early.'
@@ -41,7 +127,7 @@ const MyApplications: React.FC = () => {
         jobTitle: 'Library Book Sorting',
         employerName: 'Colombo Public Library',
         appliedDate: '2024-01-14',
-        status: 'pending',
+        status: 'pending' as const,
         location: 'Central Library, Colombo',
         pay: 'LKR 3,000'
       },
@@ -51,7 +137,7 @@ const MyApplications: React.FC = () => {
         jobTitle: 'Research Assistant',
         employerName: 'Computer Science Department',
         appliedDate: '2024-01-13',
-        status: 'interview',
+        status: 'interview' as const,
         location: 'University of Colombo',
         pay: 'LKR 5,000',
         interviewDate: '2024-01-20'
@@ -62,7 +148,7 @@ const MyApplications: React.FC = () => {
         jobTitle: 'Food Delivery Helper',
         employerName: 'Campus Eats',
         appliedDate: '2024-01-12',
-        status: 'rejected',
+        status: 'rejected' as const,
         location: 'Nugegoda Area',
         pay: 'LKR 1,800',
         message: 'Thank you for your interest. We found a more suitable candidate.'

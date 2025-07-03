@@ -1,15 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
-export default function ClearAuthPage() {
-  const [cleared, setCleared] = useState(false);
-  const [authData, setAuthData] = useState<any>({});
+interface AuthData {
+  cookies?: string;
+  localStorage?: {
+    accessToken: string | null;
+    refreshToken: string | null;
+    user: string | null;
+    userType: string | null;
+  };
+}
+
+export default function ClearAuthPage(): React.ReactElement {
+  const [cleared, setCleared] = useState<boolean>(false);
+  const [authData, setAuthData] = useState<AuthData>({});
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // Read current auth data
-      const currentData = {
+      const currentData: AuthData = {
         cookies: document.cookie,
         localStorage: {
           accessToken: localStorage.getItem('accessToken'),
@@ -22,59 +32,60 @@ export default function ClearAuthPage() {
     }
   }, []);
 
-  const clearAllAuth = () => {
-    if (typeof window !== 'undefined') {
-      console.log('🧹 Clearing all authentication data...');
-      
-      // Clear all possible auth cookies
-      const cookiesToClear = [
-        'accessToken',
-        'userType',
-        'refreshToken',
-        'testToken',
-        'testUserType'
-      ];
-      
-      cookiesToClear.forEach(name => {
-        // Clear with multiple variations to be thorough
-        document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
-        document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Domain=localhost;`;
-        document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax;`;
-      });
-      
-      // Clear localStorage
-      const localStorageKeysToRemove = [
-        'accessToken',
-        'refreshToken',
-        'user',
-        'userType'
-      ];
-      
-      localStorageKeysToRemove.forEach(key => {
-        localStorage.removeItem(key);
-      });
-      
-      // Clear sessionStorage too
-      sessionStorage.clear();
-      
-      console.log('✅ All authentication data cleared');
-      console.log('🔄 Reloading page...');
-      
-      setCleared(true);
-      
-      // Reload the page after clearing
-      setTimeout(() => {
-        window.location.href = '/auth/login';
-      }, 2000);
-    }
+  const clearAllAuth = (): void => {
+    if (typeof window === 'undefined') return;
+    
+    console.log('🧹 Clearing all authentication data...');
+    
+    // Clear all possible auth cookies
+    const cookiesToClear: string[] = [
+      'accessToken',
+      'userType',
+      'refreshToken',
+      'testToken',
+      'testUserType'
+    ];
+    
+    cookiesToClear.forEach((name: string) => {
+      // Clear with multiple variations to be thorough
+      document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+      document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; Domain=localhost;`;
+      document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax;`;
+    });
+    
+    // Clear localStorage
+    const localStorageKeysToRemove: string[] = [
+      'accessToken',
+      'refreshToken',
+      'user',
+      'userType'
+    ];
+    
+    localStorageKeysToRemove.forEach((key: string) => {
+      localStorage.removeItem(key);
+    });
+    
+    // Clear sessionStorage too
+    sessionStorage.clear();
+    
+    console.log('✅ All authentication data cleared');
+    console.log('🔄 Reloading page...');
+    
+    setCleared(true);
+    
+    // Reload the page after clearing
+    setTimeout(() => {
+      window.location.href = '/auth/login';
+    }, 2000);
   };
 
-  const forceLogout = () => {
-    if (typeof window !== 'undefined') {
-      // Clear everything and go to login
-      clearAllAuth();
-    }
-  };
+  // Function for forcing logout if needed in the future
+  // const forceLogout = () => {
+  //   if (typeof window !== 'undefined') {
+  //     // Clear everything and go to login
+  //     clearAllAuth();
+  //   }
+  // };
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -86,7 +97,7 @@ export default function ClearAuthPage() {
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 mb-8">
               <h2 className="text-lg font-semibold text-orange-800 mb-2">⚠️ Authentication Issues?</h2>
               <p className="text-orange-700">
-                If you're experiencing login/redirect issues, there might be stale cookies or cached data. 
+                If you&apos;re experiencing login/redirect issues, there might be stale cookies or cached data. 
                 Use the button below to completely clear all authentication data.
               </p>
             </div>
@@ -118,7 +129,11 @@ export default function ClearAuthPage() {
               </button>
               
               <button
-                onClick={() => window.location.reload()}
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.location.reload();
+                  }
+                }}
                 className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
               >
                 🔄 Just Reload Page
@@ -142,7 +157,7 @@ export default function ClearAuthPage() {
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
           <h3 className="font-semibold text-blue-800 mb-2">💡 Tips for Clean Testing:</h3>
           <ul className="text-blue-700 space-y-1 text-sm">
-            <li>• Use this page if login redirects aren't working</li>
+            <li>• Use this page if login redirects aren&apos;t working</li>
             <li>• Try incognito/private browsing for completely fresh sessions</li>
             <li>• Clear browser cache if issues persist</li>
             <li>• Check browser developer tools for console errors</li>

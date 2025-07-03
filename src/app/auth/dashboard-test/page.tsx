@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { authService } from '@/services/authService';
+import Link from 'next/link';
 import { FaCheckCircle, FaTimesCircle, FaClock, FaUser, FaUserTie, FaUserCog } from 'react-icons/fa';
 
 interface DashboardTest {
@@ -250,12 +251,12 @@ export default function DashboardConnectionTestPage() {
             🔑 Login to Test Access
           </a>
           
-          <a 
+          <Link 
             href="/"
             className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
           >
             🏠 Back to Home
-          </a>
+          </Link>
           
           <button 
             onClick={() => window.location.reload()}

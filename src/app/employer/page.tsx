@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import FloatingActionButton from '@/components/shared/FloatingActionButton';
-import { FaChartBar, FaBriefcase, FaUsers, FaCog, FaPlus, FaFileAlt } from 'react-icons/fa';
+import { FaChartBar, FaBriefcase, FaUsers, FaCog, FaPlus, FaFileAlt, FaWrench } from 'react-icons/fa';
 
 // Components
 import DashboardContent from '@/components/employer/DashboardContent';
@@ -11,8 +11,9 @@ import ManageJobs from '@/components/employer/ManageJobs';
 import ApplicantsManagement from '@/components/employer/ApplicantsManagement';
 import Analytics from '@/components/employer/Analytics';
 import Profile from '@/components/employer/Profile';
+import SettingsContainer from '@/components/employer/SettingsContainer';
 
-type TabType = 'dashboard' | 'jobs' | 'applicants' | 'analytics' | 'profile';
+type TabType = 'dashboard' | 'jobs' | 'applicants' | 'analytics' | 'profile' | 'settings';
 
 const navigationItems = [
   { id: 'dashboard', label: 'Dashboard', icon: FaChartBar },
@@ -20,6 +21,7 @@ const navigationItems = [
   { id: 'applicants', label: 'Applicants', icon: FaUsers, badge: '12' },
   { id: 'analytics', label: 'Analytics', icon: FaFileAlt },
   { id: 'profile', label: 'Profile', icon: FaCog },
+  { id: 'settings', label: 'Settings', icon: FaWrench },
 ];
 
 const quickStats = [
@@ -45,6 +47,8 @@ function EmployerPage() {
         return <Analytics />;
       case "profile":
         return <Profile />;
+      case "settings":
+        return <SettingsContainer />;
       default:
         return <DashboardContent />;
     }
