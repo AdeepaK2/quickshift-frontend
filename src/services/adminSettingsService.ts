@@ -229,6 +229,7 @@ class AdminSettingsService {
       return await this.makeRequest<AdminPlatformSettings>('/admin/settings/platform');
     } catch (error) {
       console.error('Error fetching platform settings:', error);
+      
       // Fallback to default settings if API call fails
       return {
         success: true,

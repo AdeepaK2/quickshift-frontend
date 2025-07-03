@@ -601,10 +601,13 @@ export default function SettingContent() {
         <div className="flex items-center mb-6">
           <div className="p-2 rounded-lg bg-green-50 mr-3">
             <SettingsIcon className="h-5 w-5 text-green-600" />
-          </div><h3 className={`text-lg ${textStyles.heading}`}>
+          </div>
+          <h3 className={`text-lg ${textStyles.heading}`}>
             Platform Preferences
           </h3>
-        </div>        <div className="space-y-4">
+        </div>
+        
+        <div className="space-y-4">
           <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-blue-50">
             <div className="flex items-center">
               <AlertTriangle className="h-5 w-5 text-red-600 mr-3" /><div>
