@@ -186,6 +186,7 @@ class AdminService {
           'Cache-Control': 'no-cache', // Disable caching to prevent 304 responses
           ...options.headers,
         },
+        credentials: 'include',
         ...options,
       });
 

@@ -72,8 +72,10 @@ class AdminDashboardService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
+          'Cache-Control': 'no-cache', // Add cache control header
           ...options.headers,
         },
+        credentials: 'include', // Add credentials
         ...options,
       });
 

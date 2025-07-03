@@ -13,6 +13,14 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline';
 
+// Define the navigation item type
+interface NavigationItem {
+  id: string;
+  name: string;
+  icon: React.ElementType;
+  badge?: string;
+}
+
 interface EmployerSidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -25,15 +33,21 @@ interface EmployerSidebarProps {
     role?: string;
   };
   onLogout: () => void;
+  stats?: {
+    activeJobs?: number;
+    totalApplications?: number;
+    totalHires?: number;
+    responseRate?: number;
+  };
 }
 
-export default function EmployerSidebar({ activeTab, setActiveTab, user, onLogout }: EmployerSidebarProps) {
+export default function EmployerSidebar({ activeTab, setActiveTab, user, onLogout, stats = {} }: EmployerSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const navigation = [
+  const navigation: NavigationItem[] = [
     { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },
-    { id: 'jobs', name: 'Manage Jobs', icon: BriefcaseIcon, badge: '5' },
-    { id: 'applicants', name: 'Applicants', icon: UserGroupIcon, badge: '12' },
+    { id: 'jobs', name: 'Manage Jobs', icon: BriefcaseIcon, badge: stats?.activeJobs?.toString() },
+    { id: 'applicants', name: 'Applicants', icon: UserGroupIcon, badge: stats?.totalApplications?.toString() },
     { id: 'analytics', name: 'Analytics', icon: ChartPieIcon },
     { id: 'profile', name: 'Profile', icon: UserIcon },
   ];
@@ -135,19 +149,19 @@ export default function EmployerSidebar({ activeTab, setActiveTab, user, onLogou
             <div className="space-y-0.5">
               <div className="flex justify-between items-center">
                 <span className="text-xs text-purple-300">Active Jobs</span>
-                <span className="text-xs font-semibold text-white">5</span>
+                <span className="text-xs font-semibold text-white">{stats?.activeJobs ?? '-'}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-purple-300">Applications</span>
-                <span className="text-xs font-semibold text-white">12</span>
+                <span className="text-xs font-semibold text-white">{stats?.totalApplications ?? '-'}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-purple-300">Hired This Month</span>
-                <span className="text-xs font-semibold text-green-300">3</span>
+                <span className="text-xs font-semibold text-green-300">{stats?.totalHires ?? '-'}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-purple-300">Response Rate</span>
-                <span className="text-xs font-semibold text-purple-200">87%</span>
+                <span className="text-xs font-semibold text-purple-200">{stats?.responseRate ? `${stats.responseRate}%` : '-'}</span>
               </div>
             </div>
           </div>

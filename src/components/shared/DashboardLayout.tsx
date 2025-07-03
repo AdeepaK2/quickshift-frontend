@@ -175,6 +175,14 @@ function DashboardLayout({
               companyName: user?.companyName || (displayUser as {companyName?: string}).companyName,
               role: user?.role || displayUser.role
             }}
+            stats={quickStats?.reduce((acc, stat) => {
+              // Convert from UI display format to internal data structure
+              if (stat.label === 'Active Jobs') acc.activeJobs = parseInt(stat.value.toString());
+              if (stat.label === 'Total Applications') acc.totalApplications = parseInt(stat.value.toString());
+              if (stat.label === 'Hired') acc.totalHires = parseInt(stat.value.toString());
+              if (stat.label === 'Response Rate') acc.responseRate = parseInt(stat.value.toString());
+              return acc;
+            }, {} as any)}
             onLogout={handleLogout}
           />
         ) : userType === 'user' ? (
