@@ -9,8 +9,6 @@ interface ApiResponse<T> {
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
 
 export interface ApplicationRequest {
-  userId: string;
-  gigRequestId: string;
   coverLetter?: string;
   timeSlots?: Array<{
     timeSlotId: string;
@@ -18,6 +16,10 @@ export interface ApplicationRequest {
     startTime: string;
     endTime: string;
   }>;
+}
+
+export interface MainApplicationRequest extends ApplicationRequest {
+  gigRequestId: string;
 }
 
 export interface ApplicationResponse {
@@ -45,7 +47,7 @@ class JobApplicationService {
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     try {
       // Try to get token from both localStorage and cookies for better reliability
-      const token = localStorage.getItem('token') || this.getAuthCookie('accessToken');
+      const token = localStorage.getItem('accessToken') || this.getAuthCookie('accessToken');
       
       if (!token) {
         console.warn('No authentication token found. User may not be logged in.');
@@ -89,12 +91,22 @@ class JobApplicationService {
 
   // Check if the user is logged in
   isLoggedIn(): boolean {
-    const token = localStorage.getItem('token') || this.getAuthCookie('accessToken');
+    const localStorageToken = localStorage.getItem('accessToken');
+    const cookieToken = this.getAuthCookie('accessToken');
+    const token = localStorageToken || cookieToken;
+    
+    console.log('JobApplicationService.isLoggedIn() check:', {
+      hasLocalStorageToken: !!localStorageToken,
+      hasCookieToken: !!cookieToken,
+      finalResult: !!token,
+      tokenPreview: token ? token.substring(0, 20) + '...' : 'No token'
+    });
+    
     return !!token;
   }
 
   // Apply for a job/gig
-  async applyForJob(application: ApplicationRequest): Promise<ApiResponse<ApplicationResponse>> {
+  async applyForJob(application: MainApplicationRequest): Promise<ApiResponse<ApplicationResponse>> {
     return await this.makeRequest<ApplicationResponse>('/api/gig-applications', {
       method: 'POST',
       body: JSON.stringify(application)
@@ -102,7 +114,7 @@ class JobApplicationService {
   }
 
   // Alternative - Apply directly through gig request
-  async applyDirectly(gigRequestId: string, application: Omit<ApplicationRequest, 'gigRequestId'>): Promise<ApiResponse<ApplicationResponse>> {
+  async applyDirectly(gigRequestId: string, application: ApplicationRequest): Promise<ApiResponse<ApplicationResponse>> {
     // Check login status first
     if (!this.isLoggedIn()) {
       console.error('User is not logged in. Cannot apply for job.');

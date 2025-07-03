@@ -77,10 +77,8 @@ const JobDetails: React.FC<JobDetailsProps> = ({ job, onApply, onClose, userId }
     try {
       console.log('Submitting application with user ID:', userId);
       
-      // Create application request object
+      // Create application request object (userId is extracted from auth token on backend)
       const applicationData = {
-        userId: userId,
-        gigRequestId: job.id,
         coverLetter: coverLetter
       };
 
@@ -248,6 +246,14 @@ const JobDetails: React.FC<JobDetailsProps> = ({ job, onApply, onClose, userId }
         </button>
         <button
           onClick={() => {
+            console.log('Apply button clicked. Auth status:', {
+              userId: userId,
+              hasUserId: !!userId,
+              isLoggedInService: jobApplicationService.isLoggedIn(),
+              localStorageToken: !!localStorage.getItem('accessToken'),
+              cookieToken: !!document.cookie.includes('accessToken')
+            });
+            
             if (!userId) {
               toast.error('You must be logged in to apply');
               return;

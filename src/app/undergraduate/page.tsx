@@ -62,7 +62,9 @@ function UndergraduatePage() {
     console.log('Auth status in UndergraduatePage:', { 
       isAuthenticated, 
       hasUser: !!user,
-      userId: user?.id
+      userId: user?.id,
+      userMongoId: user?._id,
+      userObject: user
     });
   }, [user, isAuthenticated]);
 
@@ -130,7 +132,7 @@ function UndergraduatePage() {
             job={selectedJob} 
             onApply={handleApply} 
             onClose={() => setSelectedJob(null)}
-            userId={user?.id} 
+            userId={user?._id || user?.id} 
           />
         ) : (
           <JobList onJobSelect={setSelectedJob} />
