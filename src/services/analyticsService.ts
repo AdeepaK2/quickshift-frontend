@@ -81,71 +81,74 @@ class AnalyticsService {
   
   // Since we don't have direct analytics endpoints, we'll combine data from multiple endpoints
   async getAggregatedEmployerAnalytics(): Promise<EmployerAnalytics> {
-    // For now, we'll return mock data based on what we saw in the Analytics component
-    // In a production environment, this would make multiple API calls to gather the data
-    
-    // Get job stats
-    const gigRequestStats = await this.makeRequest<{
-      total: number;
-      active: number;
-      closed: number;
-      completed: number;
-      cancelled: number;
-      drafts: number;
-      applicationsTotal: number;
-    }>('/gig-requests/stats');
-    
-    // Get employer's gig requests
-    const gigRequests = await this.makeRequest<{ 
-      gigRequests: { id: string; title: string; status: string; applications: number; views: number; createdAt: string }[],
-      total: number 
-    }>('/gig-requests?limit=10');
-    
-    // Calculate conversion rate (applications/views)
-    const totalApplications = gigRequestStats.data?.applicationsTotal || 0;
-    const totalJobs = gigRequestStats.data?.total || 1; // Avoid division by zero
-    // const avgApplicationsPerJob = totalApplications / totalJobs; // Will use this in future versions
-    
-    // Transform gig requests to job performance format
-    const jobPerformance = gigRequests.data?.gigRequests?.map((job: GigRequest) => ({
-      _id: job.id,
-      title: job.title,
-      applications: job.applications || 0,
-      views: job.views || 0,
-      conversion: job.views ? parseFloat((job.applications / job.views * 100).toFixed(1)) : 0,
-      status: job.status.charAt(0).toUpperCase() + job.status.slice(1)
-    })) || [];
-    
-    // Calculate hiring overview data
-    const applicationsThisMonth = totalApplications;
-    const interviewsConducted = Math.round(totalApplications * 0.25); // Assumption: 25% of applications lead to interviews
-    const successfulHires = Math.round(interviewsConducted * 0.6); // Assumption: 60% of interviews lead to hires
-    const conversionRate = Math.round((successfulHires / totalApplications) * 100) || 0;
-    
-    // Calculate cost analysis data (mocked as we don't have real cost data)
-    const avgRatePerHour = 1000; // LKR
-    const avgHoursPerJob = 8;
-    const workerPayments = successfulHires * avgRatePerHour * avgHoursPerJob;
-    const jobPostingFees = totalJobs * 1500; // LKR 1500 per job posting
-    const totalSpent = workerPayments + jobPostingFees;
-    const avgCostPerHire = successfulHires ? Math.round(totalSpent / successfulHires) : 0;
-    
-    return {
-      // Hiring Overview
-      applicationsThisMonth,
-      interviewsConducted,
-      successfulHires,
-      conversionRate,
+    try {
+      // Get job stats
+      const gigRequestStats = await this.makeRequest<{
+        total: number;
+        active: number;
+        closed: number;
+        completed: number;
+        cancelled: number;
+        drafts: number;
+        applicationsTotal: number;
+      }>('/gig-requests/stats');
       
-      // Cost Analysis
-      totalSpentThisMonth: totalSpent,
-      averageCostPerHire: avgCostPerHire,
-      jobPostingFees,
-      workerPayments,
+      // Get employer's gig requests
+      const gigRequests = await this.makeRequest<{ 
+        gigRequests: { id: string; title: string; status: string; applications: number; views: number; createdAt: string }[],
+        total: number 
+      }>('/gig-requests?limit=10');
       
-      // Job Performance
-      jobs: jobPerformance
-    };
+      // Calculate conversion rate (applications/views)
+      const totalApplications = gigRequestStats.data?.applicationsTotal || 0;
+      const totalJobs = gigRequestStats.data?.total || 1; // Avoid division by zero
+      
+      // Transform gig requests to job performance format - safely handle potentially missing data
+      const jobPerformance = Array.isArray(gigRequests.data?.gigRequests) 
+        ? gigRequests.data.gigRequests.map((job: GigRequest) => ({
+            _id: job.id || 'unknown',
+            title: job.title || 'Unnamed Job',
+            applications: job.applications || 0,
+            views: job.views || 0,
+            conversion: job.views ? parseFloat((job.applications / job.views * 100).toFixed(1)) : 0,
+            status: (job.status || 'unknown').charAt(0).toUpperCase() + (job.status || 'unknown').slice(1)
+          })) 
+        : [];
+      
+      // Calculate hiring overview data
+      const applicationsThisMonth = totalApplications;
+      const interviewsConducted = Math.round(totalApplications * 0.25); // Assumption: 25% of applications lead to interviews
+      const successfulHires = Math.round(interviewsConducted * 0.6); // Assumption: 60% of interviews lead to hires
+      const conversionRate = Math.round((successfulHires / totalApplications) * 100) || 0;
+      
+      // Calculate cost analysis data (mocked as we don't have real cost data)
+      const avgRatePerHour = 1000; // LKR
+      const avgHoursPerJob = 8;
+      const workerPayments = successfulHires * avgRatePerHour * avgHoursPerJob;
+      const jobPostingFees = totalJobs * 1500; // LKR 1500 per job posting
+      const totalSpent = workerPayments + jobPostingFees;
+      const avgCostPerHire = successfulHires ? Math.round(totalSpent / successfulHires) : 0;
+      
+      return {
+        // Hiring Overview
+        applicationsThisMonth,
+        interviewsConducted,
+        successfulHires,
+        conversionRate,
+        
+        // Cost Analysis
+        totalSpentThisMonth: totalSpent,
+        averageCostPerHire: avgCostPerHire,
+        jobPostingFees,
+        workerPayments,
+        
+        // Job Performance
+        jobs: jobPerformance
+      };
+    } catch (error) {
+      console.error('Error aggregating employer analytics:', error);
+      throw new Error('Failed to aggregate employer analytics data');
+    }
   }
 }
 

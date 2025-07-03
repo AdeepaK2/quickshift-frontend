@@ -1,7 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { FaMapMarkerAlt, FaClock, FaDollarSign, FaUser, FaStar, FaCalendarAlt, FaExclamationTriangle } from 'react-icons/fa';
+import ApplicationPopup from './ApplicationPopup';
+import { jobApplicationService } from '@/services/jobApplicationService';
+import { toast } from 'react-hot-toast';
 
 interface Job {
   id: string;
@@ -28,9 +31,14 @@ interface JobDetailsProps {
   job: Job | null;
   onApply?: (jobId: string) => void;
   onClose?: () => void;
+  userId?: string;
 }
 
-const JobDetails: React.FC<JobDetailsProps> = ({ job, onApply, onClose }) => {
+const JobDetails: React.FC<JobDetailsProps> = ({ job, onApply, onClose, userId }) => {
+  // Add state for popup visibility
+  const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   if (!job) {
     return (
       <div className="bg-white rounded-lg shadow p-12 text-center">
@@ -52,8 +60,56 @@ const JobDetails: React.FC<JobDetailsProps> = ({ job, onApply, onClose }) => {
   const getUrgencyIcon = (urgency: string) => {
     switch (urgency) {
       case 'high': return '🔴';
-      case 'medium': return '�';
+      case 'medium': return '🟠';
       default: return '🟢';
+    }
+  };
+
+  // Handler for application submission
+  const handleApplicationSubmit = async (coverLetter: string, resume: File | null) => {
+    if (!userId) {
+      toast.error('You must be logged in to apply');
+      setIsPopupOpen(false);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      console.log('Submitting application with user ID:', userId);
+      
+      // Create application request object
+      const applicationData = {
+        userId: userId,
+        gigRequestId: job.id,
+        coverLetter: coverLetter
+      };
+
+      // Check if the application service thinks we're logged in
+      if (!jobApplicationService.isLoggedIn()) {
+        console.warn('JobApplicationService reports user is not logged in');
+        toast.error('Authentication issue. Please log out and log back in.');
+        return;
+      }
+
+      // Call the application service
+      const response = await jobApplicationService.applyDirectly(job.id, applicationData);
+
+      if (response.success) {
+        toast.success('Application submitted successfully!');
+        setIsPopupOpen(false);
+        
+        // Call the onApply prop if provided to update parent component
+        if (onApply) {
+          onApply(job.id);
+        }
+      } else {
+        toast.error(response.message || 'Failed to submit application');
+      }
+    } catch (error) {
+      console.error('Application error:', error);
+      toast.error('An error occurred while submitting your application');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -191,12 +247,27 @@ const JobDetails: React.FC<JobDetailsProps> = ({ job, onApply, onClose }) => {
           Back to List
         </button>
         <button
-          onClick={() => onApply?.(job.id)}
+          onClick={() => {
+            if (!userId) {
+              toast.error('You must be logged in to apply');
+              return;
+            }
+            setIsPopupOpen(true);
+          }}
           className="px-6 py-2 bg-quickshift-primary text-white rounded-lg hover:bg-quickshift-secondary transition-colors font-medium"
         >
           Apply for This Job
         </button>
       </div>
+
+      {/* Application Popup */}
+      <ApplicationPopup
+        isOpen={isPopupOpen}
+        onClose={() => setIsPopupOpen(false)}
+        onSubmit={handleApplicationSubmit}
+        jobTitle={job.title}
+        companyName={job.employer.name}
+      />
     </div>
   );
 };

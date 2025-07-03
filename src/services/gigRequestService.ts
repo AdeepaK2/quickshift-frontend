@@ -2,7 +2,6 @@
 import { ApiResponse } from '@/types/auth';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
-
 // Interfaces for gig request data
 export interface TimeSlot {
   _id?: string;
@@ -76,6 +75,7 @@ export interface CreateGigRequestRequest {
   experienceRequired?: string;
   educationRequired?: string;
   visibility?: 'public' | 'private' | 'targeted';
+  totalPositions?: number;
 }
 
 export interface UpdateGigRequestRequest {
@@ -150,21 +150,83 @@ class GigRequestService {
     }
   }
 
+  private async makePublicRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+    try {
+      const url = `${API_BASE_URL}/api/gig-requests${endpoint}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        ...options,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Request failed');
+      }
+
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('API Request Error:', error.message);
+        throw error;
+      } else {
+        console.error('Unknown API Error:', error);
+        throw new Error('An unexpected error occurred');
+      }
+    }
+  }
+
   // Get all gig requests for the employer (private route)
-  async getGigRequests(filters?: GigRequestsFilters): Promise<ApiResponse<{ gigRequests: GigRequest[], total: number, page: number, pages: number }>> {
+  async getGigRequests(filters?: GigRequestsFilters): Promise<ApiResponse<GigRequest[]>> {
     let queryParams = '';
     
-    if (filters) {
-      const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined) {
-          params.append(key, String(value));
+    try {
+      if (filters) {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) {
+            params.append(key, String(value));
+          }
+        });
+        queryParams = `?${params.toString()}`;
+      }
+      
+      const response = await this.makeRequest<GigRequest[]>(queryParams);
+      
+      // Check if the data from API is in the expected format
+      if (response.success && !Array.isArray(response.data)) {
+        console.error('Invalid response format. Expected array of gig requests but got:', response.data);
+        
+        // Try to handle specific API response formats
+        if (response.data && typeof response.data === 'object' && 'gigRequests' in response.data) {
+          // If the API returns { gigRequests: [...] } format
+          return {
+            ...response,
+            data: (response.data as any).gigRequests as GigRequest[]
+          };
         }
-      });
-      queryParams = `?${params.toString()}`;
+        
+        // Return a safe response with empty array if data isn't in expected format
+        return {
+          success: false,
+          message: 'Invalid data format received from server',
+          data: []
+        };
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Error in getGigRequests:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to fetch gig requests',
+        data: []
+      };
     }
-    
-    return await this.makeRequest<{ gigRequests: GigRequest[], total: number, page: number, pages: number }>(queryParams);
   }
   
   // Get all public gig requests (for job seekers)
@@ -181,7 +243,7 @@ class GigRequestService {
       queryParams = `?${params.toString()}`;
     }
     
-    return await this.makeRequest<{ gigRequests: GigRequest[], total: number, page: number, pages: number }>(`/public${queryParams}`);
+    return await this.makePublicRequest<{ gigRequests: GigRequest[], total: number, page: number, pages: number }>(`/public${queryParams}`);
   }
 
   // Get a single gig request by ID

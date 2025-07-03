@@ -3,11 +3,13 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
 import { employerService, EmployerStats } from '@/services/employerService';
+import JobPostModal from './JobPostModal';
 
 export default function DashboardContent() {
   const { user } = useAuth();
   const [stats, setStats] = useState<EmployerStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   
   const [error, setError] = useState<string | null>(null);
 
@@ -62,7 +64,10 @@ export default function DashboardContent() {
         <div className="bg-white p-3 md:p-4 rounded-lg shadow-md">
           <h3 className="text-base md:text-lg font-semibold text-[#03045E] mb-3 md:mb-4">Quick Actions</h3>
           <div className="space-y-2 md:space-y-3">
-            <button className="w-full text-left px-3 md:px-4 py-2 bg-[#CAF0F8] text-[#0077B6] rounded-lg hover:bg-[#90E0EF] transition-colors font-medium text-xs md:text-sm">
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="w-full text-left px-3 md:px-4 py-2 bg-[#CAF0F8] text-[#0077B6] rounded-lg hover:bg-[#90E0EF] transition-colors font-medium text-xs md:text-sm"
+            >
               Post New Job
             </button>
             <button className="w-full text-left px-3 md:px-4 py-2 bg-[#CAF0F8] text-[#0077B6] rounded-lg hover:bg-[#90E0EF] transition-colors font-medium text-xs md:text-sm">
@@ -156,6 +161,16 @@ export default function DashboardContent() {
           )}
         </div>
       </div>
+
+      {/* Job Post Modal */}
+      <JobPostModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => {
+          setIsModalOpen(false);
+          // Optionally refresh stats or show success message
+        }}
+      />
     </div>
   );
 }

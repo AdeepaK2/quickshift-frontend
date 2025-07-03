@@ -13,42 +13,17 @@ import {
   User,
 } from "lucide-react";
 
-// Navigation items for the admin panel
-const navItems = [
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    id: "undergraduate",
-    label: "Undergraduates",
-    icon: Users,
-    badge: "10",
-  },
-  {
-    id: "employer",
-    label: "Employers",
-    icon: User,
-    badge: "5",
-  },  {
-    id: "gigs",
-    label: "Gig Requests",
-    icon: Briefcase,
-    badge: "23",
-  },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: Settings,
-  },
-];
-
 interface AdminSidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   user?: UserType | null;
   onLogout: () => void;
+  stats?: {
+    totalUsers: number;
+    totalEmployers: number;
+    activeGigs: number;
+    totalRevenue: number;
+  };
 }
 
 export default function AdminSidebar({
@@ -56,6 +31,12 @@ export default function AdminSidebar({
   setActiveTab,
   user,
   onLogout,
+  stats = {
+    totalUsers: 0,
+    totalEmployers: 0,
+    activeGigs: 0,
+    totalRevenue: 0
+  }
 }: AdminSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -65,6 +46,38 @@ export default function AdminSidebar({
     setActiveTab(tabId);
     setIsMobileMenuOpen(false); // Close mobile menu on navigation
   };
+
+  // Navigation items for the admin panel
+  const navItems = [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      id: "undergraduate",
+      label: "Undergraduates",
+      icon: Users,
+      badge: stats.totalUsers.toString(),
+    },
+    {
+      id: "employer",
+      label: "Employers",
+      icon: User,
+      badge: stats.totalEmployers.toString(),
+    },
+    {
+      id: "gigs",
+      label: "Gig Requests",
+      icon: Briefcase,
+      badge: stats.activeGigs.toString(),
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: Settings,
+    },
+  ];
 
   return (
     <>
@@ -160,20 +173,20 @@ export default function AdminSidebar({
             </h3>
             <div className="space-y-0.5">
               <div className="flex justify-between items-center">
-                <span className="text-xs text-blue-300">Active Users</span>
-                <span className="text-xs font-semibold text-white">2,847</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-blue-300">Pending Reviews</span>
-                <span className="text-xs font-semibold text-white">23</span>
+                <span className="text-xs text-blue-300">Total Users</span>
+                <span className="text-xs font-semibold text-white">{stats.totalUsers}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-blue-300">Active Gigs</span>
-                <span className="text-xs font-semibold text-green-300">156</span>
+                <span className="text-xs font-semibold text-green-300">{stats.activeGigs}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-blue-300">Employers</span>
+                <span className="text-xs font-semibold text-white">{stats.totalEmployers}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-xs text-blue-300">Revenue (MTD)</span>
-                <span className="text-xs font-semibold text-blue-200">$12.5K</span>
+                <span className="text-xs font-semibold text-blue-200">LKR {(stats.totalRevenue / 1000).toFixed(1)}K</span>
               </div>
             </div>
           </div>

@@ -31,9 +31,14 @@ interface DashboardLayoutProps {
   userType: UserType;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  // Removed navigationItems as it's not used
   quickStats?: QuickStat[];
   isLoadingStats?: boolean;
+  stats?: {
+    totalUsers: number;
+    totalEmployers: number;
+    activeGigs: number;
+    totalRevenue: number;
+  };
 }
 
 function DashboardLayout({
@@ -41,9 +46,9 @@ function DashboardLayout({
   userType,
   activeTab,
   setActiveTab,
-  // navigationItems is not used in this component
   quickStats,
-  isLoadingStats = false
+  isLoadingStats = false,
+  stats
 }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
@@ -156,6 +161,7 @@ function DashboardLayout({
             setActiveTab={setActiveTab}
             user={user}
             onLogout={handleLogout}
+            stats={stats}
           />
         ) : userType === 'employer' ? (
           <EmployerSidebar

@@ -183,6 +183,7 @@ class AdminService {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
+          'Cache-Control': 'no-cache', // Disable caching to prevent 304 responses
           ...options.headers,
         },
         ...options,
@@ -193,9 +194,23 @@ class AdminService {
       if (!response.ok) {
         // Handle specific error codes
         if (response.status === 401) {
-          // Clear token and redirect to login (handled by middleware)
+          // Clear token and redirect to login
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
+          localStorage.removeItem('userType');
+          localStorage.removeItem('user');
+          
+          // Clear cookies too
+          document.cookie = 'accessToken=; path=/; max-age=0';
+          document.cookie = 'refreshToken=; path=/; max-age=0';
+          document.cookie = 'userType=; path=/; max-age=0';
+          
+          // Show helpful message and redirect
+          if (typeof window !== 'undefined') {
+            alert('Your session has expired. You will be redirected to the login page.');
+            window.location.href = '/auth/login';
+          }
+          
           throw new Error('Your session has expired. Please log in again.');
         } else if (response.status === 403) {
           throw new Error('You do not have permission to perform this action.');
@@ -247,7 +262,7 @@ class AdminService {
       page: number; 
       pages: number; 
       count: number;
-    }>(`${queryParams}`);
+    }>(`/${queryParams}`);
   }
 
   async getAdminById(id: string): Promise<ApiResponse<AdminUser>> {

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { gigRequestService, GigRequest } from '@/services/gigRequestService';
 import { format } from 'date-fns';
+import JobPostModal from './JobPostModal';
 
 // Loading skeleton component
 const JobSkeleton = () => (
@@ -35,6 +36,7 @@ export default function ManageJobs() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchJobs();
@@ -65,19 +67,98 @@ export default function ManageJobs() {
         filters.status = statusFilter as 'draft' | 'active' | 'closed' | 'completed' | 'cancelled';
       }
       
+      console.log('Fetching jobs with filters:', filters);
       const response = await gigRequestService.getGigRequests(filters);
+      console.log('Jobs response:', response);
       
+      // Check for null/undefined response
+      if (!response) {
+        console.error('No response received from API');
+        setError('No response received from server');
+        setJobs([]);
+        return;
+      }
+      
+      // Check if response has data property and it's an array
       if (response.success && response.data) {
-        setJobs(response.data.gigRequests);
+        if (Array.isArray(response.data)) {
+          const jobsData = response.data;
+          console.log('Setting jobs:', jobsData.length, 'jobs');
+          console.log('Jobs data:', jobsData);
+          setJobs(jobsData);
+        } else {
+          // If data exists but is not an array (could be an object with a property containing the array)
+          console.error('Response data is not an array:', response.data);
+          
+          // Try to extract jobs array from common API formats
+          const responseObj = response.data as any; // Use 'any' to bypass TypeScript checking
+          
+          if (typeof responseObj === 'object' && responseObj !== null) {
+            if (responseObj.gigRequests && Array.isArray(responseObj.gigRequests)) {
+              const jobsData = responseObj.gigRequests;
+              console.log('Setting jobs from nested gigRequests:', jobsData.length, 'jobs');
+              setJobs(jobsData);
+              return;
+            } else if (responseObj.jobs && Array.isArray(responseObj.jobs)) {
+              const jobsData = responseObj.jobs;
+              console.log('Setting jobs from nested jobs property:', jobsData.length, 'jobs');
+              setJobs(jobsData);
+              return;
+            }
+          }
+          
+          // If we couldn't extract jobs from any known format
+          setError('Received unexpected data format from server');
+          setJobs([]);
+        }
       } else {
+        console.error('Failed to fetch jobs or invalid response format:', response.message);
         setError(response.message || 'Failed to fetch jobs');
+        setJobs([]);
       }
     } catch (err) {
       console.error('Error fetching jobs:', err);
       setError('An error occurred while fetching jobs. Please try again.');
+      setJobs([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  // Debug function to check what jobs exist without filters
+  const debugFetchAllJobs = async () => {
+    try {
+      console.log('DEBUG: Fetching all jobs without filters');
+      const response = await gigRequestService.getGigRequests();
+      console.log('DEBUG: All jobs response:', response);
+      
+      if (response.success) {
+        if (Array.isArray(response.data)) {
+          console.log('DEBUG: All jobs (array):', response.data);
+          console.log('DEBUG: Number of jobs found:', response.data.length);
+        } else if (response.data && typeof response.data === 'object') {
+          // Try to examine different possible response formats
+          const respData = response.data as any;
+          
+          if (respData.gigRequests && Array.isArray(respData.gigRequests)) {
+            console.log('DEBUG: All jobs (gigRequests):', respData.gigRequests);
+            console.log('DEBUG: Number of jobs found:', respData.gigRequests.length);
+          } else if (respData.jobs && Array.isArray(respData.jobs)) {
+            console.log('DEBUG: All jobs (jobs):', respData.jobs);
+            console.log('DEBUG: Number of jobs found:', respData.jobs.length);
+          } else {
+            console.log('DEBUG: Response data structure:', Object.keys(respData));
+            console.log('DEBUG: Full response data:', respData);
+          }
+        } else {
+          console.log('DEBUG: Unexpected response data format:', response.data);
+        }
+      } else {
+        console.error('DEBUG: Failed to fetch jobs:', response.message);
+      }
+    } catch (err) {
+      console.error('DEBUG: Error fetching all jobs:', err);
     }
   };
 
@@ -85,7 +166,7 @@ export default function ManageJobs() {
     try {
       await gigRequestService.changeGigRequestStatus(jobId, newStatus);
       // Update the job in the local state
-      setJobs(prevJobs => prevJobs.map(job => 
+      setJobs(prevJobs => (prevJobs || []).map(job => 
         job._id === jobId ? { ...job, status: newStatus } : job
       ));
     } catch (err) {
@@ -138,7 +219,7 @@ export default function ManageJobs() {
           <p className="text-gray-600 mt-2">Create, edit, and manage your job postings</p>
         </div>
         <button 
-          onClick={() => router.push('/employer/jobs/new')}
+          onClick={() => setIsModalOpen(true)}
           className="px-6 py-3 bg-[#0077B6] text-white rounded-lg hover:bg-[#00B4D8] transition-colors font-medium"
         >
           Post New Job
@@ -172,6 +253,12 @@ export default function ManageJobs() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
             <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+          <button 
+            onClick={debugFetchAllJobs}
+            className="flex items-center space-x-1 text-green-600 hover:text-green-800 px-3 py-2 rounded-md hover:bg-green-50"
+          >
+            <span>Debug All Jobs</span>
           </button>
         </div>
         <div className="p-8">
@@ -236,7 +323,7 @@ export default function ManageJobs() {
             {loading ? (
               // Show loading skeletons
               Array(3).fill(0).map((_, index) => <JobSkeleton key={index} />)
-            ) : jobs.length === 0 ? (
+            ) : !jobs || jobs.length === 0 ? (
               <div className="text-center py-10">
                 <p className="text-gray-500 text-lg">No jobs found</p>
                 {statusFilter !== 'all' && (
@@ -323,6 +410,25 @@ export default function ManageJobs() {
           </div>
         </div>
       </div>
+
+      {/* Job Post Modal */}
+      <JobPostModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => {
+          setIsModalOpen(false);
+          // Reset status filter to 'all' to ensure new job is visible
+          setStatusFilter('all');
+          // Clear any existing error
+          setError(null);
+          // Add a small delay to ensure backend processing is complete
+          setTimeout(() => {
+            console.log('Refreshing jobs after successful creation');
+            debugFetchAllJobs(); // Debug: check what jobs exist
+            fetchJobs(true); // Force refresh
+          }, 500);
+        }}
+      />
     </div>
   );
 }

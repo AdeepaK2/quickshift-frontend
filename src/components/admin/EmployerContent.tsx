@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import {
   Search,
@@ -21,8 +21,7 @@ import { formatDate, getInitials, debounce } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading";
-import { AdminEmployerData } from '@/services/adminService';
-import { adminEmployerManagementService } from '@/services/adminEmployerManagementService';
+import { AdminEmployerData, adminService } from '@/services/adminService';
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -51,6 +50,16 @@ export default function EmployerContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('EmployerContent state:', {
+      employers: employers.length,
+      loading,
+      error,
+      currentPage
+    });
+  }, [employers, loading, error, currentPage]);
+
   // Filter states
   const [filters, setFilters] = useState<FilterState>({
     search: "",
@@ -64,36 +73,33 @@ export default function EmployerContent() {
       setLoading(true);
       setError(null);
 
-      // Prepare filter parameters
-      const params: {
-        page: number;
-        limit: number;
-        search?: string;
-        status?: string;
-        isVerified?: boolean;
-        city?: string;
-        minRating?: number;
-        maxRating?: number;
-      } = {
-        page: currentPage,
-        limit: itemsPerPage,
-      };
-      
-      // Only add search if it's not empty
-      if (filters.search) {
-        params.search = filters.search;
-      }
-      
-      // Only add isVerified filter if "verified" is not "all"
-      if (filters.verified === 'verified') {
-        params.isVerified = true;
-      } else if (filters.verified === 'unverified') {
-        params.isVerified = false;
+      // Debug: Check authentication
+      const accessToken = localStorage.getItem('accessToken');
+      const userType = localStorage.getItem('userType');
+      console.log('🔍 fetchEmployers - Auth check:', {
+        hasAccessToken: !!accessToken,
+        userType,
+        tokenStart: accessToken?.substring(0, 20) + '...'
+      });
+
+      if (!accessToken) {
+        throw new Error('No access token found. Please log in again.');
       }
 
-      // Add location filter if it's not "all"
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+        search: filters.search || undefined,
+      };
+
+      // Add verification filter if not "all"
+      if (filters.verified !== 'all') {
+        params.isVerified = filters.verified === 'verified';
+      }
+
+      // Add location filter if not "all"
       if (filters.location !== 'all') {
-        params.city = filters.location;
+        params.location = filters.location;
       }
 
       // Add rating filter if it's not "all"
@@ -112,30 +118,101 @@ export default function EmployerContent() {
         }
       }
 
-      const response = await adminEmployerManagementService.getAllEmployers(params);
+      console.log('🔍 fetchEmployers - Making request with params:', params);
+
+      const response = await adminService.getAllEmployers(params);
+
+      console.log('🔍 fetchEmployers - Response received:', {
+        success: response.success,
+        message: response.message,
+        hasData: !!response.data,
+        total: response.data?.total,
+        count: response.data?.count,
+        dataLength: response.data?.data?.length,
+        fullResponse: response
+      });
 
       if (response.success && response.data) {
-        setEmployers(response.data.data);
-        const totalPages = Math.ceil(response.data.total / itemsPerPage);
+        // Handle different response structures
+        let employersData;
+        if (Array.isArray(response.data)) {
+          employersData = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          employersData = response.data.data;
+        } else if ((response.data as any).employers && Array.isArray((response.data as any).employers)) {
+          employersData = (response.data as any).employers;
+        } else {
+          console.log('🔍 fetchEmployers - Unexpected response structure:', response.data);
+          employersData = [];
+        }
+
+        console.log('🔍 fetchEmployers - Setting employers:', employersData.length);
+        setEmployers(employersData);
+        
+        const totalPages = Math.ceil((response.data.total || employersData.length) / itemsPerPage);
         if (currentPage > totalPages && totalPages > 0) {
           setCurrentPage(1);
         }
       } else {
-        throw new Error('Failed to fetch employers data');
+        console.log('🔍 fetchEmployers - Response not successful');
+        throw new Error(response.message || 'Failed to fetch employers data');
       }
     } catch (err) {
       console.error('Error fetching employers:', err);
+      
+      // Handle authentication errors specifically
+      if (err instanceof Error && (
+        err.message.includes('session has expired') ||
+        err.message.includes('unauthorized') ||
+        err.message.includes('401')
+      )) {
+        // Clear all auth data
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userType');
+        localStorage.removeItem('user');
+        
+        // Redirect to login
+        window.location.href = '/auth/login';
+        return;
+      }
+      
       setError(err instanceof Error ? err.message : 'An error occurred');
       toast.error('Failed to load employer data');
+      setEmployers([]);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, itemsPerPage, filters]);
+  }, [currentPage, itemsPerPage, filters.search, filters.verified, filters.location, filters.rating]);
 
   // Fetch employers from backend
   useEffect(() => {
     fetchEmployers();
   }, [fetchEmployers]);
+
+  // Debug function to check raw API response
+  const debugAPIResponse = async () => {
+    try {
+      console.log('🔍 DEBUG - Raw API call');
+      
+      const response = await adminService.getAllEmployers({
+        page: 1,
+        limit: 5
+      });
+      
+      console.log('🔍 DEBUG - Full API Response:', response);
+      
+      if (response.data && response.data.data) {
+        console.log('🔍 DEBUG - Raw employer data:', response.data.data);
+        console.log('🔍 DEBUG - First employer:', response.data.data[0]);
+      }
+      
+      toast.success('Check console for debug info');
+    } catch (error) {
+      console.error('🔍 DEBUG - API Error:', error);
+      toast.error('Debug failed - check console');
+    }
+  };
 
   // Refresh function
   const refetch = async () => {
@@ -145,6 +222,10 @@ export default function EmployerContent() {
 
   // Extract unique locations for filter dropdown
   const availableLocations = useMemo(() => {
+    if (!employers || !Array.isArray(employers)) {
+      return ["all"];
+    }
+    
     const locations = new Set(
       employers
         .map((employer) => employer.location)
@@ -165,6 +246,10 @@ export default function EmployerContent() {
 
   // Filtered employers with memoization for performance
   const filteredEmployers = useMemo(() => {
+    if (!employers || !Array.isArray(employers)) {
+      return [];
+    }
+    
     return employers.filter((employer) => {
       // Location filter
       if (filters.location !== "all" && employer.location !== filters.location) {
@@ -173,8 +258,8 @@ export default function EmployerContent() {
 
       // Verified filter
       if (filters.verified !== "all") {
-        const isVerified = filters.verified === "verified";
-        if (employer.isVerified !== isVerified) return false;
+        const shouldBeVerified = filters.verified === "verified";
+        if (employer.isVerified !== shouldBeVerified) return false;
       }
 
       // Rating filter
@@ -197,6 +282,11 @@ export default function EmployerContent() {
 
   // Export functionality
   const handleExportData = () => {
+    if (!filteredEmployers || filteredEmployers.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+    
     const csvData = filteredEmployers.map(employer => ({
       'Company Name': employer.companyName,
       'Email': employer.email,
@@ -320,7 +410,7 @@ export default function EmployerContent() {
       {/* Results Summary and Actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <p className="text-sm text-gray-800 font-medium">
-          Showing {filteredEmployers.length} of {employers.length} employers
+          Showing {filteredEmployers.length} of {Array.isArray(employers) ? employers.length : 0} employers
         </p>
         
         <div className="flex items-center space-x-2">
@@ -338,8 +428,17 @@ export default function EmployerContent() {
           <Button
             variant="outline"
             size="sm"
+            onClick={debugAPIResponse}
+            className="flex items-center"
+          >
+            🔍 Debug
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleExportData}
-            disabled={filteredEmployers.length === 0}
+            disabled={!filteredEmployers || filteredEmployers.length === 0}
             className="flex items-center"
           >
             <Download className="h-4 w-4 mr-2" />
@@ -349,7 +448,7 @@ export default function EmployerContent() {
       </div>
 
       {/* Employers Table */}
-      {filteredEmployers.length === 0 ? (
+      {!filteredEmployers || filteredEmployers.length === 0 ? (
         <EmptyState
           title="No Employers Found"
           description="No employers match your current filters. Try adjusting your search criteria."

@@ -45,14 +45,20 @@ export default function ApplicantsManagement() {
           sortOrder: 'desc'
         });
         
-        if (response.success && response.data) {
-          setJobs(response.data.gigRequests.map(job => ({ 
+        if (response.success && Array.isArray(response.data)) {
+          setJobs(response.data.map(job => ({ 
             _id: job._id, 
             title: job.title 
           })));
+        } else {
+          console.error('Failed to fetch jobs or invalid response format:', response);
+          // Set empty array to prevent map errors
+          setJobs([]);
         }
       } catch (err) {
-        console.error('Error fetching jobs:', err);
+        console.error('Error fetching jobs for filter:', err);
+        // Set empty array to prevent map errors
+        setJobs([]);
       }
     };
 

@@ -113,7 +113,7 @@ export default function Analytics() {
               </tr>
             </thead>
             <tbody>
-              {analyticsData && analyticsData.jobs && analyticsData.jobs.length > 0 ? (
+              {analyticsData && analyticsData.jobs && Array.isArray(analyticsData.jobs) && analyticsData.jobs.length > 0 ? (
                 analyticsData.jobs.map((job, index) => (
                   <tr key={job._id || index} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4">{job.title}</td>
@@ -121,7 +121,7 @@ export default function Analytics() {
                     <td className="py-3 px-4">{job.views}</td>
                     <td className="py-3 px-4">
                       <span className={`font-semibold ${
-                        parseFloat(String(job.conversion).replace('%', '')) > 6.5 
+                        parseFloat(String(job.conversion || 0).replace('%', '')) > 6.5 
                         ? 'text-green-600' 
                         : 'text-orange-600'
                       }`}>

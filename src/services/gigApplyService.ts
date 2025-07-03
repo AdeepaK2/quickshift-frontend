@@ -89,17 +89,27 @@ class GigApplyService {
   async getApplications(filters?: GigApplicationsFilters): Promise<ApiResponse<{ applications: GigApplication[], total: number, page: number, pages: number }>> {
     let queryParams = '';
     
-    if (filters) {
-      const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined) {
-          params.append(key, String(value));
-        }
-      });
-      queryParams = `?${params.toString()}`;
+    try {
+      if (filters) {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            params.append(key, String(value));
+          }
+        });
+        queryParams = `?${params.toString()}`;
+      }
+      
+      return await this.makeRequest<{ applications: GigApplication[], total: number, page: number, pages: number }>(`/employer${queryParams}`);
+    } catch (error) {
+      console.error("Error fetching applications:", error);
+      // Return a safe default response
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to fetch applications',
+        data: { applications: [], total: 0, page: 1, pages: 0 }
+      };
     }
-    
-    return await this.makeRequest<{ applications: GigApplication[], total: number, page: number, pages: number }>(`/employer${queryParams}`);
   }
 
   // Get applications for a specific gig request

@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react';
 // import { withAuth } from '@/contexts/AuthContext'; // Temporarily disabled
+import { useAuth } from '@/contexts/AuthContext';
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import FloatingActionButton from '@/components/shared/FloatingActionButton';
 import { FaBriefcase, FaUser, FaHistory, FaSearch, FaMoneyBillWave } from 'react-icons/fa';
 import { userService } from '@/services/userService';
+import { toast } from 'react-hot-toast';
 
 // Components
 import JobList from '@/components/undergraduate/JobList';
@@ -44,6 +46,7 @@ const navigationItems = [
 ];
 
 function UndergraduatePage() {
+  const { user, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [stats, setStats] = useState({
@@ -53,6 +56,37 @@ function UndergraduatePage() {
     rating: 0
   });
   const [loading, setLoading] = useState(true);
+  
+  // Log authentication status when it changes
+  useEffect(() => {
+    console.log('Auth status in UndergraduatePage:', { 
+      isAuthenticated, 
+      hasUser: !!user,
+      userId: user?.id
+    });
+  }, [user, isAuthenticated]);
+
+  // Handler for applying to a job
+  const handleApply = async (jobId: string) => {
+    try {
+      if (!isAuthenticated || !user) {
+        toast.error('You must be logged in to apply for jobs');
+        return;
+      }
+      
+      // The actual submission is now handled by the ApplicationPopup
+      // This handler is called after successful application
+      toast.success('Successfully applied for the job!');
+      
+      // Update stats after successful application
+      setStats(prev => ({
+        ...prev,
+        appliedJobs: prev.appliedJobs + 1
+      }));
+    } catch (error) {
+      toast.error('Failed to apply for the job. Please try again.');
+    }
+  };
 
   // Fetch user stats when the page loads
   useEffect(() => {
@@ -92,7 +126,12 @@ function UndergraduatePage() {
         return <Dashboard />;
       case 'jobs':
         return selectedJob ? (
-          <JobDetails job={selectedJob} onClose={() => setSelectedJob(null)} />
+          <JobDetails 
+            job={selectedJob} 
+            onApply={handleApply} 
+            onClose={() => setSelectedJob(null)}
+            userId={user?.id} 
+          />
         ) : (
           <JobList onJobSelect={setSelectedJob} />
         );

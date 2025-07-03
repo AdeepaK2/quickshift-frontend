@@ -19,6 +19,7 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  Users,
 } from "lucide-react";
 import Button from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,12 +84,24 @@ interface FilterState {
 
 // Function to convert AdminUserData to Undergraduate format
 const convertToUndergraduate = (user: AdminUserData): Undergraduate => {
-  return {
+  console.log('Converting user data:', {
     id: user._id,
-    _id: user._id,
-    profilePicture: null, // Not available in AdminUserData
-    fullName: `${user.firstName} ${user.lastName}`,
+    firstName: user.firstName,
+    lastName: user.lastName,
     email: user.email,
+    university: user.university,
+    yearOfStudy: user.yearOfStudy,
+    isActive: user.isActive,
+    isVerified: user.isVerified,
+    fullUser: user
+  });
+  
+  return {
+    id: user._id || 'unknown',
+    _id: user._id || 'unknown',
+    profilePicture: null, // Not available in AdminUserData
+    fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown',
+    email: user.email || 'No email provided',
     university: user.university || 'Not specified',
     yearOfStudy: user.yearOfStudy || 1,
     studentIdVerified: user.studentIdVerified || false,
@@ -135,6 +148,18 @@ export default function UndergraduatesContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [itemsPerPage] = useState(10);
   
+  // Debug logging
+  useEffect(() => {
+    console.log('UndergraduatesContent state:', {
+      undergraduates: undergraduates.length,
+      loading,
+      error,
+      totalRecords,
+      currentPage,
+      totalPages
+    });
+  }, [undergraduates, loading, error, totalRecords, currentPage, totalPages]);
+  
   // Filter states
   const [filters, setFilters] = useState<FilterState>({
     search: "",
@@ -149,39 +174,153 @@ export default function UndergraduatesContent() {
       setLoading(true);
       setError(null);
       
-      const params = {
+      // Check authentication
+      const accessToken = localStorage.getItem('accessToken');
+      const userType = localStorage.getItem('userType');
+      console.log('🔍 fetchUndergraduates - Auth check:', {
+        hasAccessToken: !!accessToken,
+        userType,
+        tokenStart: accessToken?.substring(0, 20) + '...'
+      });
+      
+      if (!accessToken) {
+        throw new Error('No access token found. Please log in again.');
+      }
+      
+      // Build query parameters
+      const params: any = {
         page: currentPage,
         limit: itemsPerPage,
-        search: filters.search || undefined,
         role: 'job_seeker', // Only get students
-        isActive: filters.accountStatus === 'active' ? true : 
-                 filters.accountStatus === 'inactive' ? false : undefined,
       };
 
+      // Add search filter if provided
+      if (filters.search && filters.search.trim()) {
+        params.search = filters.search.trim();
+      }
+
+      // Add account status filter if provided
+      if (filters.accountStatus && filters.accountStatus !== 'all') {
+        params.isActive = filters.accountStatus === 'active';
+      }
+
+      // Add verification status filter if provided
+      if (filters.verificationStatus && filters.verificationStatus !== 'all') {
+        params.isVerified = filters.verificationStatus === 'verified';
+      }
+
+      // Add university filter if provided
+      if (filters.university && filters.university !== LABELS.ALL_UNIVERSITIES) {
+        params.university = filters.university;
+      }
+
+      // Add year of study filter if provided
+      if (filters.yearOfStudy !== null) {
+        params.yearOfStudy = filters.yearOfStudy;
+      }
+
+      console.log('🔍 fetchUndergraduates - Making request with params:', params);
+      
       const response = await adminService.getAllUsers(params);
 
+      console.log('🔍 fetchUndergraduates - Response received:', {
+        success: response.success,
+        message: response.message,
+        hasData: !!response.data,
+        total: response.data?.total,
+        count: response.data?.count,
+        dataLength: response.data?.data?.length,
+        fullResponse: response
+      });
+
       if (response.success && response.data) {
-        const convertedUsers = response.data.data.map(convertToUndergraduate);
-        setUndergraduates(convertedUsers);
-        setTotalRecords(response.data.total);
-        setTotalPages(response.data.pages);
+        // Check if response.data is directly an array or has a nested structure
+        let userData;
+        if (Array.isArray(response.data)) {
+          userData = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          userData = response.data.data;
+        } else if ((response.data as any).users && Array.isArray((response.data as any).users)) {
+          userData = (response.data as any).users;
+        } else {
+          console.log('🔍 fetchUndergraduates - Unexpected response structure:', response.data);
+          userData = [];
+        }
+
+        if (userData.length > 0) {
+          const convertedUsers = userData.map(convertToUndergraduate);
+          console.log('🔍 fetchUndergraduates - Converted users:', convertedUsers.length);
+          setUndergraduates(convertedUsers);
+          setTotalRecords(response.data.total || userData.length);
+          setTotalPages(Math.ceil((response.data.total || userData.length) / itemsPerPage));
+        } else {
+          console.log('🔍 fetchUndergraduates - No data array found or empty array');
+          setUndergraduates([]);
+          setTotalRecords(0);
+          setTotalPages(1);
+        }
       } else {
-        throw new Error('Failed to fetch users');
+        console.log('🔍 fetchUndergraduates - Response not successful');
+        throw new Error(response.message || 'Failed to fetch users');
       }
     } catch (err) {
       console.error('Error fetching undergraduates:', err);
+      
+      // Handle authentication errors specifically
+      if (err instanceof Error && (
+        err.message.includes('session has expired') ||
+        err.message.includes('unauthorized') ||
+        err.message.includes('401')
+      )) {
+        // Clear all auth data
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userType');
+        localStorage.removeItem('user');
+        
+        // Redirect to login
+        window.location.href = '/auth/login';
+        return;
+      }
+      
       setError((err as Error).message);
       toast.error('Failed to load student data');
       setUndergraduates([]);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, filters, itemsPerPage]);
+  }, [currentPage, itemsPerPage, filters]);
 
   // Fetch users from backend
   useEffect(() => {
     fetchUndergraduates();
   }, [fetchUndergraduates]);
+
+  // Debug function to check raw API response
+  const debugAPIResponse = async () => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      console.log('🔍 DEBUG - Raw API call');
+      
+      const response = await adminService.getAllUsers({
+        page: 1,
+        limit: 5,
+        role: 'job_seeker'
+      });
+      
+      console.log('🔍 DEBUG - Full API Response:', response);
+      
+      if (response.data && response.data.data) {
+        console.log('🔍 DEBUG - Raw user data:', response.data.data);
+        console.log('🔍 DEBUG - First user:', response.data.data[0]);
+      }
+      
+      toast.success('Check console for debug info');
+    } catch (error) {
+      console.error('🔍 DEBUG - API Error:', error);
+      toast.error('Debug failed - check console');
+    }
+  };
 
   // Refetch function for refresh button
   const refetch = async () => {
@@ -196,16 +335,23 @@ export default function UndergraduatesContent() {
 
   // Extract unique universities for filter dropdown
   const availableUniversities = useMemo(() => {
-    const universities = new Set(
-      undergraduates
-        .map((undergraduate: Undergraduate) => undergraduate.university)
-        .filter(
-          (university: string | undefined): university is string =>
-            university !== undefined && university.trim() !== ""
-        )
-    );
-    return [LABELS.ALL_UNIVERSITIES, ...Array.from(universities)];
-  }, [undergraduates]);
+    // For now, we'll use a static list of universities since we're doing server-side filtering
+    // In a real application, you might want to fetch this from a separate API endpoint
+    return [
+      LABELS.ALL_UNIVERSITIES,
+      "University of Malaysia",
+      "Universiti Malaya",
+      "Universiti Putra Malaysia",
+      "Universiti Kebangsaan Malaysia",
+      "Universiti Sains Malaysia",
+      "Universiti Teknologi Malaysia",
+      "Universiti Teknologi MARA",
+      "International Islamic University Malaysia",
+      "Universiti Malaysia Sabah",
+      "Universiti Malaysia Sarawak",
+      "Other"
+    ];
+  }, []);
 
   // Debounced search handler
   const debouncedSearch = useMemo(
@@ -213,52 +359,10 @@ export default function UndergraduatesContent() {
       debounce((...args: unknown[]) => {
         const value = args[0] as string;
         setFilters((prev) => ({ ...prev, search: value }));
+        setCurrentPage(1); // Reset to first page when searching
       }, 300),
     []
   );
-
-  // Filtered undergraduates with memoization for performance
-  const filteredUndergraduates = useMemo(() => {
-    if (!undergraduates) return [];
-
-    return undergraduates.filter((undergraduate: Undergraduate) => {
-      // Search filter
-      if (filters.search) {
-        const query = filters.search.toLowerCase();
-        const matchesSearch =
-          undergraduate.fullName?.toLowerCase().includes(query) ||
-          undergraduate.email?.toLowerCase().includes(query) ||
-          undergraduate.university?.toLowerCase().includes(query) ||
-          undergraduate.faculty?.toLowerCase().includes(query);
-
-        if (!matchesSearch) return false;
-      } // University filter
-      if (
-        filters.university &&
-        filters.university !== LABELS.ALL_UNIVERSITIES
-      ) {
-        if (undergraduate.university !== filters.university) return false;
-      }
-
-      // Year of study filter
-      if (filters.yearOfStudy !== null) {
-        if (undergraduate.yearOfStudy !== filters.yearOfStudy) return false;
-      }
-
-      // Verification status filter
-      if (filters.verificationStatus) {
-        if (undergraduate.verificationStatus !== filters.verificationStatus)
-          return false;
-      }
-
-      // Account status filter
-      if (filters.accountStatus) {
-        if (undergraduate.accountStatus !== filters.accountStatus) return false;
-      }
-
-      return true;
-    });
-  }, [undergraduates, filters]);
 
   // Handle viewing undergraduate details
   const handleViewUndergraduate = (undergraduate: Undergraduate) => {
@@ -267,10 +371,13 @@ export default function UndergraduatesContent() {
   };
 
   // Export functionality
-
-  // Export functionality
   const handleExportData = () => {
-    const csvData = filteredUndergraduates.map(undergraduate => ({
+    if (!undergraduates || undergraduates.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+    
+    const csvData = undergraduates.map(undergraduate => ({
       'Full Name': undergraduate.fullName,
       'Email': undergraduate.email,
       'University': undergraduate.university,
@@ -310,6 +417,7 @@ export default function UndergraduatesContent() {
   // Update other filters
   const updateFilter = (key: keyof FilterState, value: string | number | null) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
+    setCurrentPage(1); // Reset to first page when filtering
   };
 
   // Handle page change
@@ -331,7 +439,9 @@ export default function UndergraduatesContent() {
         onRetry={refetch}
       />
     );
-  }  return (
+  }
+  
+  return (
     <div className="p-4 space-y-4">
       <h1 className="text-2xl font-bold text-gray-900 mb-4">Undergraduates</h1>
       
@@ -400,8 +510,8 @@ export default function UndergraduatesContent() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">        <p className="text-sm text-gray-800 font-medium">
           {LABELS.SHOWING_RESULTS.replace(
             "{count}",
-            filteredUndergraduates.length.toString()
-          ).replace("{total}", (undergraduates?.length || 0).toString())}
+            (undergraduates?.length || 0).toString()
+          ).replace("{total}", totalRecords.toString())}
         </p>
         
         <div className="flex items-center space-x-2">
@@ -419,8 +529,17 @@ export default function UndergraduatesContent() {
           <Button
             variant="outline"
             size="sm"
+            onClick={debugAPIResponse}
+            className="flex items-center"
+          >
+            🔍 Debug
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleExportData}
-            disabled={filteredUndergraduates.length === 0}
+            disabled={!undergraduates || undergraduates.length === 0}
             className="flex items-center"
           >
             <Download className="h-4 w-4 mr-2" />
@@ -429,7 +548,7 @@ export default function UndergraduatesContent() {
         </div>
       </div>{" "}
       {/* Users Table */}
-      {filteredUndergraduates.length === 0 ? (
+      {!undergraduates || undergraduates.length === 0 ? (
         <EmptyState
           title={LABELS.NO_RESULTS_TITLE}
           description={LABELS.NO_RESULTS_DESCRIPTION}
@@ -438,7 +557,7 @@ export default function UndergraduatesContent() {
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="space-y-4 p-4">
-            {filteredUndergraduates.map((undergraduate) => (
+            {undergraduates.map((undergraduate: Undergraduate) => (
               <div key={undergraduate.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
@@ -492,8 +611,8 @@ export default function UndergraduatesContent() {
       {/* Pagination Controls */}
       <div className="flex flex-col sm:flex-row justify-between items-center mt-4">
         <div className="text-sm text-gray-700">
-          {`Showing ${currentPage * itemsPerPage - itemsPerPage + 1}-${
-            currentPage * itemsPerPage
+          {`Showing ${Math.min((currentPage - 1) * itemsPerPage + 1, totalRecords)}-${
+            Math.min(currentPage * itemsPerPage, totalRecords)
           } of ${totalRecords} results`}
         </div>
         <div className="flex items-center space-x-2">
