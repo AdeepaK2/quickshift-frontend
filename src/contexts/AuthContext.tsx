@@ -55,6 +55,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
           setUser(storedUser);
           setUserType(storedUserType);
 
+          // Ensure currentUserId is also set in localStorage
+          if (!localStorage.getItem('currentUserId') && storedUser._id) {
+            localStorage.setItem('currentUserId', storedUser._id);
+          }
+
           // Set cookies for middleware
           setCookies(storedTokens.accessToken, storedUserType);
 
@@ -130,6 +135,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         storeTokens(userTokens);
         storeUser(userData);
         storeUserType(responseUserType as UserType);
+        
+        // Store the user ID for profile access
+        localStorage.setItem('currentUserId', userData._id);
 
         // Set cookies for middleware
         setCookies(userTokens.accessToken, responseUserType);
@@ -201,7 +209,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setTokens(null);
     
     // Clear localStorage
-    const keysToRemove = ['accessToken', 'refreshToken', 'user', 'userType'];
+    const keysToRemove = ['accessToken', 'refreshToken', 'user', 'userType', 'currentUserId'];
     keysToRemove.forEach(key => {
       localStorage.removeItem(key);
     });
@@ -361,6 +369,8 @@ function storeUser(user: User): void {
   
   try {
     localStorage.setItem('user', JSON.stringify(user));
+    // Also store the user ID separately for easier access
+    localStorage.setItem('currentUserId', user._id);
   } catch (error) {
     console.error('Error storing user:', error);
   }

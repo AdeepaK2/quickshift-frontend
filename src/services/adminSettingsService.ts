@@ -13,6 +13,7 @@ export interface AdminProfile {
   role: 'admin' | 'super_admin';
   phone?: string;
   isActive: boolean;
+  twoFactorAuth?: boolean;
   permissions: {
     canCreateAdmin: boolean;
     canDeleteAdmin: boolean;
@@ -85,13 +86,77 @@ class AdminSettingsService {
   // Get current admin profile
   async getCurrentAdminProfile(): Promise<ApiResponse<AdminProfile>> {
     try {
-      // Get current user ID from local storage or token
-      const currentUserId = localStorage.getItem('currentUserId');
-      if (!currentUserId) {
-        throw new Error('No current user ID found');
+      // Try to get the profile from the new endpoint
+      try {
+        // Use the new endpoint that doesn't require an ID
+        const profile = await this.makeRequest<AdminProfile>('/admin/profile');
+        
+        // Store the ID for backward compatibility
+        if (profile.data && profile.data._id) {
+          localStorage.setItem('currentUserId', profile.data._id);
+        }
+        
+        return profile;
+      } catch (apiError) {
+        console.warn('Failed to get profile from /admin/profile endpoint, trying fallback methods...', apiError);
       }
       
-      return await this.makeRequest<AdminProfile>(`/admin/${currentUserId}`);
+      // Fallback 1: Try to get user ID from localStorage
+      let currentUserId = localStorage.getItem('currentUserId');
+      
+      // Fallback 2: If not found, try to extract from the stored user object
+      if (!currentUserId) {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          try {
+            const userData = JSON.parse(userStr);
+            if (userData && userData._id) {
+              currentUserId = userData._id;
+              // Store it for future use
+              localStorage.setItem('currentUserId', userData._id);
+            }
+          } catch (e) {
+            console.error('Failed to parse user data from localStorage:', e);
+          }
+        }
+      }
+      
+      // Fallback 3: Try to get user profile from auth API
+      if (!currentUserId) {
+        console.log('Attempting to retrieve user ID from current profile...');
+        try {
+          // Get current user profile from API
+          const accessToken = localStorage.getItem('accessToken');
+          if (!accessToken) {
+            throw new Error('No access token available');
+          }
+          
+          const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`
+            }
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.data && data.data._id) {
+              currentUserId = data.data._id;
+              localStorage.setItem('currentUserId', data.data._id);
+              console.log('Retrieved user ID from profile:', currentUserId);
+            }
+          }
+        } catch (profileError) {
+          console.error('Failed to retrieve user profile:', profileError);
+        }
+      }
+      
+      // If we have a user ID, try to get the profile by ID
+      if (currentUserId) {
+        return await this.makeRequest<AdminProfile>(`/admin/${currentUserId}`);
+      }
+      
+      // If all methods fail, throw an error
+      throw new Error('Unable to retrieve admin profile: No user ID available');
     } catch (error) {
       console.error('Error fetching admin profile:', error);
       throw error;
@@ -158,14 +223,16 @@ class AdminSettingsService {
     }
   }
 
-  // Get platform settings (Note: This might need to be implemented in backend)
+  // Get platform settings
   async getPlatformSettings(): Promise<ApiResponse<AdminPlatformSettings>> {
     try {
-      // For now, return default settings since this endpoint might not exist
-      // In production, you would implement this endpoint in the backend
+      return await this.makeRequest<AdminPlatformSettings>('/admin/settings/platform');
+    } catch (error) {
+      console.error('Error fetching platform settings:', error);
+      // Fallback to default settings if API call fails
       return {
         success: true,
-        message: 'Settings retrieved successfully',
+        message: 'Settings retrieved from defaults',
         data: {
           maintenanceMode: false,
           feedbackCollection: true,
@@ -176,28 +243,16 @@ class AdminSettingsService {
           allowRegistrations: true,
         }
       };
-    } catch (error) {
-      console.error('Error fetching platform settings:', error);
-      throw error;
     }
   }
 
-  // Update platform settings (Note: This might need to be implemented in backend)
+  // Update platform settings
   async updatePlatformSettings(settings: Partial<AdminPlatformSettings>): Promise<ApiResponse<AdminPlatformSettings>> {
     try {
-      // For now, simulate the update since this endpoint might not exist
-      // In production, you would implement this endpoint in the backend
-      const currentSettings = await this.getPlatformSettings();
-      const updatedSettings: AdminPlatformSettings = { 
-        ...currentSettings.data, 
-        ...settings 
-      } as AdminPlatformSettings;
-      
-      return {
-        success: true,
-        message: 'Settings updated successfully',
-        data: updatedSettings
-      };
+      return await this.makeRequest<AdminPlatformSettings>('/admin/settings/platform', {
+        method: 'PATCH',
+        body: JSON.stringify(settings),
+      });
     } catch (error) {
       console.error('Error updating platform settings:', error);
       throw error;
@@ -218,12 +273,7 @@ class AdminSettingsService {
       });
     } catch (error) {
       console.error('Error toggling two-factor auth:', error);
-      // Return success for now since this feature might not be implemented
-      return {
-        success: true,
-        message: 'Two-factor authentication setting updated',
-        data: { twoFactorAuth: enabled }
-      };
+      throw error;
     }
   }
 }

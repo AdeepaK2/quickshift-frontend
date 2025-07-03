@@ -102,12 +102,30 @@ export default function SettingContent() {
             newPassword: "",
             confirmPassword: "",
           });
+
+          // Update two-factor auth setting from profile
+          if (profileResponse.data.twoFactorAuth !== undefined) {
+            setSettings(prevSettings => ({
+              ...prevSettings,
+              twoFactorAuth: profileResponse.data!.twoFactorAuth || false
+            }));
+          }
         }
 
         // Load platform settings
         const settingsResponse = await adminSettingsService.getPlatformSettings();
         if (settingsResponse.success && settingsResponse.data) {
-          setSettings(settingsResponse.data);
+          // Merge platform settings with the current settings (keeping twoFactorAuth from profile)
+          setSettings({
+            maintenanceMode: settingsResponse.data.maintenanceMode,
+            feedbackCollection: settingsResponse.data.feedbackCollection,
+            emailNotifications: settingsResponse.data.emailNotifications,
+            passwordMinLength: settingsResponse.data.passwordMinLength,
+            sessionTimeout: settingsResponse.data.sessionTimeout,
+            allowRegistrations: settingsResponse.data.allowRegistrations,
+            // Keep the twoFactorAuth that was set from profile
+            twoFactorAuth: settings.twoFactorAuth
+          });
         }
       } catch (error) {
         console.error('Error loading admin data:', error);
@@ -187,9 +205,33 @@ export default function SettingContent() {
     [validationErrors]
   );
 
-  const handleSettingToggle = useCallback((field: keyof AdminPlatformSettings) => {
-    setSettings((prev) => ({ ...prev, [field]: !prev[field] }));
-  }, []);
+  const handleSettingToggle = useCallback(async (field: keyof AdminPlatformSettings) => {
+    // Special handling for two-factor auth
+    if (field === 'twoFactorAuth') {
+      try {
+        const newValue = !settings.twoFactorAuth;
+        setIsSubmitting(true);
+        
+        // Call the specific 2FA API
+        const response = await adminSettingsService.toggleTwoFactorAuth(newValue);
+        
+        if (response.success) {
+          setSettings(prev => ({ ...prev, [field]: newValue }));
+          toast.success(`Two-factor authentication ${newValue ? 'enabled' : 'disabled'}`);
+        } else {
+          throw new Error(response.message || 'Failed to update two-factor authentication');
+        }
+      } catch (error) {
+        console.error('2FA toggle error:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to update two-factor authentication');
+      } finally {
+        setIsSubmitting(false);
+      }
+    } else {
+      // Normal toggle for other settings
+      setSettings((prev) => ({ ...prev, [field]: !prev[field] }));
+    }
+  }, [settings]);
 
   const togglePasswordVisibility = useCallback(
     (field: keyof typeof showPasswords) => {
