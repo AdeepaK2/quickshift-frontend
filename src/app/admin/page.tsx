@@ -65,7 +65,6 @@ function AdminPage() {
         userType="admin"
         activeTab={activeTab}
         setActiveTab={handleTabChange}
-        navigationItems={navigationItems}
         quickStats={quickStats}
       >
         {renderContent()}

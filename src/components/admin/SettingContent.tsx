@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   User,
   Settings as SettingsIcon,
@@ -14,11 +14,14 @@ import {
   AlertTriangle,
   MessageSquare,
 } from "lucide-react";
-import { useMutation } from "@/lib/hooks";
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
-import { LoadingState } from "@/components/ui/loading";
 import { formatDate } from "@/lib/utils";
+import toast from "react-hot-toast";
+import { 
+  adminSettingsService, 
+  AdminPlatformSettings 
+} from "@/services/adminSettingsService";
 
 // Enhanced styles for blue theme
 const textStyles = {
@@ -33,18 +36,9 @@ const textStyles = {
 };
 
 // TypeScript interfaces
-interface AdminSettings {
-  maintenanceMode: boolean;
-  feedbackCollection: boolean;
-  emailNotifications: boolean;
-  twoFactorAuth: boolean;
-  passwordMinLength: number;
-  sessionTimeout: number;
-  allowRegistrations: boolean;
-}
-
 interface FormData {
-  name: string;
+  firstName: string;
+  lastName: string;
   email: string;
   currentPassword: string;
   newPassword: string;
@@ -52,7 +46,8 @@ interface FormData {
 }
 
 interface ValidationErrors {
-  name?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   currentPassword?: string;
   newPassword?: string;
@@ -60,55 +55,87 @@ interface ValidationErrors {
 }
 
 const initialFormData: FormData = {
-  name: "Admin User",
-  email: "admin@quickshift.com",
+  firstName: "",
+  lastName: "",
+  email: "",
   currentPassword: "",
   newPassword: "",
   confirmPassword: "",
-};
-
-const initialSettings: AdminSettings = {
-  maintenanceMode: false,
-  feedbackCollection: true,
-  emailNotifications: true,
-  twoFactorAuth: false,
-  passwordMinLength: 8,
-  sessionTimeout: 30,
-  allowRegistrations: true,
 };
 
 export default function SettingContent() {
   // State management
   const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleString());
   const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [settings, setSettings] = useState<AdminSettings>(initialSettings);
+  const [settings, setSettings] = useState<AdminPlatformSettings>({
+    maintenanceMode: false,
+    feedbackCollection: true,
+    emailNotifications: true,
+    twoFactorAuth: false,
+    passwordMinLength: 8,
+    sessionTimeout: 30,
+    allowRegistrations: true,
+  });
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
     confirm: false,
   });
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // API mutations
-  const { mutate: updateProfile, loading: updateProfileLoading } =
-    useMutation();
-  const { mutate: updateSettings, loading: updateSettingsLoading } =
-    useMutation();
-  const { mutate: changePassword, loading: changePasswordLoading } =
-    useMutation();
+  // Load admin profile and settings on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Load admin profile
+        const profileResponse = await adminSettingsService.getCurrentAdminProfile();
+        if (profileResponse.success && profileResponse.data) {
+          setFormData({
+            firstName: profileResponse.data.firstName,
+            lastName: profileResponse.data.lastName,
+            email: profileResponse.data.email,
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: "",
+          });
+        }
+
+        // Load platform settings
+        const settingsResponse = await adminSettingsService.getPlatformSettings();
+        if (settingsResponse.success && settingsResponse.data) {
+          setSettings(settingsResponse.data);
+        }
+      } catch (error) {
+        console.error('Error loading admin data:', error);
+        toast.error('Failed to load admin settings');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   // Form validation
   const validateForm = useCallback((): boolean => {
     const errors: ValidationErrors = {};
 
-    // Name validation
-    if (!formData.name.trim()) {
-      errors.name = "Name is required";
-    } else if (formData.name.trim().length < 2) {
-      errors.name = "Name must be at least 2 characters";
+    // First name validation
+    if (!formData.firstName.trim()) {
+      errors.firstName = "First name is required";
+    } else if (formData.firstName.trim().length < 2) {
+      errors.firstName = "First name must be at least 2 characters";
+    }
+
+    // Last name validation
+    if (!formData.lastName.trim()) {
+      errors.lastName = "Last name is required";
+    } else if (formData.lastName.trim().length < 2) {
+      errors.lastName = "Last name must be at least 2 characters";
     }
 
     // Email validation
@@ -160,7 +187,7 @@ export default function SettingContent() {
     [validationErrors]
   );
 
-  const handleSettingToggle = useCallback((field: keyof AdminSettings) => {
+  const handleSettingToggle = useCallback((field: keyof AdminPlatformSettings) => {
     setSettings((prev) => ({ ...prev, [field]: !prev[field] }));
   }, []);
 
@@ -176,25 +203,27 @@ export default function SettingContent() {
 
     setIsSubmitting(true);
     try {
-      // API call would go here
-      await updateProfile(
-        () =>
-          Promise.resolve({
-            success: true,
-            data: null,
-            message: "Profile updated",
-          }),
-        { name: formData.name, email: formData.email }
-      );
+      const profileData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+      };
 
-      setLastUpdated(new Date().toLocaleString());
-      alert("Profile updated successfully!");
-    } catch {
-      alert("Failed to update profile. Please try again.");
+      const response = await adminSettingsService.updateAdminProfile(profileData);
+      
+      if (response.success && response.data) {
+        setLastUpdated(new Date().toLocaleString());
+        toast.success("Profile updated successfully!");
+      } else {
+        throw new Error(response.message || 'Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Profile update error:', error);
+      toast.error(error instanceof Error ? error.message : "Failed to update profile. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, updateProfile, validateForm]);
+  }, [formData, validateForm]);
 
   const handleChangePassword = useCallback(async () => {
     if (
@@ -202,7 +231,7 @@ export default function SettingContent() {
       !formData.newPassword ||
       !formData.confirmPassword
     ) {
-      alert("Please fill in all password fields");
+      toast.error("Please fill in all password fields");
       return;
     }
 
@@ -210,58 +239,52 @@ export default function SettingContent() {
 
     setIsSubmitting(true);
     try {
-      // API call would go here
-      await changePassword(
-        () =>
-          Promise.resolve({
-            success: true,
-            data: null,
-            message: "Password changed",
-          }),
-        {
-          currentPassword: formData.currentPassword,
-          newPassword: formData.newPassword,
-        }
-      );
+      const response = await adminSettingsService.changePassword({
+        currentPassword: formData.currentPassword,
+        newPassword: formData.newPassword,
+        confirmPassword: formData.confirmPassword,
+      });
 
-      // Clear password fields
-      setFormData((prev) => ({
-        ...prev,
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      }));
-      setLastUpdated(new Date().toLocaleString());
-      alert("Password changed successfully!");
-    } catch {
-      alert("Failed to change password. Please try again.");
+      if (response.success) {
+        // Clear password fields
+        setFormData((prev) => ({
+          ...prev,
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        }));
+        setLastUpdated(new Date().toLocaleString());
+        toast.success("Password changed successfully!");
+      } else {
+        throw new Error(response.message || 'Failed to change password');
+      }
+    } catch (error) {
+      console.error('Password change error:', error);
+      toast.error(error instanceof Error ? error.message : "Failed to change password. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, changePassword, validateForm]);
+  }, [formData, validateForm]);
 
   const handleSaveSettings = useCallback(async () => {
     setIsSubmitting(true);
     try {
-      // API call would go here
-      await updateSettings(
-        () =>
-          Promise.resolve({
-            success: true,
-            data: null,
-            message: "Settings updated",
-          }),
-        settings
-      );
+      const response = await adminSettingsService.updatePlatformSettings(settings);
 
-      setLastUpdated(new Date().toLocaleString());
-      alert("Settings saved successfully!");
-    } catch {
-      alert("Failed to save settings. Please try again.");
+      if (response.success && response.data) {
+        setSettings(response.data);
+        setLastUpdated(new Date().toLocaleString());
+        toast.success("Settings saved successfully!");
+      } else {
+        throw new Error(response.message || 'Failed to save settings');
+      }
+    } catch (error) {
+      console.error('Settings save error:', error);
+      toast.error(error instanceof Error ? error.message : "Failed to save settings. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
-  }, [settings, updateSettings]);
+  }, [settings]);
 
   const handleResetToDefaults = useCallback(() => {
     if (
@@ -270,9 +293,17 @@ export default function SettingContent() {
       )
     ) {
       setFormData(initialFormData);
-      setSettings(initialSettings);
+      setSettings({
+        maintenanceMode: false,
+        feedbackCollection: true,
+        emailNotifications: true,
+        twoFactorAuth: false,
+        passwordMinLength: 8,
+        sessionTimeout: 30,
+        allowRegistrations: true,
+      });
       setValidationErrors({});
-      alert("Settings reset to defaults!");
+      toast.success("Settings reset to defaults!");
     }
   }, []);
 
@@ -283,24 +314,36 @@ export default function SettingContent() {
       )
     ) {
       try {
-        // API call would go here
-        alert("Password reset link has been sent to your email address.");
-      } catch {
-        alert("Failed to send password reset link. Please try again.");
+        setIsSubmitting(true);
+        const response = await adminSettingsService.sendPasswordResetEmail();
+        
+        if (response.success) {
+          toast.success("Password reset link has been sent to your email address.");
+        } else {
+          throw new Error(response.message || 'Failed to send password reset link');
+        }
+      } catch (error) {
+        console.error('Password reset error:', error);
+        toast.error(error instanceof Error ? error.message : "Failed to send password reset link. Please try again.");
+      } finally {
+        setIsSubmitting(false);
       }
     }
   }, []);
 
-  const isLoading =
-    updateProfileLoading ||
-    updateSettingsLoading ||
-    changePasswordLoading ||
-    isSubmitting;
+  // Remove loading state check since we don't have API loading states anymore
 
   if (isLoading) {
-    return <LoadingState message="Updating settings..." />;
-  }  return (
-    <div className="space-y-6 p-4 bg-gray-50 min-h-screen">{/* Page Header */}
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-lg">Loading admin settings...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 p-4 bg-gray-50 min-h-screen">
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className={`text-2xl font-bold ${textStyles.heading}`}>
@@ -315,45 +358,75 @@ export default function SettingContent() {
             Last updated: {formatDate(lastUpdated)}
           </p>
         </div>
-      </div>      {/* Profile Settings Section */}
+      </div>
+
+      {/* Profile Settings Section */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
         <div className="flex items-center mb-6">
           <div className="p-2 rounded-lg bg-blue-50 mr-3">
             <User className="h-5 w-5 text-blue-600" />
-          </div><h3 className={`text-lg ${textStyles.heading}`}>
+          </div>
+          <h3 className={`text-lg ${textStyles.heading}`}>
             Profile Settings
           </h3>
         </div>
 
         <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">            <div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
               <label className={`block text-sm ${textStyles.label} mb-2`}>
-                Admin Name
-              </label>              <Input
+                First Name
+              </label>
+              <Input
                 label=""
                 type="text"
-                value={formData.name}
-                onChange={(e) => handleInputChange("name", e.target.value)}
-                disabled={isLoading}
-                placeholder="Enter your full name"
+                value={formData.firstName}
+                onChange={(e) => handleInputChange("firstName", e.target.value)}
+                disabled={isSubmitting}
+                placeholder="Enter your first name"
                 className="placeholder:text-gray-600 placeholder:opacity-100 text-gray-900 font-medium"
-              />{validationErrors.name && (
+              />
+              {validationErrors.firstName && (
                 <p className={`mt-1 text-sm ${textStyles.error}`}>
-                  {validationErrors.name}
+                  {validationErrors.firstName}
                 </p>
               )}
-            </div>            <div>
+            </div>
+
+            <div>
+              <label className={`block text-sm ${textStyles.label} mb-2`}>
+                Last Name
+              </label>
+              <Input
+                label=""
+                type="text"
+                value={formData.lastName}
+                onChange={(e) => handleInputChange("lastName", e.target.value)}
+                disabled={isSubmitting}
+                placeholder="Enter your last name"
+                className="placeholder:text-gray-600 placeholder:opacity-100 text-gray-900 font-medium"
+              />
+              {validationErrors.lastName && (
+                <p className={`mt-1 text-sm ${textStyles.error}`}>
+                  {validationErrors.lastName}
+                </p>
+              )}
+            </div>
+
+            <div className="md:col-span-2">
               <label className={`block text-sm ${textStyles.label} mb-2`}>
                 Email Address
-              </label>              <Input
+              </label>
+              <Input
                 label=""
                 type="email"
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
-                disabled={isLoading}
+                disabled={isSubmitting}
                 placeholder="Enter your email address"
                 className="placeholder:text-gray-600 placeholder:opacity-100 text-gray-900 font-medium"
-              />{validationErrors.email && (
+              />
+              {validationErrors.email && (
                 <p className={`mt-1 text-sm ${textStyles.error}`}>
                   {validationErrors.email}
                 </p>
@@ -364,7 +437,7 @@ export default function SettingContent() {
           <div className="flex justify-end">
             <Button
               onClick={handleSaveProfile}
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="flex items-center gap-2"
             >
               <Save className="h-4 w-4" />
@@ -390,7 +463,7 @@ export default function SettingContent() {
                     onChange={(e) =>
                       handleInputChange("currentPassword", e.target.value)
                     }
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                     placeholder="Enter current password"
                     className="placeholder:text-gray-600 placeholder:opacity-100 text-gray-900 font-medium pr-10"
                   /><button
@@ -419,7 +492,7 @@ export default function SettingContent() {
                     onChange={(e) =>
                       handleInputChange("newPassword", e.target.value)
                     }
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                     placeholder="Enter new password"
                     className="placeholder:text-gray-600 placeholder:opacity-100 text-gray-900 font-medium pr-10"
                   /><button
@@ -448,7 +521,7 @@ export default function SettingContent() {
                     onChange={(e) =>
                       handleInputChange("confirmPassword", e.target.value)
                     }
-                    disabled={isLoading}
+                    disabled={isSubmitting}
                     placeholder="Confirm new password"
                     className="placeholder:text-gray-600 placeholder:opacity-100 text-gray-900 font-medium pr-10"
                   /><button
@@ -472,7 +545,7 @@ export default function SettingContent() {
             <div className="flex justify-end">
               <Button
                 onClick={handleChangePassword}
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="flex items-center gap-2"
               >
                 <Lock className="h-4 w-4" />
@@ -505,7 +578,7 @@ export default function SettingContent() {
                 checked={settings.maintenanceMode}
                 onChange={() => handleSettingToggle("maintenanceMode")}
                 className="sr-only peer"
-                disabled={isLoading}
+                disabled={isSubmitting}
               />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
@@ -524,7 +597,7 @@ export default function SettingContent() {
                 checked={settings.feedbackCollection}
                 onChange={() => handleSettingToggle("feedbackCollection")}
                 className="sr-only peer"
-                disabled={isLoading}
+                disabled={isSubmitting}
               />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
@@ -543,7 +616,7 @@ export default function SettingContent() {
                 checked={settings.emailNotifications}
                 onChange={() => handleSettingToggle("emailNotifications")}
                 className="sr-only peer"
-                disabled={isLoading}
+                disabled={isSubmitting}
               />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
@@ -572,7 +645,7 @@ export default function SettingContent() {
             <Button
               onClick={handleSendPasswordReset}
               variant="outline"
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
               Reset Password
             </Button>
@@ -591,7 +664,7 @@ export default function SettingContent() {
                 checked={settings.twoFactorAuth}
                 onChange={() => handleSettingToggle("twoFactorAuth")}
                 className="sr-only peer"
-                disabled={isLoading}
+                disabled={isSubmitting}
               />
               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
@@ -604,7 +677,7 @@ export default function SettingContent() {
         <Button
           onClick={handleResetToDefaults}
           variant="outline"
-          disabled={isLoading}
+          disabled={isSubmitting}
           className="flex items-center gap-2"
         >
           <RotateCcw className="h-4 w-4" />
@@ -612,7 +685,7 @@ export default function SettingContent() {
         </Button>
         <Button
           onClick={handleSaveSettings}
-          disabled={isLoading}
+          disabled={isSubmitting}
           className="flex items-center gap-2"
         >
           <Save className="h-4 w-4" />

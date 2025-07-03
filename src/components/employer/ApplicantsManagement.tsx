@@ -66,8 +66,14 @@ export default function ApplicantsManagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
-  const fetchApplications = async () => {
-    setLoading(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchApplications = async (isRefreshing = false) => {
+    if (isRefreshing) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     
     try {
@@ -83,6 +89,7 @@ export default function ApplicantsManagement() {
       setError('An error occurred while fetching applications. Please try again.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -166,13 +173,23 @@ export default function ApplicantsManagement() {
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent"
                 onChange={(e) => handleFilterChange('status', e.target.value)}
               >
-                <option value="all">All Status</option>
+                <option value="all">All Statuses</option>
                 <option value="pending">Pending</option>
                 <option value="reviewed">Reviewed</option>
-                <option value="accepted">Hired</option>
+                <option value="accepted">Accepted</option>
                 <option value="rejected">Rejected</option>
                 <option value="withdrawn">Withdrawn</option>
               </select>
+              <button 
+                onClick={() => fetchApplications(true)} 
+                disabled={refreshing}
+                className="flex items-center space-x-1 bg-white text-blue-600 hover:text-blue-800 px-4 py-2 rounded-lg border border-gray-300 hover:bg-blue-50 focus:ring-2 focus:ring-[#0077B6] focus:border-transparent"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span className="hidden sm:inline">{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+              </button>
             </div>
           </div>
 
@@ -181,7 +198,7 @@ export default function ApplicantsManagement() {
               {error}
               <button 
                 className="ml-2 text-red-500 hover:text-red-700 underline" 
-                onClick={fetchApplications}
+                onClick={() => fetchApplications()}
               >
                 Try again
               </button>

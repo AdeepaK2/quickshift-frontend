@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 // import { withAuth } from '@/contexts/AuthContext'; // Temporarily disabled
 import DashboardLayout from '@/components/shared/DashboardLayout';
 import FloatingActionButton from '@/components/shared/FloatingActionButton';
 import { FaBriefcase, FaUser, FaHistory, FaSearch, FaMoneyBillWave } from 'react-icons/fa';
+import { userService } from '@/services/userService';
 
 // Components
 import JobList from '@/components/undergraduate/JobList';
@@ -42,16 +43,48 @@ const navigationItems = [
   { id: 'profile', label: 'Profile', icon: FaUser },
 ];
 
-const quickStats = [
-  { label: 'Applied Jobs', value: '8', description: 'Applications sent' },
-  { label: 'Active Gigs', value: '2', description: 'Current work' },
-  { label: 'This Month', value: 'LKR 18,500', description: 'Earnings' },
-  { label: 'Rating', value: '4.8', description: 'Your rating' }
-];
-
 function UndergraduatePage() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
+  const [stats, setStats] = useState({
+    appliedJobs: 0,
+    activeGigs: 0,
+    monthlyEarnings: 0,
+    rating: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  // Fetch user stats when the page loads
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        setLoading(true);
+        const response = await userService.getStats();
+        if (response.success && response.data) {
+          setStats({
+            appliedJobs: response.data.appliedJobs,
+            activeGigs: response.data.activeGigs,
+            monthlyEarnings: response.data.monthlyEarnings,
+            rating: response.data.rating
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching user stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchStats();
+  }, []);
+
+  // Generate quick stats from fetched data
+  const quickStats = [
+    { label: 'Applied Jobs', value: loading ? '...' : stats.appliedJobs.toString(), description: 'Applications sent' },
+    { label: 'Active Gigs', value: loading ? '...' : stats.activeGigs.toString(), description: 'Current work' },
+    { label: 'This Month', value: loading ? '...' : `LKR ${stats.monthlyEarnings.toLocaleString()}`, description: 'Earnings' },
+    { label: 'Rating', value: loading ? '...' : stats.rating.toFixed(1), description: 'Your rating' }
+  ];
 
   const renderContent = () => {
     switch (activeTab) {
@@ -92,7 +125,6 @@ function UndergraduatePage() {
         userType="user"
         activeTab={activeTab}
         setActiveTab={handleTabChange}
-        navigationItems={navigationItems}
         quickStats={quickStats}
       >
         {renderContent()}

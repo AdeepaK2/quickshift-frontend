@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
 import {
   Search,
@@ -17,6 +17,8 @@ import {
   UserCheck,
   Download,
   RefreshCw,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import Button from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,7 +43,7 @@ import { LoadingState } from "@/components/ui/loading";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { UNDERGRADUATE_CONSTANTS } from "@/lib/undergraduate-constants";
-import { mockUndergraduates } from "@/lib/mock-data/undergraduates";
+import { adminService, AdminUserData } from '@/services/adminService';
 
 // TypeScript interfaces for Undergraduate data
 interface Undergraduate {
@@ -79,6 +81,36 @@ interface FilterState {
   accountStatus: string | null;
 }
 
+// Function to convert AdminUserData to Undergraduate format
+const convertToUndergraduate = (user: AdminUserData): Undergraduate => {
+  return {
+    id: user._id,
+    _id: user._id,
+    profilePicture: null, // Not available in AdminUserData
+    fullName: `${user.firstName} ${user.lastName}`,
+    email: user.email,
+    university: user.university || 'Not specified',
+    yearOfStudy: user.yearOfStudy || 1,
+    studentIdVerified: user.studentIdVerified || false,
+    phoneNumber: user.phone || 'Not provided',
+    faculty: user.faculty || 'Not specified',
+    gender: 'Not specified', // Not available in AdminUserData
+    dateOfBirth: '', // Not available in AdminUserData
+    address: '', // Not available in AdminUserData
+    city: '', // Not available in AdminUserData
+    postalCode: '', // Not available in AdminUserData
+    accountStatus: user.isActive ? 'active' : 'inactive',
+    verificationStatus: user.isVerified ? 'verified' : 'pending',
+    lastLogin: user.lastLoginAt || user.updatedAt || user.createdAt,
+    bio: '', // Not available in AdminUserData
+    gpa: 0, // Not available in AdminUserData
+    skillsAndInterests: [], // Not available in AdminUserData
+    documentsUploaded: [], // Not available in AdminUserData
+    joinDate: user.createdAt,
+    verified: user.isVerified,
+  };
+};
+
 // Constants for filter options - moved to constants file for better maintainability
 const {
   YEARS_OF_STUDY,
@@ -95,9 +127,13 @@ export default function UndergraduatesContent() {
   const [selectedUndergraduate, setSelectedUndergraduate] =
     useState<Undergraduate | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [undergraduates, setUndergraduates] = useState<Undergraduate[]>(mockUndergraduates);
-  const [loading, setLoading] = useState(false);
+  const [undergraduates, setUndergraduates] = useState<Undergraduate[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [itemsPerPage] = useState(10);
   
   // Filter states
   const [filters, setFilters] = useState<FilterState>({
@@ -107,18 +143,50 @@ export default function UndergraduatesContent() {
     verificationStatus: null,
     accountStatus: null,
   });
-  // Refetch function for mock data
-  const refetch = async () => {
-    setLoading(true);
+
+  const fetchUndergraduates = useCallback(async () => {
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setUndergraduates(mockUndergraduates);
-      setError(null);    } catch {
-      setError("Failed to fetch data");
+      setLoading(true);
+      setError(null);
+      
+      const params = {
+        page: currentPage,
+        limit: itemsPerPage,
+        search: filters.search || undefined,
+        role: 'job_seeker', // Only get students
+        isActive: filters.accountStatus === 'active' ? true : 
+                 filters.accountStatus === 'inactive' ? false : undefined,
+      };
+
+      const response = await adminService.getAllUsers(params);
+
+      if (response.success && response.data) {
+        const convertedUsers = response.data.data.map(convertToUndergraduate);
+        setUndergraduates(convertedUsers);
+        setTotalRecords(response.data.total);
+        setTotalPages(response.data.pages);
+      } else {
+        throw new Error('Failed to fetch users');
+      }
+    } catch (err) {
+      console.error('Error fetching undergraduates:', err);
+      setError((err as Error).message);
+      toast.error('Failed to load student data');
+      setUndergraduates([]);
     } finally {
       setLoading(false);
     }
+  }, [currentPage, filters, itemsPerPage]);
+
+  // Fetch users from backend
+  useEffect(() => {
+    fetchUndergraduates();
+  }, [fetchUndergraduates]);
+
+  // Refetch function for refresh button
+  const refetch = async () => {
+    await fetchUndergraduates();
+    toast.success("Data refreshed successfully");
   };
 
   // Mock mutation states - will be used when handlers are implemented
@@ -148,18 +216,6 @@ export default function UndergraduatesContent() {
       }, 300),
     []
   );
-  // Mock API functions - will be used when handlers are implemented
-  // const verifyUndergraduate = async (id: string) => {
-  //   return await mockUndergraduatesApi.verify(id);
-  // };
-  // 
-  // const suspendUndergraduate = async (id: string) => {
-  //   return await mockUndergraduatesApi.suspend(id);
-  // };
-  // 
-  // const activateUndergraduate = async (id: string) => {
-  //   return await mockUndergraduatesApi.activate(id);
-  // };
 
   // Filtered undergraduates with memoization for performance
   const filteredUndergraduates = useMemo(() => {
@@ -208,86 +264,7 @@ export default function UndergraduatesContent() {
   const handleViewUndergraduate = (undergraduate: Undergraduate) => {
     setSelectedUndergraduate(undergraduate);
     setIsSheetOpen(true);
-  };  // These handlers are used in the UI components but will be implemented later
-  // Commented to avoid unused function warnings
-  /*
-  const handleVerifyUndergraduate = async (id: string) => {
-    setVerifyLoading(true);
-    try {
-      const result = await verifyUndergraduate(id);
-      if (result) {
-        toast.success("Undergraduate verified successfully!");
-        // Update local state
-        setUndergraduates(prev => 
-          prev.map(undergraduate => 
-            undergraduate.id === id 
-              ? { ...undergraduate, verificationStatus: "verified" }
-              : undergraduate
-          )
-        );
-        // Update selected undergraduate if it's currently viewed
-        if (selectedUndergraduate && selectedUndergraduate.id === id) {
-          setSelectedUndergraduate({
-            ...selectedUndergraduate,
-            verificationStatus: "verified",
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Failed to verify undergraduate:", error);
-      toast.error("Failed to verify undergraduate. Please try again.");
-    } finally {
-      setVerifyLoading(false);
-    }
   };
-  */  // Commented to avoid unused function warnings
-  /*
-  const handleSuspendUndergraduate = async (id: string) => {
-    setSuspendLoading(true);
-    try {
-      const result = await suspendUndergraduate(id);
-      if (result) {
-        toast.success("Undergraduate suspended successfully!");
-        // Update local state
-        setUndergraduates(prev => 
-          prev.map(undergraduate => 
-            undergraduate.id === id 
-              ? { ...undergraduate, accountStatus: "suspended" }
-              : undergraduate
-          )
-        );
-        // Update selected undergraduate if it's currently viewed
-        if (selectedUndergraduate && selectedUndergraduate.id === id) {
-          setSelectedUndergraduate({
-            ...selectedUndergraduate,
-            accountStatus: "suspended",
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Failed to suspend undergraduate:", error);
-      toast.error("Failed to suspend undergraduate. Please try again.");
-    } finally {
-      setSuspendLoading(false);
-    }
-  };
-  */
-  // Commented to avoid unused function warnings
-  /*
-  const handleActivateUndergraduate = async (id: string) => {
-    setActivateLoading(true);
-    try {
-      const result = await activateUndergraduate(id);
-      if (result) {
-        toast.success("Undergraduate activated successfully!");
-        // Update local state
-        setUndergraduates(prev => 
-          prev.map(undergraduate => 
-            undergraduate.id === id 
-              ? { ...undergraduate, accountStatus: "active" }
-              : undergraduate
-          )
-  */
 
   // Export functionality
 
@@ -333,6 +310,11 @@ export default function UndergraduatesContent() {
   // Update other filters
   const updateFilter = (key: keyof FilterState, value: string | number | null) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
   };
 
   // Loading state
@@ -507,6 +489,36 @@ export default function UndergraduatesContent() {
           </div>
         </div>
       )}
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row justify-between items-center mt-4">
+        <div className="text-sm text-gray-700">
+          {`Showing ${currentPage * itemsPerPage - itemsPerPage + 1}-${
+            currentPage * itemsPerPage
+          } of ${totalRecords} results`}
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="flex items-center"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="flex items-center"
+          >
+            <ChevronRight className="h-4 w-4 mr-1" />
+            Next
+          </Button>
+        </div>
+      </div>
       {/* User Details Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="w-full sm:max-w-md overflow-y-auto">

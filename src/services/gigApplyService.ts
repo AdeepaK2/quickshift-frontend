@@ -63,6 +63,7 @@ class GigApplyService {
           'Authorization': `Bearer ${accessToken}`,
           ...options.headers,
         },
+        credentials: 'include',
         ...options,
       });
 

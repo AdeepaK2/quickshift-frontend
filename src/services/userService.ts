@@ -97,15 +97,68 @@ class UserService {
 
   // Get user profile
   async getProfile(): Promise<ApiResponse<UserProfile>> {
-    return await this.makeRequest<UserProfile>('/profile');
+    // Use auth endpoint instead of users endpoint
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const url = `${API_BASE_URL}/api/auth/me`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Request failed');
+      }
+
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('API Request Error:', error.message);
+        throw error;
+      } else {
+        console.error('Unknown API Error:', error);
+        throw new Error('An unexpected error occurred');
+      }
+    }
   }
 
   // Update user profile
   async updateProfile(profileData: UpdateUserProfileRequest): Promise<ApiResponse<UserProfile>> {
-    return await this.makeRequest<UserProfile>('/profile', {
-      method: 'PATCH',
-      body: JSON.stringify(profileData),
-    });
+    // Use auth endpoint instead of users endpoint
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const url = `${API_BASE_URL}/api/auth/profile`;
+      
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(profileData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Request failed');
+      }
+
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('API Request Error:', error.message);
+        throw error;
+      } else {
+        console.error('Unknown API Error:', error);
+        throw new Error('An unexpected error occurred');
+      }
+    }
   }
 
   // Upload profile picture
@@ -144,15 +197,82 @@ class UserService {
 
   // Get user statistics for dashboard
   async getStats(): Promise<ApiResponse<UserStats>> {
-    return await this.makeRequest<UserStats>('/stats');
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      
+      if (!accessToken) {
+        throw new Error('Authentication token not found. Please log in again.');
+      }
+      
+      const url = `${API_BASE_URL}/api/users/stats`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle specific error codes
+        if (response.status === 401) {
+          // Clear token and redirect to login (handled by middleware)
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          throw new Error('Your session has expired. Please log in again.');
+        } else if (response.status === 403) {
+          throw new Error('You do not have permission to access this resource.');
+        }
+        
+        throw new Error(data.message || `Request failed with status ${response.status}`);
+      }
+
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('API Request Error:', error.message);
+        throw error;
+      } else {
+        console.error('Unknown API Error:', error);
+        throw new Error('An unexpected error occurred');
+      }
+    }
   }
 
   // Update user password
   async updatePassword(oldPassword: string, newPassword: string): Promise<ApiResponse<void>> {
-    return await this.makeRequest<void>('/update-password', {
-      method: 'POST',
-      body: JSON.stringify({ oldPassword, newPassword }),
-    });
+    // Use auth endpoint instead of users endpoint
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const url = `${API_BASE_URL}/api/auth/change-password`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ currentPassword: oldPassword, newPassword }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Request failed');
+      }
+
+      return data;
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('API Request Error:', error.message);
+        throw error;
+      } else {
+        console.error('Unknown API Error:', error);
+        throw new Error('An unexpected error occurred');
+      }
+    }
   }
 
   // Upload user document (student ID, etc.)

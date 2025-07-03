@@ -2,10 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { FaBriefcase, FaClock, FaMapMarkerAlt, FaDollarSign, FaCheckCircle, FaSpinner, FaCalendarAlt, FaStar } from 'react-icons/fa';
-import { gigApplicationService } from '@/services/gigApplicationService';
-import { gigCompletionService, GigCompletion } from '@/services/gigCompletionService';
-import toast from 'react-hot-toast';
-import { formatDistanceToNow, format } from 'date-fns';
 
 interface Gig {
   id: string;
@@ -28,54 +24,9 @@ interface Gig {
   feedback?: string;
 }
 
-// Convert backend GigCompletion to frontend Gig format
-const convertToGig = (gigCompletion: GigCompletion): Gig => {
-  // Extract gig request details
-  const gigRequest = typeof gigCompletion.gigRequest === 'string' 
-    ? { title: 'Unknown Job', employer: { companyName: 'Unknown Employer' }, payRate: { amount: 0, rateType: 'hourly' } } 
-    : gigCompletion.gigRequest;
-
-  // Determine status
-  let status: 'upcoming' | 'in-progress' | 'completed' | 'cancelled';
-  switch (gigCompletion.status) {
-    case 'pending_confirmation': status = 'in-progress'; break;
-    case 'confirmed': status = 'completed'; break;
-    case 'cancelled': status = 'cancelled'; break;
-    default: status = 'in-progress';
-  }
-
-  // Format pay information
-  const pay = typeof gigRequest === 'string' ? 'Unknown' : 
-    `LKR ${gigRequest.payRate.amount} ${gigRequest.payRate.rateType === 'hourly' ? 'per hour' : 
-      gigRequest.payRate.rateType === 'daily' ? 'per day' : 'fixed'}`;
-
-  const startTime = new Date(gigCompletion.startTime);
-  const endTime = new Date(gigCompletion.endTime);
-  
-  return {
-    id: gigCompletion._id,
-    title: typeof gigRequest === 'string' ? 'Unknown Job' : gigRequest.title,
-    description: '',
-    employer: {
-      name: typeof gigRequest === 'string' ? 'Unknown Employer' : 
-        typeof gigRequest.employer === 'string' ? 'Unknown Employer' : gigRequest.employer.companyName,
-      rating: 0
-    },
-    location: '',
-    startDate: format(startTime, 'yyyy-MM-dd'),
-    endDate: format(endTime, 'yyyy-MM-dd'),
-    duration: `${gigCompletion.hoursWorked} hours`,
-    pay,
-    status,
-    rating: gigCompletion.feedback?.rating,
-    feedback: gigCompletion.feedback?.comment
-  };
-};
-
 const MyGigs: React.FC = (): React.ReactElement => {
   const [gigs, setGigs] = useState<Gig[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'in-progress' | 'completed' | 'cancelled'>('all');
 
   useEffect(() => {

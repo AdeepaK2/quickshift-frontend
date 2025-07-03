@@ -14,7 +14,7 @@ import {
   CheckCircleIcon,
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
-import { gigRequestService, CreateGigRequestRequest, GigRequest } from '@/services/gigRequestService';
+import { gigRequestService, CreateGigRequestRequest } from '@/services/gigRequestService';
 import { formatISO } from 'date-fns';
 
 // Extended interface for form data with additional fields
@@ -35,7 +35,7 @@ interface JobFormData {
       longitude: number;
     };
   };
-  timeSlots?: any[];
+  timeSlots?: TimeSlot[];
   requirements?: string[] | string;
   benefits?: string[] | string;
   skillsRequired?: string[];
@@ -47,6 +47,14 @@ interface JobFormData {
   type?: string;
   minSalary?: number;
   maxSalary?: number;
+}
+
+interface TimeSlot {
+  _id?: string;
+  startTime: string | Date;
+  endTime: string | Date;
+  date: string | Date;
+  peopleNeeded: number;
 }
 
 interface JobFormProps {
@@ -82,9 +90,8 @@ export default function JobForm({ jobId, isEditing = false }: JobFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentSection, setCurrentSection] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
-  // Error state that will be used in the future implementation
-  const [error, setError] = useState<string | null>(null);
 
+  
   // Fetch job data if editing
   useEffect(() => {
     const fetchJobData = async () => {
@@ -111,7 +118,6 @@ export default function JobForm({ jobId, isEditing = false }: JobFormProps) {
           }
         } catch (error) {
           console.error('Error fetching job data:', error);
-          setError('Failed to load job data. Please try again.');
         }
       }
     };
@@ -123,7 +129,6 @@ export default function JobForm({ jobId, isEditing = false }: JobFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setError(null);
     
     try {
       // Format data for API
@@ -168,7 +173,6 @@ export default function JobForm({ jobId, isEditing = false }: JobFormProps) {
       }
     } catch (error) {
       console.error('Error submitting form:', error);
-      setError('Failed to save job. Please check your information and try again.');
       setIsSubmitting(false);
     }
   };

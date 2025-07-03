@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { FaUser, FaEdit, FaSave, FaTimes, FaGraduationCap, FaPhone, FaEnvelope, FaMapMarkerAlt, FaIdCard, FaUniversity } from 'react-icons/fa';
 import { userService, UserProfile as BackendUserProfile } from '@/services/userService';
 import toast from 'react-hot-toast';
+import Image from 'next/image';
 
 // Interface that combines backend data with UI-specific fields
 interface UserProfileUI extends Omit<BackendUserProfile, '_id'> {
@@ -244,10 +245,12 @@ const Profile: React.FC = () => {
           <div className="flex justify-between items-start mb-6">
             <div className="flex items-center space-x-4">
               {profile.profilePicture ? (
-                <img 
+                <Image 
                   src={profile.profilePicture} 
                   alt={`${profile.firstName} ${profile.lastName}`}
-                  className="w-20 h-20 object-cover rounded-full"
+                  width={80}
+                  height={80}
+                  className="object-cover rounded-full"
                 />
               ) : (
                 <div className="w-20 h-20 bg-quickshift-primary rounded-full flex items-center justify-center text-white text-2xl font-bold">

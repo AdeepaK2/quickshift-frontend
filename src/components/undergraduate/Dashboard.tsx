@@ -294,20 +294,43 @@ export default function Dashboard() {
     rating: 0,
     pendingPayments: 0
   });
-  // Using setLoading in the code but not using loading variable directly
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Fetch user statistics
   useEffect(() => {
     const fetchStats = async () => {
       try {
         setLoading(true);
+        setError(null);
         const response = await userService.getStats();
+        
         if (response.success && response.data) {
           setStatistics(response.data);
+        } else {
+          throw new Error(response.message || 'Failed to load dashboard data');
         }
       } catch (error) {
         console.error('Error fetching user stats:', error);
+        
+        // Set a user-friendly error message based on error type
+        if (error instanceof Error) {
+          if (error.message.includes('Authentication token not found') || 
+              error.message.includes('session has expired')) {
+            setError('Your session has expired. Please log in again.');
+            // Redirect to login page after a brief delay
+            setTimeout(() => {
+              window.location.href = '/auth/login';
+            }, 3000);
+          } else if (error.message.includes('permission')) {
+            setError('You do not have permission to access this dashboard.');
+          } else {
+            setError(error.message || 'Failed to load dashboard data');
+          }
+        } else {
+          setError('An unexpected error occurred. Please try again later.');
+        }
+        
         toast.error('Failed to load dashboard data');
       } finally {
         setLoading(false);
@@ -316,6 +339,58 @@ export default function Dashboard() {
     
     fetchStats();
   }, []);
+  
+  if (loading) {
+    return (
+      <div className="w-full max-w-5xl mx-auto px-2">
+        <div className="mb-4 animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white p-3 md:p-4 rounded-lg shadow-md animate-pulse">
+              <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+              <div className="space-y-3">
+                <div className="h-8 bg-gray-200 rounded w-full"></div>
+                <div className="h-8 bg-gray-200 rounded w-full"></div>
+                <div className="h-8 bg-gray-200 rounded w-full"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-6 animate-pulse">
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <div className="h-6 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-16 bg-gray-200 rounded w-full"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="w-full max-w-5xl mx-auto px-2 py-8">
+        <div className="bg-white rounded-lg shadow-md p-6 text-center">
+          <div className="text-red-500 text-xl mb-4">Error Loading Dashboard</div>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="w-full max-w-5xl mx-auto px-2">

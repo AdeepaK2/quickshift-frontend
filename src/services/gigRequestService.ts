@@ -128,6 +128,7 @@ class GigRequestService {
           'Authorization': `Bearer ${accessToken}`,
           ...options.headers,
         },
+        credentials: 'include',
         ...options,
       });
 
@@ -193,6 +194,7 @@ class GigRequestService {
     return await this.makeRequest<GigRequest>('', {
       method: 'POST',
       body: JSON.stringify(gigRequestData),
+      credentials: 'include',
     });
   }
 
@@ -201,6 +203,7 @@ class GigRequestService {
     return await this.makeRequest<GigRequest>(`/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(gigRequestData),
+      credentials: 'include',
     });
   }
 
@@ -208,6 +211,7 @@ class GigRequestService {
   async deleteGigRequest(id: string): Promise<ApiResponse<{ deleted: boolean }>> {
     return await this.makeRequest<{ deleted: boolean }>(`/${id}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
   }
 
@@ -216,6 +220,7 @@ class GigRequestService {
     return await this.makeRequest<GigRequest>(`/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
+      credentials: 'include',
     });
   }
 

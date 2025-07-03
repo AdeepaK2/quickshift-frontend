@@ -27,6 +27,15 @@ export interface EmployerAnalytics {
   }[];
 }
 
+interface GigRequest {
+  id: string;
+  title: string;
+  status: string;
+  applications: number;
+  views: number;
+  createdAt: string;
+}
+
 class AnalyticsService {
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     try {
@@ -98,12 +107,12 @@ class AnalyticsService {
     // const avgApplicationsPerJob = totalApplications / totalJobs; // Will use this in future versions
     
     // Transform gig requests to job performance format
-    const jobPerformance = gigRequests.data?.gigRequests?.map(job => ({
-      _id: (job as any)._id,
+    const jobPerformance = gigRequests.data?.gigRequests?.map((job: GigRequest) => ({
+      _id: job.id,
       title: job.title,
-      applications: (job as any).applicationsCount || 0,
+      applications: job.applications || 0,
       views: job.views || 0,
-      conversion: job.views ? parseFloat((((job as any).applicationsCount || 0) / job.views * 100).toFixed(1)) : 0,
+      conversion: job.views ? parseFloat((job.applications / job.views * 100).toFixed(1)) : 0,
       status: job.status.charAt(0).toUpperCase() + job.status.slice(1)
     })) || [];
     

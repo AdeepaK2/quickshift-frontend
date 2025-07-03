@@ -18,12 +18,7 @@ export interface DashboardUser {
   role?: string;
 }
 
-interface NavigationItem {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string; size?: number }>;
-  badge?: string;
-}
+// Removed NavigationItem interface as it's no longer used
 
 interface QuickStat {
   label: string;
@@ -36,8 +31,9 @@ interface DashboardLayoutProps {
   userType: UserType;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  navigationItems?: NavigationItem[];
+  // Removed navigationItems as it's not used
   quickStats?: QuickStat[];
+  isLoadingStats?: boolean;
 }
 
 function DashboardLayout({
@@ -45,8 +41,9 @@ function DashboardLayout({
   userType,
   activeTab,
   setActiveTab,
-  // navigationItems, // Commented out as it's not used
-  quickStats
+  // navigationItems is not used in this component
+  quickStats,
+  isLoadingStats = false
 }: DashboardLayoutProps) {
   const { user, logout } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
@@ -204,6 +201,7 @@ function DashboardLayout({
               }}
               userType={userType === 'user' ? 'undergraduate' : userType as 'admin' | 'employer' | 'undergraduate'}
               quickStats={quickStats}
+              isLoadingStats={isLoadingStats}
             />
           </div>
 

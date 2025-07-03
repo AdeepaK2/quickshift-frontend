@@ -2,9 +2,36 @@
 
 import React, { useState, useEffect } from 'react';
 import { FaMoneyBillWave, FaCreditCard, FaCalendarAlt, FaCheckCircle, FaClock, FaDownload, FaEye, FaSearch } from 'react-icons/fa';
-import { gigCompletionService, GigCompletion } from '@/services/gigCompletionService';
-// import toast from 'react-hot-toast';
+import { gigCompletionService } from '@/services/gigCompletionService';
 import { format } from 'date-fns';
+
+interface GigRequest {
+  _id: string;
+  title: string;
+  employer: {
+    companyName: string;
+  } | string;
+}
+
+interface GigCompletion {
+  _id: string;
+  gigRequest: GigRequest | string;
+  paymentAmount: number;
+  paymentStatus: string;
+  paymentDate?: string;
+  completionDate: string;
+  hoursWorked: number;
+}
+
+interface PaymentSummary {
+  totalEarned: number;
+  totalEarnings: number;
+  pendingPayments: number;
+  completedPayments: number;
+  averagePayment: number;
+  thisMonth: number;
+  completedGigs: number;
+}
 
 interface Payment {
   id: string;
@@ -13,40 +40,29 @@ interface Payment {
   employerName: string;
   amount: number;
   currency: string;
-  status: 'pending' | 'paid' | 'processing' | 'failed';
+  status: string;
   paymentDate?: string;
   completionDate: string;
-  paymentMethod: 'bank_transfer' | 'mobile_payment' | 'cash';
-  transactionId?: string;
   description: string;
+  paymentMethod?: string;
+  transactionId?: string;
   invoiceUrl?: string;
-}
-
-interface PaymentSummary {
-  totalEarnings: number;
-  thisMonth: number;
-  pendingPayments: number;
-  completedGigs: number;
 }
 
 // Convert GigCompletion to Payment interface
 const convertToPayment = (gigCompletion: GigCompletion): Payment => {
-  const gigRequest = typeof gigCompletion.gigRequest === 'string' 
-    ? { title: 'Unknown Job', employer: { companyName: 'Unknown Employer' } } 
-    : gigCompletion.gigRequest;
+  const gigRequest = gigCompletion.gigRequest;
+  let status = 'Pending';
   
-  // Map payment status
-  let status: 'pending' | 'paid' | 'processing' | 'failed';
-  switch (gigCompletion.paymentStatus) {
-    case 'paid': status = 'paid'; break;
-    case 'processing': status = 'processing'; break;
-    case 'failed': status = 'failed'; break;
-    default: status = 'pending';
+  if (gigCompletion.paymentStatus === 'completed') {
+    status = 'Completed';
+  } else if (gigCompletion.paymentStatus === 'failed') {
+    status = 'Failed';
   }
 
   return {
     id: gigCompletion._id,
-    gigId: typeof gigRequest === 'string' ? gigRequest : (gigRequest as any)._id,
+    gigId: typeof gigRequest === 'string' ? gigRequest : gigRequest._id,
     gigTitle: typeof gigRequest === 'string' ? 'Unknown Job' : gigRequest.title,
     employerName: typeof gigRequest === 'string' ? 'Unknown Employer' : 
       typeof gigRequest.employer === 'string' ? 'Unknown Employer' : gigRequest.employer.companyName,
@@ -55,10 +71,7 @@ const convertToPayment = (gigCompletion: GigCompletion): Payment => {
     status,
     paymentDate: gigCompletion.paymentDate ? format(new Date(gigCompletion.paymentDate), 'yyyy-MM-dd') : undefined,
     completionDate: format(new Date(gigCompletion.completionDate), 'yyyy-MM-dd'),
-    paymentMethod: 'bank_transfer',
-    transactionId: gigCompletion._id,
-    description: `Payment for ${typeof gigRequest === 'string' ? 'gig work' : gigRequest.title} (${gigCompletion.hoursWorked} hours)`,
-    invoiceUrl: undefined
+    description: `Payment for ${typeof gigRequest === 'string' ? 'gig work' : gigRequest.title} (${gigCompletion.hoursWorked} hours)`
   };
 };
 
@@ -95,9 +108,14 @@ const MyPayments: React.FC = () => {
             if (statsResponse.success && statsResponse.data) {
               setSummary({
                 totalEarnings: statsResponse.data.totalPaid,
+                totalEarned: statsResponse.data.totalPaid,
                 thisMonth: statsResponse.data.thisMonthEarnings,
                 pendingPayments: statsResponse.data.pendingAmount,
-                completedGigs: response.data.total
+                completedPayments: convertedPayments.filter(p => p.status === 'Completed').length,
+                averagePayment: convertedPayments.length > 0 
+                  ? convertedPayments.reduce((acc, curr) => acc + curr.amount, 0) / convertedPayments.length 
+                  : 0,
+                completedGigs: convertedPayments.filter(p => p.status === 'Completed').length
               });
             }
           } catch (statsError) {
@@ -109,12 +127,16 @@ const MyPayments: React.FC = () => {
               .reduce((sum, payment) => sum + payment.amount, 0);
             const pending = convertedPayments.filter(p => p.status === 'pending')
               .reduce((sum, payment) => sum + payment.amount, 0);
-              
+            const completed = convertedPayments.filter(p => p.status === 'paid' || p.status === 'completed').length;
+            
             setSummary({
               totalEarnings: paid,
+              totalEarned: paid,
               thisMonth: paid, // simplified - would need date filtering for accuracy
               pendingPayments: pending,
-              completedGigs: response.data.total
+              completedPayments: completed,
+              averagePayment: completed > 0 ? paid / completed : 0,
+              completedGigs: completed
             });
           }
         } else {
@@ -131,6 +153,24 @@ const MyPayments: React.FC = () => {
 
     fetchPayments();
   }, [filter]);
+
+  useEffect(() => {
+    if (payments.length > 0) {
+      const completedPayments = payments.filter(p => p.status === 'Completed');
+      const pendingPayments = payments.filter(p => p.status === 'Pending');
+      const totalPaid = completedPayments.reduce((acc, curr) => acc + curr.amount, 0);
+
+      setSummary({
+        totalEarnings: totalPaid,
+        totalEarned: totalPaid,
+        thisMonth: totalPaid,
+        pendingPayments: pendingPayments.length,
+        completedPayments: completedPayments.length,
+        averagePayment: completedPayments.length > 0 ? totalPaid / completedPayments.length : 0,
+        completedGigs: completedPayments.length
+      });
+    }
+  }, [payments, setSummary]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -152,21 +192,27 @@ const MyPayments: React.FC = () => {
     }
   };
 
-  const getPaymentMethodIcon = (method: string) => {
-    switch (method) {
-      case 'bank_transfer': return '🏦';
-      case 'mobile_payment': return '📱';
-      case 'cash': return '💵';
-      default: return '💳';
+  const getPaymentMethodIcon = (method: string | undefined) => {
+    if (!method) return '💳';
+    switch (method.toLowerCase()) {
+      case 'card':
+        return '💳';
+      case 'bank':
+        return '🏦';
+      default:
+        return '💰';
     }
   };
 
-  const getPaymentMethodLabel = (method: string) => {
-    switch (method) {
-      case 'bank_transfer': return 'Bank Transfer';
-      case 'mobile_payment': return 'Mobile Payment';
-      case 'cash': return 'Cash Payment';
-      default: return 'Unknown';
+  const getPaymentMethodLabel = (method: string | undefined) => {
+    if (!method) return 'Card Payment';
+    switch (method.toLowerCase()) {
+      case 'card':
+        return 'Card Payment';
+      case 'bank':
+        return 'Bank Transfer';
+      default:
+        return 'Other Payment';
     }
   };
 

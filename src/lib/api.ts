@@ -5,7 +5,6 @@
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
-const LOCAL_API_BASE_URL = "/api";
 
 // Environment check
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -29,6 +28,55 @@ export interface ApiResponse<T> {
   pages?: number;
 }
 
+export interface Gig {
+  id: string;
+  title: string;
+  employer: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  category: string;
+  status: "draft" | "open" | "in_progress" | "completed" | "cancelled";
+  city: string;
+  totalPositions: number;
+  filledPositions: number;
+  applicationDeadline: string;
+  description: string;
+  payRate?: {
+    type: "hourly" | "fixed" | "daily";
+    min?: number;
+    max?: number;
+    amount?: number;
+    currency: string;
+  };
+  timeSlots: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+    peopleNeeded: number;
+    peopleAssigned: number;
+  }>;
+  location: {
+    address: string;
+    city: string;
+    postalCode: string;
+  };
+  skills?: string[];
+  experience?: string;
+  dressCode?: string;
+  equipment?: string;
+  isAcceptingApplications: boolean;
+  applicants: Array<{
+    id: string;
+    name: string;
+    status: "pending" | "accepted" | "rejected";
+    appliedAt: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /**
  * Generic API call function with fallback to local API
  */
@@ -43,7 +91,7 @@ async function apiCall<T>(
 
   // Add authentication token if available
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("accessToken");
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -54,56 +102,26 @@ async function apiCall<T>(
     headers,
   };
 
-  let response: Response;
-
   try {
-    // Try backend API first
+    // Direct backend API call
     const backendUrl = `${API_BASE_URL}${endpoint}`;
     if (isDevelopment) {
       console.log(`API Call: ${requestOptions.method || "GET"} ${backendUrl}`);
     }
 
-    response = await fetch(backendUrl, requestOptions);
+    const response = await fetch(backendUrl, requestOptions);
 
     if (!response.ok) {
-      throw new Error(`Backend API returned ${response.status}`);
+      throw new ApiError(`API request failed with status ${response.status}`);
     }
-  } catch (backendError) {
-    // Backend failed (network error or HTTP error), try local API
-    console.warn(
-      `Backend API failed, trying local API...`,
-      backendError instanceof Error ? backendError.message : backendError
-    );
 
-    try {
-      const localUrl = `${LOCAL_API_BASE_URL}${endpoint}`;
-      response = await fetch(localUrl, requestOptions);
-
-      if (!response.ok) {
-        throw new ApiError(
-          `Both backend and local API failed. Local API status: ${response.status}`
-        );
-      }
-    } catch (localError) {
-      console.error(`Local API also failed for ${endpoint}:`, localError);
-      throw new ApiError(
-        `Both backend and local API failed: ${
-          localError instanceof Error ? localError.message : "Unknown error"
-        }`
-      );
-    }
-  }
-
-  try {
     const data = await response.json();
     return data;
-  } catch (parseError) {
-    console.error(`Failed to parse response for ${endpoint}:`, parseError);
+  } catch (error) {
+    console.error(`API request failed for ${endpoint}:`, error);
     throw new ApiError(
-      `Failed to parse API response: ${
-        parseError instanceof Error
-          ? parseError.message
-          : "Unknown parsing error"
+      `API request failed: ${
+        error instanceof Error ? error.message : "Unknown error"
       }`
     );
   }
@@ -154,7 +172,32 @@ export const employersApi = {
 /**
  * Students/Undergraduates API
  */
-import type { Undergraduate } from "@/lib/api/undergraduateApi";
+export type Undergraduate = {
+  id: string;
+  _id: string;
+  profilePicture?: string | null;
+  fullName: string;
+  email: string;
+  university: string;
+  yearOfStudy: number;
+  studentIdVerified: boolean;
+  phoneNumber: string;
+  faculty: string;
+  gender: string;
+  dateOfBirth: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  accountStatus: string;
+  verificationStatus: string;
+  lastLogin: string;
+  bio: string;
+  gpa: number;
+  skillsAndInterests: string[];
+  documentsUploaded: string[];
+  joinDate: string;
+  verified: boolean;
+};
 
 export const studentsApi = {
   getAll: async (): Promise<ApiResponse<Undergraduate[]>> => {
@@ -178,8 +221,6 @@ export const studentsApi = {
 /**
  * Gigs API
  */
-import type { Gig } from "@/lib/api/gigsApi";
-
 export const gigsApi = {
   getAll: async (): Promise<ApiResponse<Gig[]>> => {
     return apiCall(API_ENDPOINTS.GIGS);

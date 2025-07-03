@@ -14,6 +14,7 @@ interface DashboardHeaderProps {
   userType: 'admin' | 'employer' | 'undergraduate';
   user: DashboardUser;
   quickStats?: QuickStat[];
+  isLoadingStats?: boolean;
 }
 
 const getUserTypeConfig = (userType: string) => {
@@ -82,7 +83,8 @@ const getDefaultStats = (userType: string): QuickStat[] => {
 export default function DashboardHeader({
   userType,
   user,
-  quickStats
+  quickStats,
+  isLoadingStats = false
 }: DashboardHeaderProps) {
   const config = getUserTypeConfig(userType);
   const stats = quickStats || getDefaultStats(userType);
@@ -182,9 +184,19 @@ export default function DashboardHeader({
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 sm:gap-2">
             {stats.map((stat, index) => (
               <div key={index} className={`bg-white/95 backdrop-blur-sm rounded-lg p-2 sm:p-2.5 lg:p-3 text-center shadow-lg border ${bgClasses.statBorder} hover:shadow-xl transition-all duration-300 hover:bg-white hover:scale-105`}>
-                <div className={`text-sm sm:text-base lg:text-lg xl:text-xl font-bold ${bgClasses.statText} mb-0.5`}>{stat.value}</div>
-                <div className={`text-xs font-semibold ${bgClasses.statLabel} mb-0.5 leading-tight`}>{stat.label}</div>
-                <div className={`text-xs font-normal ${bgClasses.statDesc} leading-tight`}>{stat.description}</div>
+                {isLoadingStats ? (
+                  <>
+                    <div className={`h-6 bg-gray-200 animate-pulse rounded mb-1 mx-auto w-1/2`}></div>
+                    <div className={`h-4 bg-gray-200 animate-pulse rounded mb-1 mx-auto w-3/4`}></div>
+                    <div className={`h-3 bg-gray-200 animate-pulse rounded mx-auto w-2/3`}></div>
+                  </>
+                ) : (
+                  <>
+                    <div className={`text-sm sm:text-base lg:text-lg xl:text-xl font-bold ${bgClasses.statText} mb-0.5`}>{stat.value}</div>
+                    <div className={`text-xs font-semibold ${bgClasses.statLabel} mb-0.5 leading-tight`}>{stat.label}</div>
+                    <div className={`text-xs font-normal ${bgClasses.statDesc} leading-tight`}>{stat.description}</div>
+                  </>
+                )}
               </div>
             ))}
           </div>

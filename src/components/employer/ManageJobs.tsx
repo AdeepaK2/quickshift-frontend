@@ -41,8 +41,14 @@ export default function ManageJobs() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
-  const fetchJobs = async () => {
-    setLoading(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchJobs = async (isRefreshing = false) => {
+    if (isRefreshing) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
     setError(null);
     
     try {
@@ -64,13 +70,14 @@ export default function ManageJobs() {
       if (response.success && response.data) {
         setJobs(response.data.gigRequests);
       } else {
-        setError('Failed to fetch jobs');
+        setError(response.message || 'Failed to fetch jobs');
       }
     } catch (err) {
       console.error('Error fetching jobs:', err);
       setError('An error occurred while fetching jobs. Please try again.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -139,13 +146,41 @@ export default function ManageJobs() {
       </div>
       
       <div className="bg-white rounded-lg shadow-md">
+        <div className="border-b border-gray-200 px-8 py-4 flex justify-between items-center">
+          <div className="flex items-center space-x-4">
+            <label className="text-sm text-gray-600">Filter by status:</label>
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Jobs</option>
+              <option value="active">Active</option>
+              <option value="draft">Draft</option>
+              <option value="closed">Closed</option>
+              <option value="completed">Completed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+          
+          <button 
+            onClick={() => fetchJobs(true)} 
+            disabled={refreshing}
+            className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 px-3 py-2 rounded-md hover:bg-blue-50"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+        </div>
         <div className="p-8">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
               {error}
               <button 
                 className="ml-2 text-red-500 hover:text-red-700 underline" 
-                onClick={fetchJobs}
+                onClick={() => fetchJobs()}
               >
                 Try again
               </button>

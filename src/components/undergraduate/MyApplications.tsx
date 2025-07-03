@@ -2,9 +2,41 @@
 
 import React, { useState, useEffect } from 'react';
 import { FaClipboardList, FaClock, FaCheckCircle, FaTimesCircle, FaEye, FaMapMarkerAlt } from 'react-icons/fa';
-import { gigApplicationService, GigApplication } from '@/services/gigApplicationService';
+import { gigApplicationService } from '@/services/gigApplicationService';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
+
+interface GigRequest {
+  _id: string;
+  title: string;
+  employer: {
+    _id?: string;
+    companyName: string;
+    logo?: string;
+  } | string;
+  location: {
+    address: string;
+    city: string;
+  } | string;
+  payRate: {
+    amount: number;
+    rateType: string;
+  };
+}
+
+interface GigApplication {
+  _id: string;
+  gigRequest: GigRequest | string;
+  appliedAt: string;
+  status: string;
+  employerFeedback?: string;
+  interviewDetails?: {
+    date: string;
+    time?: string;
+    location?: string;
+    notes?: string;
+  };
+}
 
 interface Application {
   id: string;
@@ -12,49 +44,43 @@ interface Application {
   jobTitle: string;
   employerName: string;
   appliedDate: string;
-  status: 'pending' | 'accepted' | 'rejected' | 'interview';
+  status: string;
   location: string;
-  pay: string;
+  pay?: string;
   message?: string;
   interviewDate?: string;
 }
 
 // Convert backend GigApplication to frontend Application format
 const convertToApplication = (gigApplication: GigApplication): Application => {
-  // Extract job details
-  const gigRequest = typeof gigApplication.gigRequest === 'string' 
-    ? { title: 'Unknown Job', employer: { companyName: 'Unknown Employer' }, location: { address: 'Unknown', city: '' }, payRate: { amount: 0, rateType: 'hourly' } } 
-    : gigApplication.gigRequest;
+  const gigRequest = gigApplication.gigRequest;
+  const status = gigApplication.status.charAt(0).toUpperCase() + gigApplication.status.slice(1);
+  let location = 'Location not specified';
+  let pay: string | undefined;
 
-  // Map statuses from backend to frontend format
-  let status: 'pending' | 'accepted' | 'rejected' | 'interview' = 'pending';
-  switch (gigApplication.status) {
-    case 'applied': status = 'pending'; break;
-    case 'shortlisted': status = 'interview'; break; 
-    case 'hired': status = 'accepted'; break;
-    case 'rejected': status = 'rejected'; break;
+  if (typeof gigRequest !== 'string') {
+    if (typeof gigRequest.location === 'object') {
+      location = `${gigRequest.location.address}, ${gigRequest.location.city}`;
+    }
+    
+    if (gigRequest.payRate) {
+      pay = `LKR ${gigRequest.payRate.amount} ${
+        gigRequest.payRate.rateType === 'hourly' ? 'per hour' :
+        gigRequest.payRate.rateType === 'daily' ? 'per day' : 'fixed'
+      }`;
+    }
   }
-  
-  // Format pay information
-  const payRate = typeof gigRequest === 'string' ? 'Unknown' : 
-    `LKR ${gigRequest.payRate.amount} ${gigRequest.payRate.rateType === 'hourly' ? 'per hour' : 
-    gigRequest.payRate.rateType === 'daily' ? 'per day' : 'fixed'}`;
-  
-  // Format location
-  const location = typeof gigRequest === 'string' ? 'Unknown location' : 
-    typeof gigRequest.location === 'object' ? 
-    `${gigRequest.location.address}, ${gigRequest.location.city}` : 'Location not specified';
   
   return {
     id: gigApplication._id,
-    jobId: typeof gigRequest === 'string' ? gigRequest : (gigRequest as any)._id,
+    jobId: typeof gigRequest === 'string' ? gigRequest : gigRequest._id,
     jobTitle: typeof gigRequest === 'string' ? 'Unknown Job' : gigRequest.title,
     employerName: typeof gigRequest === 'string' ? 'Unknown Employer' : 
       typeof gigRequest.employer === 'string' ? 'Unknown Employer' : gigRequest.employer.companyName,
     appliedDate: formatDistanceToNow(new Date(gigApplication.appliedAt), { addSuffix: true }),
     status,
     location,
-    pay: payRate,
+    pay,
     message: gigApplication.employerFeedback,
     interviewDate: gigApplication.interviewDetails?.date
   };
