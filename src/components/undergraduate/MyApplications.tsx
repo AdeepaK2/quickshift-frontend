@@ -9,6 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 interface GigRequest {
   _id: string;
   title: string;
+  status?: 'draft' | 'active' | 'filled' | 'in_progress' | 'completed' | 'closed' | 'cancelled';
   employer: {
     _id?: string;
     companyName: string;
@@ -54,7 +55,31 @@ interface Application {
 // Convert backend GigApplication to frontend Application format
 const convertToApplication = (gigApplication: GigApplication): Application => {
   const gigRequest = gigApplication.gigRequest;
-  const status = gigApplication.status.charAt(0).toUpperCase() + gigApplication.status.slice(1);
+  
+  // Map backend status to frontend display status
+  let displayStatus = gigApplication.status;
+  switch (gigApplication.status) {
+    case 'pending': displayStatus = 'Pending'; break;
+    case 'reviewed': displayStatus = 'Under Review'; break;
+    case 'accepted': 
+      // If accepted, show the current job status
+      if (typeof gigRequest !== 'string') {
+        switch (gigRequest.status) {
+          case 'filled': displayStatus = 'Job Filled'; break;
+          case 'in_progress': displayStatus = 'In Progress'; break;
+          case 'completed': displayStatus = 'Completed'; break;
+          case 'cancelled': displayStatus = 'Job Cancelled'; break;
+          default: displayStatus = 'Accepted'; break;
+        }
+      } else {
+        displayStatus = 'Accepted';
+      }
+      break;
+    case 'rejected': displayStatus = 'Rejected'; break;
+    case 'withdrawn': displayStatus = 'Withdrawn'; break;
+    default: displayStatus = gigApplication.status.charAt(0).toUpperCase() + gigApplication.status.slice(1);
+  }
+  
   let location = 'Location not specified';
   let pay: string | undefined;
 
@@ -77,8 +102,8 @@ const convertToApplication = (gigApplication: GigApplication): Application => {
     jobTitle: typeof gigRequest === 'string' ? 'Unknown Job' : gigRequest.title,
     employerName: typeof gigRequest === 'string' ? 'Unknown Employer' : 
       typeof gigRequest.employer === 'string' ? 'Unknown Employer' : gigRequest.employer.companyName,
-    appliedDate: formatDistanceToNow(new Date(gigApplication.appliedAt), { addSuffix: true }),
-    status,
+    appliedDate: gigApplication.appliedAt, // Store the original date string instead of converting
+    status: displayStatus,
     location,
     pay,
     message: gigApplication.employerFeedback,
@@ -92,23 +117,12 @@ const MyApplications: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected' | 'interview'>('all');
   
   useEffect(() => {
-    // Fetch applications from backend
+    // Fetch all applications from backend (not filtered by status)
     const fetchApplications = async () => {
       try {
         setLoading(true);
         
-        // Map frontend filter to backend filter
-        let statusFilter: 'applied' | 'shortlisted' | 'hired' | 'rejected' | 'all' = 'all';
-        switch (filter) {
-          case 'pending': statusFilter = 'applied'; break;
-          case 'interview': statusFilter = 'shortlisted'; break;
-          case 'accepted': statusFilter = 'hired'; break;
-          case 'rejected': statusFilter = 'rejected'; break;
-          default: statusFilter = 'all'; break;
-        }
-        
         const response = await gigApplicationService.getMyApplications({
-          status: statusFilter === 'all' ? undefined : statusFilter,
           sortBy: 'appliedAt',
           sortOrder: 'desc'
         });
@@ -116,6 +130,8 @@ const MyApplications: React.FC = () => {
         if (response.success && response.data?.applications) {
           // Convert backend format to frontend format
           const convertedApplications = response.data.applications.map(convertToApplication);
+          console.log('Raw applications from backend:', response.data.applications);
+          console.log('Converted applications:', convertedApplications);
           setApplications(convertedApplications);
         } else {
           setApplications([]);
@@ -131,91 +147,68 @@ const MyApplications: React.FC = () => {
     };
     
     fetchApplications();
-  }, [filter]);
-
-  // Mock data for development
-  React.useEffect(() => {
-    const mockApplications: Application[] = [
-      {
-        id: '1',
-        jobId: 'job1',
-        jobTitle: 'Campus Event Setup Assistant',
-        employerName: 'UC Student Union',
-        appliedDate: '2024-01-15',
-        status: 'accepted' as const,
-        location: 'University of Colombo',
-        pay: 'LKR 2,000',
-        message: 'Great application! Please arrive 30 minutes early.'
-      },
-      {
-        id: '2',
-        jobId: 'job2',
-        jobTitle: 'Library Book Sorting',
-        employerName: 'Colombo Public Library',
-        appliedDate: '2024-01-14',
-        status: 'pending' as const,
-        location: 'Central Library, Colombo',
-        pay: 'LKR 3,000'
-      },
-      {
-        id: '3',
-        jobId: 'job3',
-        jobTitle: 'Research Assistant',
-        employerName: 'Computer Science Department',
-        appliedDate: '2024-01-13',
-        status: 'interview' as const,
-        location: 'University of Colombo',
-        pay: 'LKR 5,000',
-        interviewDate: '2024-01-20'
-      },
-      {
-        id: '4',
-        jobId: 'job4',
-        jobTitle: 'Food Delivery Helper',
-        employerName: 'Campus Eats',
-        appliedDate: '2024-01-12',
-        status: 'rejected' as const,
-        location: 'Nugegoda Area',
-        pay: 'LKR 1,800',
-        message: 'Thank you for your interest. We found a more suitable candidate.'
-      }
-    ];
-
-    setTimeout(() => {
-      setApplications(mockApplications);
-      setLoading(false);
-    }, 1000);
-  }, []);
+  }, []); // Remove filter dependency - only fetch once
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'accepted': return <FaCheckCircle className="text-green-500" />;
-      case 'rejected': return <FaTimesCircle className="text-red-500" />;
-      case 'interview': return <FaEye className="text-blue-500" />;
+      case 'Accepted': return <FaCheckCircle className="text-green-500" />;
+      case 'Job Filled': return <FaCheckCircle className="text-orange-500" />;
+      case 'In Progress': return <FaClock className="text-blue-500" />;
+      case 'Completed': return <FaCheckCircle className="text-green-600" />;
+      case 'Job Cancelled': return <FaTimesCircle className="text-red-600" />;
+      case 'Rejected': return <FaTimesCircle className="text-red-500" />;
+      case 'Under Review': return <FaEye className="text-blue-500" />;
+      case 'Pending': return <FaClock className="text-orange-500" />;
       default: return <FaClock className="text-orange-500" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'accepted': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      case 'interview': return 'bg-quickshift-light text-quickshift-primary';
-      default: return 'bg-orange-100 text-orange-800';
+      case 'Accepted': return 'bg-green-100 text-green-800';
+      case 'Job Filled': return 'bg-orange-100 text-orange-800';
+      case 'In Progress': return 'bg-quickshift-light text-quickshift-primary';
+      case 'Completed': return 'bg-green-100 text-green-900';
+      case 'Job Cancelled': return 'bg-red-100 text-red-900';
+      case 'Rejected': return 'bg-red-100 text-red-800';
+      case 'Under Review': return 'bg-quickshift-light text-quickshift-primary';
+      case 'Pending': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const filteredApplications = applications.filter(app => 
-    filter === 'all' || app.status === filter
-  );
+  const filteredApplications = applications.filter(app => {
+    if (filter === 'all') return true;
+    
+    switch (filter) {
+      case 'pending':
+        return app.status === 'Pending';
+      case 'accepted':
+        return ['Accepted', 'Job Filled', 'In Progress', 'Completed'].includes(app.status);
+      case 'rejected':
+        return ['Rejected', 'Job Cancelled'].includes(app.status);
+      case 'interview':
+        return app.status === 'Under Review';
+      default:
+        return true;
+    }
+  });
 
   const getStatusCounts = () => {
     return {
       all: applications.length,
-      pending: applications.filter(app => app.status === 'pending').length,
-      accepted: applications.filter(app => app.status === 'accepted').length,
-      rejected: applications.filter(app => app.status === 'rejected').length,
-      interview: applications.filter(app => app.status === 'interview').length
+      pending: applications.filter(app => app.status === 'Pending').length,
+      accepted: applications.filter(app => 
+        app.status === 'Accepted' || 
+        app.status === 'Job Filled' || 
+        app.status === 'In Progress' || 
+        app.status === 'Completed'
+      ).length,
+      rejected: applications.filter(app => 
+        app.status === 'Rejected' || 
+        app.status === 'Job Cancelled'
+      ).length,
+      interview: applications.filter(app => app.status === 'Under Review').length
     };
   };
 
@@ -316,7 +309,19 @@ const MyApplications: React.FC = () => {
                         {application.pay}
                       </div>
                       <div>
-                        Applied: {new Date(application.appliedDate).toLocaleDateString()}
+                        Applied: {
+                          (() => {
+                            try {
+                              const date = new Date(application.appliedDate);
+                              if (isNaN(date.getTime())) {
+                                return 'Date not available';
+                              }
+                              return formatDistanceToNow(date, { addSuffix: true });
+                            } catch {
+                              return 'Date not available';
+                            }
+                          })()
+                        }
                       </div>
                     </div>
                   </div>
@@ -329,7 +334,7 @@ const MyApplications: React.FC = () => {
                 </div>
 
                 {/* Additional Info Based on Status */}
-                {application.status === 'interview' && application.interviewDate && (
+                {application.status === 'Under Review' && application.interviewDate && (
                   <div className="bg-quickshift-light border border-quickshift-tertiary rounded-lg p-3 mb-4">
                     <div className="flex items-center text-blue-800">
                       <FaEye className="mr-2" />
@@ -337,6 +342,54 @@ const MyApplications: React.FC = () => {
                     </div>
                     <p className="text-blue-700 text-sm mt-1">
                       Date: {new Date(application.interviewDate).toLocaleDateString()} at 2:00 PM
+                    </p>
+                  </div>
+                )}
+
+                {application.status === 'Job Filled' && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center text-orange-800">
+                      <FaCheckCircle className="mr-2" />
+                      <span className="font-medium">Job Filled - Ready to Start</span>
+                    </div>
+                    <p className="text-orange-700 text-sm mt-1">
+                      All positions are filled. The employer will start this job soon.
+                    </p>
+                  </div>
+                )}
+
+                {application.status === 'In Progress' && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center text-blue-800">
+                      <FaClock className="mr-2" />
+                      <span className="font-medium">Job in Progress</span>
+                    </div>
+                    <p className="text-blue-700 text-sm mt-1">
+                      This job is currently active. Check your "My Gigs" section for details.
+                    </p>
+                  </div>
+                )}
+
+                {application.status === 'Completed' && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center text-green-800">
+                      <FaCheckCircle className="mr-2" />
+                      <span className="font-medium">Job Completed</span>
+                    </div>
+                    <p className="text-green-700 text-sm mt-1">
+                      This job has been completed successfully. Check your "My Gigs" section for final details.
+                    </p>
+                  </div>
+                )}
+
+                {application.status === 'Job Cancelled' && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center text-red-800">
+                      <FaTimesCircle className="mr-2" />
+                      <span className="font-medium">Job Cancelled</span>
+                    </div>
+                    <p className="text-red-700 text-sm mt-1">
+                      This job has been cancelled by the employer.
                     </p>
                   </div>
                 )}
@@ -368,12 +421,23 @@ const MyApplications: React.FC = () => {
                   View Job Details
                 </button>
                 <div className="space-x-2">
-                  {application.status === 'accepted' && (
-                    <button className="bg-green-600 text-white px-4 py-1 rounded text-sm hover:bg-green-700 transition-colors">
-                      Mark as Completed
+                  {(application.status === 'Accepted' || application.status === 'Job Filled' || application.status === 'In Progress') && (
+                    <button 
+                      onClick={() => {/* Navigate to My Gigs */}} 
+                      className="bg-blue-600 text-white px-4 py-1 rounded text-sm hover:bg-blue-700 transition-colors"
+                    >
+                      View in My Gigs
                     </button>
                   )}
-                  {application.status === 'pending' && (
+                  {application.status === 'Completed' && (
+                    <button 
+                      onClick={() => {/* Navigate to My Gigs */}} 
+                      className="bg-green-600 text-white px-4 py-1 rounded text-sm hover:bg-green-700 transition-colors"
+                    >
+                      View Completed Gig
+                    </button>
+                  )}
+                  {application.status === 'Pending' && (
                     <button className="bg-red-600 text-white px-4 py-1 rounded text-sm hover:bg-red-700 transition-colors">
                       Withdraw Application
                     </button>

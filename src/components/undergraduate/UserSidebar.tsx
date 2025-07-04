@@ -42,9 +42,24 @@ export default function UserSidebar({ activeTab, setActiveTab, user, onLogout }:
   const navigation = [
     { id: 'dashboard', name: 'Dashboard', icon: ChartPieIcon },
     { id: 'jobs', name: 'Browse Jobs', icon: MagnifyingGlassIcon },
-    { id: 'applications', name: 'My Applications', icon: ClockIcon, badge: '2' },
-    { id: 'gigs', name: 'My Gigs', icon: BriefcaseIcon, badge: '2' },
-    { id: 'payments', name: 'My Payments', icon: CurrencyDollarIcon },
+    { 
+      id: 'applications', 
+      name: 'My Applications', 
+      icon: ClockIcon, 
+      badge: user?.stats?.appliedJobs ? (user.stats.appliedJobs > 0 ? user.stats.appliedJobs.toString() : undefined) : undefined
+    },
+    { 
+      id: 'gigs', 
+      name: 'My Gigs', 
+      icon: BriefcaseIcon, 
+      badge: user?.stats?.activeGigs ? (user.stats.activeGigs > 0 ? user.stats.activeGigs.toString() : undefined) : undefined
+    },
+    { 
+      id: 'payments', 
+      name: 'My Payments', 
+      icon: CurrencyDollarIcon, 
+      badge: user?.stats?.pendingPayments ? (user.stats.pendingPayments > 0 ? user.stats.pendingPayments.toString() : undefined) : undefined
+    },
     { id: 'profile', name: 'Profile', icon: UserIcon },
   ];
 

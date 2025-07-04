@@ -119,19 +119,30 @@ const JobList: React.FC<JobListProps> = ({ onJobSelect, selectedJobId }) => {
         
         const response = await gigRequestService.getAllGigRequests(filters);
         
-        if (response.success && response.data?.gigRequests) {
+        if (response.success && response.data) {
+          // Check if data is array (new format) or object with gigRequests (legacy format)
+          let gigRequests: GigRequest[] = [];
+          
+          if (Array.isArray(response.data)) {
+            // New format: data is directly an array of GigRequest
+            gigRequests = response.data;
+          } else if (response.data && typeof response.data === 'object' && 'gigRequests' in response.data) {
+            // Legacy format: data contains gigRequests array
+            gigRequests = (response.data as any).gigRequests || [];
+          }
+          
           // Convert backend format to frontend format
-          const convertedJobs = response.data.gigRequests.map(convertToJob);
+          const convertedJobs = gigRequests.map(convertToJob);
           setJobs(convertedJobs);
           
           // Extract unique categories
           const uniqueCategories = Array.from(
-            new Set(response.data.gigRequests.map(gig => gig.category))
-          );
+            new Set(gigRequests.map((gig: GigRequest) => gig.category))
+          ).filter((category): category is string => typeof category === 'string');
           setCategories(['all', ...uniqueCategories]);
         } else {
           setJobs([]);
-          setError('Failed to load jobs');
+          setError(response.message || 'Failed to load jobs');
         }
       } catch (error) {
         console.error('Error fetching jobs:', error);

@@ -24,7 +24,7 @@ export interface GigApplication {
     title: string;
     status: string;
   };
-  user: Applicant;
+  user: Applicant | null; // Can be null if user was deleted
   status: 'pending' | 'reviewed' | 'accepted' | 'rejected' | 'withdrawn';
   coverLetter?: string;
   availableTimeSlots: string[]; // IDs of time slots

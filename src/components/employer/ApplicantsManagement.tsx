@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { gigApplyService, GigApplication, GigApplicationsFilters } from '@/services/gigApplyService';
 import { gigRequestService } from '@/services/gigRequestService';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 
 // Loading skeleton component
 const ApplicationSkeleton = () => (
@@ -34,6 +35,9 @@ export default function ApplicantsManagement() {
     status: undefined,
     gigRequestId: undefined
   });
+  const [selectedApplication, setSelectedApplication] = useState<GigApplication | null>(null);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch jobs for filter dropdown
@@ -72,6 +76,21 @@ export default function ApplicantsManagement() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters]);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.status-dropdown')) {
+        setOpenDropdownId(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchApplications = async (isRefreshing = false) => {
@@ -86,7 +105,9 @@ export default function ApplicantsManagement() {
       const response = await gigApplyService.getApplications(filters);
       
       if (response.success && response.data) {
-        setApplications(response.data.applications);
+        // Filter out applications with null or missing user data
+        const validApplications = response.data.applications.filter(app => app.user !== null && app.user !== undefined);
+        setApplications(validApplications);
       } else {
         setError('Failed to fetch applications');
       }
@@ -109,9 +130,30 @@ export default function ApplicantsManagement() {
           app._id === applicationId ? { ...app, status: newStatus } : app
         )
       );
+      
+      // Close dropdown
+      setOpenDropdownId(null);
     } catch (err) {
       console.error('Error updating application status:', err);
     }
+  };
+
+  const openProfileModal = (application: GigApplication) => {
+    if (!application.user) {
+      console.warn('Cannot open profile modal: user data is missing');
+      return;
+    }
+    setSelectedApplication(application);
+    setShowProfileModal(true);
+  };
+
+  const closeProfileModal = () => {
+    setSelectedApplication(null);
+    setShowProfileModal(false);
+  };
+
+  const toggleDropdown = (applicationId: string) => {
+    setOpenDropdownId(openDropdownId === applicationId ? null : applicationId);
   };
 
   const formatAppliedDate = (dateString: string) => {
@@ -234,13 +276,16 @@ export default function ApplicantsManagement() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h4 className="text-lg font-semibold text-[#03045E]">
-                        {application.user.firstName} {application.user.lastName}
+                        {application.user ? 
+                          `${application.user.firstName || 'N/A'} ${application.user.lastName || 'N/A'}` : 
+                          'User not found'
+                        }
                       </h4>
-                      <p className="text-gray-600 mt-1">Applied for: {application.gigRequest.title}</p>
+                      <p className="text-gray-600 mt-1">Applied for: {application.gigRequest?.title || 'Unknown Job'}</p>
                       <p className="text-sm text-gray-500 mt-1">
                         Applied {formatAppliedDate(application.createdAt)}
                       </p>
-                      {application.user.rating !== undefined && (
+                      {application.user?.rating !== undefined && (
                         <div className="flex items-center mt-2">
                           <span className="text-sm text-gray-600">Rating: </span>
                           <span className="text-sm font-semibold text-[#0077B6] ml-1">
@@ -251,14 +296,20 @@ export default function ApplicantsManagement() {
                       )}
                     </div>
                     <div className="flex items-center space-x-3">
-                      <div className="relative group">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium capitalize ${getStatusClass(application.status)}`}>
+                      <div className="relative status-dropdown">
+                        <button
+                          onClick={() => toggleDropdown(application._id)}
+                          className={`px-3 py-1 rounded-full text-sm font-medium capitalize ${getStatusClass(application.status)} cursor-pointer hover:opacity-80 transition-opacity`}
+                        >
                           {application.status}
-                        </span>
+                          {application.status === 'pending' && (
+                            <span className="ml-1 text-xs">▼</span>
+                          )}
+                        </button>
                         
                         {/* Status change dropdown */}
-                        {application.status === 'pending' && (
-                          <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-10 hidden group-hover:block">
+                        {application.status === 'pending' && openDropdownId === application._id && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg py-1 z-10">
                             <button 
                               onClick={() => handleStatusChange(application._id, 'reviewed')}
                               className="block w-full text-left px-4 py-2 text-sm text-blue-700 hover:bg-gray-100"
@@ -281,8 +332,9 @@ export default function ApplicantsManagement() {
                         )}
                       </div>
                       <button 
-                        onClick={() => router.push(`/employer/applicants/${application._id}`)}
+                        onClick={() => openProfileModal(application)}
                         className="px-4 py-2 bg-[#0077B6] text-white rounded-lg hover:bg-[#00B4D8] transition-colors text-sm"
+                        disabled={!application.user}
                       >
                         View Profile
                       </button>
@@ -294,6 +346,150 @@ export default function ApplicantsManagement() {
           </div>
         </div>
       </div>
+
+      {/* Profile Modal */}
+      {showProfileModal && selectedApplication && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Applicant Profile
+                </h3>
+                <button
+                  onClick={closeProfileModal}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-6">
+              {selectedApplication.user ? (
+                <>
+                  {/* Personal Information */}
+                  <div>
+                    <h4 className="text-md font-medium text-gray-900 mb-3">Personal Information</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Full Name</label>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {selectedApplication.user.firstName || 'N/A'} {selectedApplication.user.lastName || 'N/A'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Email</label>
+                        <p className="mt-1 text-sm text-gray-900">{selectedApplication.user.email || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">University</label>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {selectedApplication.user.university || 'Not specified'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Faculty</label>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {selectedApplication.user.faculty || 'Not specified'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Year of Study</label>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {selectedApplication.user.yearOfStudy || 'Not specified'}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Application Date</label>
+                        <p className="mt-1 text-sm text-gray-900">
+                          {formatAppliedDate(selectedApplication.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rating */}
+                  {selectedApplication.user.rating !== undefined && (
+                    <div>
+                      <h4 className="text-md font-medium text-gray-900 mb-3">Rating</h4>
+                      <div className="flex items-center">
+                        <span className="text-2xl font-bold text-[#0077B6]">
+                          {selectedApplication.user.rating.toFixed(1)}
+                        </span>
+                        <span className="text-blue-400 ml-1 text-2xl">★</span>
+                        <span className="text-gray-600 ml-2">out of 5</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Bio */}
+                  {selectedApplication.user.bio && (
+                    <div>
+                      <h4 className="text-md font-medium text-gray-900 mb-3">Bio</h4>
+                      <p className="text-sm text-gray-900">{selectedApplication.user.bio}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">User information is not available</p>
+                </div>
+              )}
+
+              {/* Cover Letter */}
+              {selectedApplication.coverLetter && (
+                <div>
+                  <h4 className="text-md font-medium text-gray-900 mb-3">Cover Letter</h4>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-900 whitespace-pre-wrap">
+                      {selectedApplication.coverLetter}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Job Applied For */}
+              <div>
+                <h4 className="text-md font-medium text-gray-900 mb-3">Job Applied For</h4>
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <h5 className="font-medium text-blue-900">{selectedApplication.gigRequest.title}</h5>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Status: {selectedApplication.gigRequest.status}
+                  </p>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Application Status: {selectedApplication.status}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            {selectedApplication.status === 'pending' && (
+              <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    handleStatusChange(selectedApplication._id, 'rejected');
+                    closeProfileModal();
+                  }}
+                  className="px-4 py-2 border border-red-300 text-red-700 rounded-md hover:bg-red-50 transition-colors"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={() => {
+                    handleStatusChange(selectedApplication._id, 'accepted');
+                    closeProfileModal();
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                >
+                  Accept
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

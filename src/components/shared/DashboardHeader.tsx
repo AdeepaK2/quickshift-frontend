@@ -87,10 +87,9 @@ export default function DashboardHeader({
   isLoadingStats = false
 }: DashboardHeaderProps) {
   const config = getUserTypeConfig(userType);
-  const stats = quickStats || getDefaultStats(userType);
-  // We'll use the theme in future styling updates
-  // const theme = getTheme(userType);
-
+  // Use provided quickStats if available, otherwise fall back to defaults when not loading
+  const stats = quickStats || (!isLoadingStats ? getDefaultStats(userType) : []);
+  
   const getUserDisplayName = () => {
     if (userType === 'employer' && user.companyName) {
       return user.companyName;

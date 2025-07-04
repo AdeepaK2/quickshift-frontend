@@ -48,7 +48,7 @@ export default function EmployerSidebar({ activeTab, setActiveTab, user, onLogou
     { id: 'dashboard', name: 'Dashboard', icon: ChartBarIcon },
     { id: 'jobs', name: 'Manage Jobs', icon: BriefcaseIcon, badge: stats?.activeJobs?.toString() },
     { id: 'applicants', name: 'Applicants', icon: UserGroupIcon, badge: stats?.totalApplications?.toString() },
-    { id: 'analytics', name: 'Analytics', icon: ChartPieIcon },
+    { id: 'payments', name: 'Payments', icon: ChartPieIcon },
     { id: 'profile', name: 'Profile', icon: UserIcon },
   ];
 

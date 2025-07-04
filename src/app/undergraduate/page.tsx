@@ -52,8 +52,11 @@ function UndergraduatePage() {
   const [stats, setStats] = useState({
     appliedJobs: 0,
     activeGigs: 0,
+    completedGigs: 0,
+    totalEarnings: 0,
     monthlyEarnings: 0,
-    rating: 0
+    rating: 0,
+    pendingPayments: 0
   });
   const [loading, setLoading] = useState(true);
   
@@ -98,14 +101,27 @@ function UndergraduatePage() {
         const response = await userService.getStats();
         if (response.success && response.data) {
           setStats({
-            appliedJobs: response.data.appliedJobs,
-            activeGigs: response.data.activeGigs,
-            monthlyEarnings: response.data.monthlyEarnings,
-            rating: response.data.rating
+            appliedJobs: response.data.appliedJobs || 0,
+            activeGigs: response.data.activeGigs || 0,
+            completedGigs: response.data.completedGigs || 0,
+            totalEarnings: response.data.totalEarnings || 0,
+            monthlyEarnings: response.data.monthlyEarnings || 0,
+            rating: response.data.rating || 0,
+            pendingPayments: response.data.pendingPayments || 0
           });
         }
       } catch (error) {
         console.error('Error fetching user stats:', error);
+        // Set default stats if API fails
+        setStats({
+          appliedJobs: 0,
+          activeGigs: 0,
+          completedGigs: 0,
+          totalEarnings: 0,
+          monthlyEarnings: 0,
+          rating: 0,
+          pendingPayments: 0
+        });
       } finally {
         setLoading(false);
       }
@@ -121,6 +137,12 @@ function UndergraduatePage() {
     { label: 'This Month', value: loading ? '...' : `LKR ${stats.monthlyEarnings.toLocaleString()}`, description: 'Earnings' },
     { label: 'Rating', value: loading ? '...' : stats.rating.toFixed(1), description: 'Your rating' }
   ];
+
+  // Create enhanced user object with stats
+  const userWithStats = user ? {
+    ...user,
+    stats: stats
+  } : null;
 
   const renderContent = () => {
     switch (activeTab) {
@@ -167,6 +189,8 @@ function UndergraduatePage() {
         activeTab={activeTab}
         setActiveTab={handleTabChange}
         quickStats={quickStats}
+        isLoadingStats={loading}
+        user={userWithStats || undefined}
       >
         {renderContent()}
       </DashboardLayout>

@@ -15,6 +15,8 @@ export interface GigApplication {
   gigRequest: string | {
     _id: string;
     title: string;
+    description?: string;
+    status: 'draft' | 'active' | 'filled' | 'in_progress' | 'completed' | 'closed' | 'cancelled';
     employer: {
       _id: string;
       companyName: string;
@@ -28,8 +30,12 @@ export interface GigApplication {
       address: string;
       city: string;
     };
+    filledPositions: number;
+    totalPositions: number;
+    startDate?: string;
+    endDate?: string;
   };
-  status: 'applied' | 'shortlisted' | 'hired' | 'rejected';
+  status: 'applied' | 'shortlisted' | 'hired' | 'rejected' | 'pending' | 'reviewed' | 'accepted' | 'withdrawn';
   coverLetter?: string;
   appliedAt: string;
   updatedAt: string;
@@ -171,6 +177,32 @@ class GigApplicationService {
       method: 'PATCH',
       body: JSON.stringify({ isArchived: false }),
     });
+  }
+
+  // Get accepted gigs for the student dashboard
+  async getAcceptedGigs(): Promise<ApiResponse<{ gigs: GigApplication[] }>> {
+    return await this.makeRequest<{ gigs: GigApplication[] }>('/accepted-gigs');
+  }
+
+  // Get accepted gigs for student dashboard (shows gigs with their current status)
+  async getMyAcceptedGigs(filters?: Omit<ApplicationFilters, 'status'>): Promise<ApiResponse<{ applications: GigApplication[], total: number }>> {
+    let queryParams = '';
+    
+    const acceptedFilters = { ...filters, status: 'accepted' as const };
+    
+    if (acceptedFilters) {
+      const params = new URLSearchParams();
+      if (acceptedFilters.status) params.append('status', acceptedFilters.status);
+      if (acceptedFilters.sortBy) params.append('sortBy', acceptedFilters.sortBy);
+      if (acceptedFilters.sortOrder) params.append('sortOrder', acceptedFilters.sortOrder);
+      if (acceptedFilters.page) params.append('page', acceptedFilters.page.toString());
+      if (acceptedFilters.limit) params.append('limit', acceptedFilters.limit.toString());
+      if (acceptedFilters.isArchived !== undefined) params.append('isArchived', acceptedFilters.isArchived.toString());
+      
+      queryParams = `?${params.toString()}`;
+    }
+    
+    return await this.makeRequest<{ applications: GigApplication[], total: number }>(`/my-applications${queryParams}`);
   }
 }
 

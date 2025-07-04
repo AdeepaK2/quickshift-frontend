@@ -9,41 +9,51 @@ export interface GigCompletion {
   gigRequest: string | {
     _id: string;
     title: string;
+    category?: string;
+    location?: {
+      city: string;
+      address: string;
+    };
+    payRate?: {
+      amount: number;
+      rateType: string;
+    };
     employer: {
       _id: string;
       companyName: string;
       logo?: string;
     };
-    payRate: {
-      amount: number;
-      rateType: string;
-    };
   };
-  user: string | {
+  employer: string | {
     _id: string;
-    firstName: string;
-    lastName: string;
+    companyName: string;
+    logo?: string;
   };
-  status: 'pending_confirmation' | 'confirmed' | 'disputed' | 'cancelled' | 'paid';
-  hoursWorked: number;
-  startTime: string;
-  endTime: string;
-  completionDate: string;
-  paymentAmount: number;
-  paymentStatus: 'pending' | 'processing' | 'paid' | 'failed';
-  paymentDate?: string;
-  feedback?: {
-    rating: number;
-    comment: string;
+  status: 'in_progress' | 'completed' | 'partially_completed' | 'verified' | 'disputed';
+  workers: Array<{
+    worker: string | {
+      _id: string;
+      firstName: string;
+      lastName: string;
+    };
+    payment: {
+      status: string;
+      amount: number;
+    };
+    completedTimeSlots: Array<{
+      hoursWorked: number;
+    }>;
+    performance?: {
+      rating?: number;
+      feedback?: string;
+    };
+  }>;
+  paymentSummary: {
+    totalAmount: number;
+    finalAmount: number;
+    paymentStatus: 'pending' | 'processing' | 'partial' | 'completed' | 'refunded';
   };
-  userProof?: {
-    images: string[];
-    description: string;
-  };
-  employerFeedback?: {
-    rating: number;
-    comment: string;
-  };
+  completedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -65,7 +75,7 @@ export interface CreateCompletionRequest {
 export interface CompletionFilters {
   status?: 'pending_confirmation' | 'confirmed' | 'disputed' | 'cancelled' | 'paid' | 'all';
   paymentStatus?: 'pending' | 'processing' | 'paid' | 'failed' | 'all';
-  sortBy?: 'completionDate' | 'createdAt' | 'paymentAmount';
+  sortBy?: 'completionDate' | 'createdAt' | 'paymentAmount' | 'completedAt';
   sortOrder?: 'asc' | 'desc';
   page?: number;
   limit?: number;
@@ -227,6 +237,80 @@ class GigCompletionService {
         amount: number;
       }>;
     }>('/payment-stats');
+  }
+
+  /**
+   * Get user's completed gigs (for My Gigs section)
+   * @param filters Filters to apply
+   * @returns Promise<ApiResponse<{ completions: GigCompletion[] }>>
+   */
+  async getMyCompletedGigs(filters: CompletionFilters = {}): Promise<ApiResponse<{ completions: GigCompletion[] }>> {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      // Add filters to query params
+      if (filters.status && filters.status !== 'all') queryParams.append('status', filters.status);
+      if (filters.paymentStatus && filters.paymentStatus !== 'all') queryParams.append('paymentStatus', filters.paymentStatus);
+      if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
+      if (filters.sortOrder) queryParams.append('sortOrder', filters.sortOrder);
+      if (filters.page) queryParams.append('page', filters.page.toString());
+      if (filters.limit) queryParams.append('limit', filters.limit.toString());
+      if (filters.startDate) queryParams.append('startDate', filters.startDate);
+      if (filters.endDate) queryParams.append('endDate', filters.endDate);
+
+      const endpoint = `/my-completions?${queryParams.toString()}`;
+      return await this.makeRequest<{ completions: GigCompletion[] }>(endpoint);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get employer's completed gigs (for Manage Jobs section)
+   * @param filters Filters to apply
+   * @returns Promise<ApiResponse<GigCompletion[]>>
+   */
+  async getEmployerCompletedGigs(filters: CompletionFilters = {}): Promise<ApiResponse<GigCompletion[]>> {
+    try {
+      const queryParams = new URLSearchParams();
+      
+      // Add filters to query params
+      if (filters.paymentStatus && filters.paymentStatus !== 'all') queryParams.append('paymentStatus', filters.paymentStatus);
+      if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
+      if (filters.sortOrder) queryParams.append('sortOrder', filters.sortOrder);
+      if (filters.page) queryParams.append('page', filters.page.toString());
+      if (filters.limit) queryParams.append('limit', filters.limit.toString());
+      if (filters.startDate) queryParams.append('startDate', filters.startDate);
+      if (filters.endDate) queryParams.append('endDate', filters.endDate);
+
+      const endpoint = `/employer/completed?${queryParams.toString()}`;
+      return await this.makeRequest<GigCompletion[]>(endpoint);
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // Recalculate payments for a gig completion
+  async recalculatePayments(completionId: string): Promise<ApiResponse<{
+    paymentSummary: any;
+    workers: Array<{
+      worker: string;
+      payment: any;
+    }>;
+  }>> {
+    try {
+      return await this.makeRequest<{
+        paymentSummary: any;
+        workers: Array<{
+          worker: string;
+          payment: any;
+        }>;
+      }>(`/${completionId}/recalculate-payments`, {
+        method: 'POST'
+      });
+    } catch (error) {
+      throw error;
+    }
   }
 }
 

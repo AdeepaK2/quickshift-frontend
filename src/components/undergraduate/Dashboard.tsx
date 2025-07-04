@@ -180,9 +180,14 @@ const RecommendedJobs = () => {
           status: 'active'
         });
         
-        if (response.success && response.data?.gigRequests) {
+        if (response.success && response.data) {
+          // Handle both new format (array) and legacy format (object with gigRequests)
+          const gigRequests = Array.isArray(response.data) 
+            ? response.data 
+            : (response.data as any)?.gigRequests || [];
+          
           // Transform GigRequest data to JobSummary format
-          const transformedJobs: JobSummary[] = response.data.gigRequests.map(job => ({
+          const transformedJobs: JobSummary[] = gigRequests.map((job: any) => ({
             _id: job._id,
             title: job.title,
             employer: job.employer,

@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 
 export interface DashboardUser {
   _id?: string;
+  id?: string;
   firstName?: string;
   lastName?: string;
   email: string;
@@ -33,6 +34,17 @@ interface DashboardLayoutProps {
   setActiveTab: (tab: string) => void;
   quickStats?: QuickStat[];
   isLoadingStats?: boolean;
+  user?: DashboardUser & {
+    stats?: {
+      appliedJobs: number;
+      activeGigs: number;
+      completedGigs: number;
+      totalEarnings: number;
+      monthlyEarnings: number;
+      rating: number;
+      pendingPayments: number;
+    };
+  };
   stats?: {
     totalUsers: number;
     totalEmployers: number;
@@ -48,9 +60,10 @@ function DashboardLayout({
   setActiveTab,
   quickStats,
   isLoadingStats = false,
+  user: propUser,
   stats
 }: DashboardLayoutProps) {
-  const { user, logout } = useAuth();
+  const { user: contextUser, logout } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -143,6 +156,7 @@ function DashboardLayout({
   // }
 
   // Use fallback user data if context user is not available
+  const user = propUser || contextUser;
   const displayUser = user || {
     id: 'temp-user',
     firstName: 'Student',
@@ -159,7 +173,7 @@ function DashboardLayout({
           <AdminSidebar
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            user={user}
+            user={contextUser}
             onLogout={handleLogout}
             stats={stats}
           />
@@ -168,7 +182,7 @@ function DashboardLayout({
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             user={{
-              id: user?.id || displayUser.id,
+              id: (user as any)?.id || (user as any)?._id || displayUser.id,
               firstName: user?.firstName || displayUser.firstName,
               lastName: user?.lastName || displayUser.lastName,
               email: user?.email || displayUser.email,
@@ -189,12 +203,13 @@ function DashboardLayout({
           <UserSidebar
             activeTab={activeTab}
             setActiveTab={setActiveTab}
-            user={user || {
-              id: displayUser.id,
-              firstName: displayUser.firstName,
-              lastName: displayUser.lastName,
-              email: displayUser.email,
-              role: displayUser.role
+            user={{
+              id: (user as any)?.id || (user as any)?._id || displayUser.id,
+              firstName: user?.firstName || displayUser.firstName,
+              lastName: user?.lastName || displayUser.lastName,
+              email: user?.email || displayUser.email,
+              role: user?.role || displayUser.role,
+              stats: (user as any)?.stats || undefined
             }}
             onLogout={handleLogout}
           />
@@ -206,7 +221,7 @@ function DashboardLayout({
           <div className="sticky top-0 z-20 bg-white border-b border-slate-200 shadow-sm">
             <DashboardHeader
               user={{
-                _id: user?.id || displayUser.id,
+                _id: (user as any)?.id || (user as any)?._id || displayUser.id,
                 firstName: user?.firstName || displayUser.firstName,
                 lastName: user?.lastName || displayUser.lastName,
                 email: user?.email || displayUser.email,

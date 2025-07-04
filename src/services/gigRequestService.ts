@@ -38,7 +38,7 @@ export interface GigRequest {
   };
   requirements?: string[];
   benefits?: string[];
-  status: 'draft' | 'active' | 'closed' | 'completed' | 'cancelled';
+  status: 'draft' | 'active' | 'closed' | 'filled' | 'in_progress' | 'completed' | 'cancelled';
   applicationDeadline?: Date | string;
   skillsRequired?: string[];
   experienceRequired?: string;
@@ -46,6 +46,8 @@ export interface GigRequest {
   visibility: 'public' | 'private' | 'targeted';
   views?: number;
   applicationsCount?: number;
+  totalPositions?: number;
+  filledPositions?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -98,7 +100,7 @@ export interface UpdateGigRequestRequest {
   };
   requirements?: string[];
   benefits?: string[];
-  status?: 'draft' | 'active' | 'closed' | 'completed' | 'cancelled';
+  status?: 'draft' | 'active' | 'closed' | 'filled' | 'in_progress' | 'completed' | 'cancelled';
   applicationDeadline?: Date | string;
   skillsRequired?: string[];
   experienceRequired?: string;
@@ -107,7 +109,7 @@ export interface UpdateGigRequestRequest {
 }
 
 export interface GigRequestsFilters {
-  status?: 'draft' | 'active' | 'closed' | 'completed' | 'cancelled';
+  status?: 'draft' | 'active' | 'closed' | 'filled' | 'in_progress' | 'completed' | 'cancelled';
   category?: string;
   sortBy?: 'createdAt' | 'updatedAt' | 'applicationsCount';
   sortOrder?: 'asc' | 'desc';
@@ -230,20 +232,52 @@ class GigRequestService {
   }
   
   // Get all public gig requests (for job seekers)
-  async getAllGigRequests(filters?: GigRequestsFilters): Promise<ApiResponse<{ gigRequests: GigRequest[], total: number, page: number, pages: number }>> {
+  async getAllGigRequests(filters?: GigRequestsFilters): Promise<ApiResponse<GigRequest[]>> {
     let queryParams = '';
     
-    if (filters) {
-      const params = new URLSearchParams();
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== undefined) {
-          params.append(key, String(value));
+    try {
+      if (filters) {
+        const params = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (value !== undefined) {
+            params.append(key, String(value));
+          }
+        });
+        queryParams = `?${params.toString()}`;
+      }
+      
+      const response = await this.makePublicRequest<GigRequest[]>(`/public${queryParams}`);
+      
+      // Check if the data from API is in the expected format
+      if (response.success && !Array.isArray(response.data)) {
+        console.error('Invalid response format. Expected array of gig requests but got:', response.data);
+        
+        // Try to handle legacy API response formats
+        if (response.data && typeof response.data === 'object' && 'gigRequests' in response.data) {
+          // If the API returns { gigRequests: [...] } format (legacy)
+          return {
+            ...response,
+            data: (response.data as any).gigRequests as GigRequest[]
+          };
         }
-      });
-      queryParams = `?${params.toString()}`;
+        
+        // Return a safe response with empty array if data isn't in expected format
+        return {
+          success: false,
+          message: 'Invalid data format received from server',
+          data: []
+        };
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Error in getAllGigRequests:', error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Failed to fetch public gig requests',
+        data: []
+      };
     }
-    
-    return await this.makePublicRequest<{ gigRequests: GigRequest[], total: number, page: number, pages: number }>(`/public${queryParams}`);
   }
 
   // Get a single gig request by ID
@@ -278,7 +312,7 @@ class GigRequestService {
   }
 
   // Change the status of a gig request
-  async changeGigRequestStatus(id: string, status: 'draft' | 'active' | 'closed' | 'completed' | 'cancelled'): Promise<ApiResponse<GigRequest>> {
+  async changeGigRequestStatus(id: string, status: 'draft' | 'active' | 'closed' | 'filled' | 'in_progress' | 'completed' | 'cancelled'): Promise<ApiResponse<GigRequest>> {
     return await this.makeRequest<GigRequest>(`/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
@@ -305,6 +339,100 @@ class GigRequestService {
       drafts: number;
       applicationsTotal: number;
     }>('/stats');
+  }
+
+  // Start a filled job
+  async startJob(id: string): Promise<ApiResponse<GigRequest>> {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const url = `${API_BASE_URL}/api/employers/jobs/${id}/start`;
+      
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to start job');
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Job started successfully',
+        data: data.data
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Start Job Error:', error.message);
+        return {
+          success: false,
+          message: error.message,
+          data: undefined
+        };
+      } else {
+        console.error('Unknown Start Job Error:', error);
+        return {
+          success: false,
+          message: 'An unexpected error occurred',
+          data: undefined
+        };
+      }
+    }
+  }
+
+  // Complete a job in progress
+  async completeJob(id: string, completionData?: { notes?: string, proof?: string[] }): Promise<ApiResponse<GigRequest>> {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      const url = `${API_BASE_URL}/api/employers/jobs/${id}/complete`;
+      
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          completionNotes: completionData?.notes,
+          completionProof: completionData?.proof
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to complete job');
+      }
+
+      return {
+        success: true,
+        message: data.message || 'Job completed successfully',
+        data: data.data
+      };
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Complete Job Error:', error.message);
+        return {
+          success: false,
+          message: error.message,
+          data: undefined
+        };
+      } else {
+        console.error('Unknown Complete Job Error:', error);
+        return {
+          success: false,
+          message: 'An unexpected error occurred',
+          data: undefined
+        };
+      }
+    }
   }
 }
 

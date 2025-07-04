@@ -1,10 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FaBriefcase, FaClock, FaMapMarkerAlt, FaDollarSign, FaCheckCircle, FaSpinner, FaCalendarAlt, FaStar } from 'react-icons/fa';
+import { FaBriefcase, FaClock, FaMapMarkerAlt, FaDollarSign, FaCheckCircle, FaSpinner, FaCalendarAlt, FaStar, FaPlay, FaStop } from 'react-icons/fa';
+import { gigCompletionService, GigCompletion } from '@/services/gigCompletionService';
+import { gigApplicationService, GigApplication } from '@/services/gigApplicationService';
+import { format } from 'date-fns';
 
-interface Gig {
+interface FormattedGig {
   id: string;
+  applicationId?: string; // For tracking the application
   title: string;
   description: string;
   employer: {
@@ -16,73 +20,198 @@ interface Gig {
   endDate: string;
   duration: string;
   pay: string;
-  status: 'upcoming' | 'in-progress' | 'completed' | 'cancelled';
+  status: 'upcoming' | 'in-progress' | 'completed' | 'cancelled' | 'filled';
+  jobStatus?: 'draft' | 'active' | 'filled' | 'in_progress' | 'completed' | 'closed' | 'cancelled'; // Job's actual status
   progress?: number;
   completedTasks?: string[];
   totalTasks?: string[];
   rating?: number;
   feedback?: string;
+  totalHours?: number;
+  paymentStatus?: string;
+  positions?: {
+    filled: number;
+    total: number;
+  };
 }
 
 const MyGigs: React.FC = (): React.ReactElement => {
-  const [gigs, setGigs] = useState<Gig[]>([]);
+  const [gigs, setGigs] = useState<FormattedGig[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'upcoming' | 'in-progress' | 'completed' | 'cancelled'>('all');
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'upcoming' | 'filled' | 'in-progress' | 'completed' | 'cancelled'>('all');
 
   useEffect(() => {
-    // Mock data for development
-    const mockGigs: Gig[] = [
-      {
-        id: '3',
-        title: 'Research Data Entry',
-        description: 'Enter survey data into spreadsheets for psychology research project.',
-        employer: {
-          name: 'Psychology Department',
-          rating: 4.9
-        },
-        location: 'University of Colombo',
-        startDate: '2024-01-10',
-        endDate: '2024-01-12',
-        duration: '15 hours',
-        pay: 'LKR 4,500',
-        status: 'completed' as const,
-        progress: 100,
-        rating: 5,
-        feedback: 'Excellent work! Very accurate and completed ahead of schedule.',
-        completedTasks: ['Data entry', 'Quality check', 'Final review'],
-        totalTasks: ['Data entry', 'Quality check', 'Final review']
-      },
-      {
-        id: '4',
-        title: 'Food Delivery Helper',
-        description: 'Assist with food delivery during lunch hours near university campus.',
-        employer: {
-          name: 'Campus Eats',
-          rating: 4.2
-        },
-        location: 'Nugegoda Area',
-        startDate: '2024-01-08',
-        endDate: '2024-01-08',
-        duration: '3 hours',
-        pay: 'LKR 1,800',
-        status: 'cancelled' as const,
-        completedTasks: [],
-        totalTasks: ['Deliver orders', 'Collect payments', 'Customer service']
-      }
-    ];
-
-    setTimeout(() => {
-      setGigs(mockGigs);
-      setLoading(false);
-    }, 1000);
+    fetchAllMyGigs();
   }, []);
+
+  const fetchAllMyGigs = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Fetch both completed gigs and accepted applications in parallel
+      const [completedResponse, acceptedResponse] = await Promise.all([
+        gigCompletionService.getMyCompletedGigs({
+          sortBy: 'completedAt',
+          sortOrder: 'desc',
+          limit: 50
+        }),
+        gigApplicationService.getMyAcceptedGigs({
+          sortBy: 'appliedAt',
+          sortOrder: 'desc',
+          limit: 50
+        })
+      ]);
+      
+      const allGigs: FormattedGig[] = [];
+      
+      // Add completed gigs
+      if (completedResponse.success && completedResponse.data) {
+        const completedGigs = completedResponse.data.completions.map(convertCompletionToGig);
+        allGigs.push(...completedGigs);
+      }
+      
+      // Add accepted gigs (filter out those that are already completed)
+      if (acceptedResponse.success && acceptedResponse.data) {
+        const acceptedGigs = acceptedResponse.data.applications
+          .filter(app => typeof app.gigRequest !== 'string' && app.gigRequest.status !== 'completed')
+          .map(convertApplicationToGig);
+        allGigs.push(...acceptedGigs);
+      }
+      
+      // Sort all gigs by most recent first
+      allGigs.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+      
+      setGigs(allGigs);
+    } catch (err) {
+      console.error('Error fetching gigs:', err);
+      setError('Error loading your gigs. Please try again.');
+      
+      // Fallback to mock data for development
+      const mockGigs: FormattedGig[] = [
+        {
+          id: '1',
+          title: 'Research Data Entry',
+          description: 'Enter survey data into spreadsheets for psychology research project.',
+          employer: {
+            name: 'Psychology Department',
+            rating: 4.9
+          },
+          location: 'University of Colombo',
+          startDate: '2024-01-10',
+          endDate: '2024-01-12',
+          duration: '15 hours',
+          pay: 'LKR 4,500',
+          status: 'completed' as const,
+          progress: 100,
+          rating: 5,
+          feedback: 'Excellent work! Very accurate and completed ahead of schedule.',
+          completedTasks: ['Data entry', 'Quality check', 'Final review'],
+          totalTasks: ['Data entry', 'Quality check', 'Final review'],
+          totalHours: 15,
+          paymentStatus: 'paid'
+        }
+      ];
+      setGigs(mockGigs);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const convertCompletionToGig = (completion: any): FormattedGig => {
+    const gigRequest = completion.gigRequest;
+    const employer = completion.employer;
+    const myWork = completion.myWork;
+    
+    return {
+      id: completion._id,
+      title: gigRequest.title,
+      description: gigRequest.description || 'No description provided',
+      employer: {
+        name: employer.companyName,
+        rating: 4.5 // Default rating, you can implement a rating system
+      },
+      location: gigRequest.location ? `${gigRequest.location.city}, ${gigRequest.location.address}` : 'Location not specified',
+      startDate: format(new Date(completion.completedAt), 'yyyy-MM-dd'),
+      endDate: format(new Date(completion.completedAt), 'yyyy-MM-dd'),
+      duration: myWork?.totalHours ? `${myWork.totalHours} hours` : 'N/A',
+      pay: gigRequest.payRate ? `LKR ${(myWork?.payment?.amount || 0).toLocaleString()}` : 'N/A',
+      status: 'completed',
+      progress: 100,
+      rating: myWork?.performance?.rating || undefined,
+      feedback: myWork?.performance?.feedback || undefined,
+      totalHours: myWork?.totalHours || 0,
+      paymentStatus: myWork?.payment?.status || 'pending'
+    };
+  };
+
+  const convertApplicationToGig = (application: GigApplication): FormattedGig => {
+    const gigRequest = application.gigRequest;
+    
+    if (typeof gigRequest === 'string') {
+      throw new Error('GigRequest should be populated');
+    }
+    
+    // Map job status to gig status for student view
+    let gigStatus: FormattedGig['status'];
+    switch (gigRequest.status) {
+      case 'filled':
+        gigStatus = 'filled';
+        break;
+      case 'in_progress':
+        gigStatus = 'in-progress';
+        break;
+      case 'completed':
+        gigStatus = 'completed';
+        break;
+      case 'cancelled':
+      case 'closed':
+        gigStatus = 'cancelled';
+        break;
+      case 'active':
+      default:
+        gigStatus = 'upcoming';
+        break;
+    }
+    
+    const startDate = gigRequest.startDate ? gigRequest.startDate : application.appliedAt;
+    const endDate = gigRequest.endDate ? gigRequest.endDate : application.appliedAt;
+    
+    return {
+      id: gigRequest._id,
+      applicationId: application._id,
+      title: gigRequest.title,
+      description: gigRequest.description || 'No description provided',
+      employer: {
+        name: gigRequest.employer.companyName,
+        rating: 4.5 // Default rating
+      },
+      location: `${gigRequest.location.city}, ${gigRequest.location.address}`,
+      startDate: format(new Date(startDate), 'yyyy-MM-dd'),
+      endDate: format(new Date(endDate), 'yyyy-MM-dd'),
+      duration: 'TBD', // Can be calculated based on start/end dates
+      pay: `LKR ${gigRequest.payRate.amount.toLocaleString()} ${
+        gigRequest.payRate.rateType === 'hourly' ? 'per hour' :
+        gigRequest.payRate.rateType === 'daily' ? 'per day' : 'fixed'
+      }`,
+      status: gigStatus,
+      jobStatus: gigRequest.status,
+      positions: {
+        filled: gigRequest.filledPositions,
+        total: gigRequest.totalPositions
+      },
+      progress: gigStatus === 'in-progress' ? 25 : undefined // Default progress for in-progress jobs
+    };
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed': return <FaCheckCircle className="text-green-500" />;
       case 'in-progress': return <FaSpinner className="text-blue-500 animate-spin" />;
       case 'upcoming': return <FaCalendarAlt className="text-purple-500" />;
-      case 'cancelled': return <FaCheckCircle className="text-red-500" />;
+      case 'filled': return <FaPlay className="text-orange-500" />;
+      case 'cancelled': return <FaStop className="text-red-500" />;
       default: return <FaClock className="text-gray-500" />;
     }
   };
@@ -92,6 +221,7 @@ const MyGigs: React.FC = (): React.ReactElement => {
       case 'completed': return 'bg-green-100 text-green-800';
       case 'in-progress': return 'bg-quickshift-light text-quickshift-primary';
       case 'upcoming': return 'bg-purple-100 text-purple-800';
+      case 'filled': return 'bg-orange-100 text-orange-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -105,6 +235,7 @@ const MyGigs: React.FC = (): React.ReactElement => {
     return {
       all: gigs.length,
       upcoming: gigs.filter(gig => gig.status === 'upcoming').length,
+      filled: gigs.filter(gig => gig.status === 'filled').length,
       'in-progress': gigs.filter(gig => gig.status === 'in-progress').length,
       completed: gigs.filter(gig => gig.status === 'completed').length,
       cancelled: gigs.filter(gig => gig.status === 'cancelled').length
@@ -151,6 +282,7 @@ const MyGigs: React.FC = (): React.ReactElement => {
           {[
             { key: 'all', label: 'All Gigs', count: statusCounts.all },
             { key: 'upcoming', label: 'Upcoming', count: statusCounts.upcoming },
+            { key: 'filled', label: 'Filled', count: statusCounts.filled },
             { key: 'in-progress', label: 'In Progress', count: statusCounts['in-progress'] },
             { key: 'completed', label: 'Completed', count: statusCounts.completed },
             { key: 'cancelled', label: 'Cancelled', count: statusCounts.cancelled }
@@ -242,6 +374,21 @@ const MyGigs: React.FC = (): React.ReactElement => {
                   </div>
                 )}
 
+                {/* Filled Status Information */}
+                {gig.status === 'filled' && gig.positions && (
+                  <div className="mb-4 bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-orange-800">Job Filled - Waiting to Start</span>
+                      <span className="text-sm text-orange-600">
+                        {gig.positions.filled}/{gig.positions.total} positions filled
+                      </span>
+                    </div>
+                    <p className="text-orange-700 text-sm">
+                      All positions have been filled. The employer will start the job soon.
+                    </p>
+                  </div>
+                )}
+
                 {/* Task Progress */}
                 {gig.totalTasks && gig.totalTasks.length > 0 && (
                   <div className="mb-4">
@@ -303,8 +450,13 @@ const MyGigs: React.FC = (): React.ReactElement => {
                 <div className="space-x-2">
                   {gig.status === 'upcoming' && (
                     <button className="bg-red-600 text-white px-4 py-1 rounded text-sm hover:bg-red-700 transition-colors">
-                      Cancel Gig
+                      Cancel Application
                     </button>
+                  )}
+                  {gig.status === 'filled' && (
+                    <span className="text-orange-600 font-medium text-sm">
+                      Waiting for start
+                    </span>
                   )}
                   {gig.status === 'in-progress' && (
                     <button className="bg-green-600 text-white px-4 py-1 rounded text-sm hover:bg-green-700 transition-colors">

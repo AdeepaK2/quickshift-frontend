@@ -10,11 +10,11 @@ import { employerService } from '@/services/employerService';
 import DashboardContent from '@/components/employer/DashboardContent';
 import ManageJobs from '@/components/employer/ManageJobs';
 import ApplicantsManagement from '@/components/employer/ApplicantsManagement';
-import Analytics from '@/components/employer/Analytics';
+import PaymentManagement from '@/components/employer/PaymentManagement';
 import Profile from '@/components/employer/Profile';
 import SettingsContainer from '@/components/employer/SettingsContainer';
 
-type TabType = 'dashboard' | 'jobs' | 'applicants' | 'analytics' | 'profile' | 'settings';
+type TabType = 'dashboard' | 'jobs' | 'applicants' | 'payments' | 'profile' | 'settings';
 
 type QuickStat = {
   label: string;
@@ -26,7 +26,7 @@ const navigationItems = [
   { id: 'dashboard', label: 'Dashboard', icon: FaChartBar },
   { id: 'jobs', label: 'Manage Jobs', icon: FaBriefcase },
   { id: 'applicants', label: 'Applicants', icon: FaUsers },
-  { id: 'analytics', label: 'Analytics', icon: FaFileAlt },
+  { id: 'payments', label: 'Payments', icon: FaFileAlt },
   { id: 'profile', label: 'Profile', icon: FaCog },
   { id: 'settings', label: 'Settings', icon: FaWrench },
 ];
@@ -74,8 +74,8 @@ function EmployerPage() {
         return <ManageJobs />;
       case "applicants":
         return <ApplicantsManagement />;
-      case "analytics":
-        return <Analytics />;
+      case "payments":
+        return <PaymentManagement />;
       case "profile":
         return <Profile />;
       case "settings":
