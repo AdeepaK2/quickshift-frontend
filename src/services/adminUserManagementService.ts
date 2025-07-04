@@ -145,13 +145,28 @@ class AdminUserManagementService {
   // Activate user
   async activateUser(request: UserActionRequest): Promise<ApiResponse<{ success: boolean }>> {
     try {
-      return await this.makeRequest<{ success: boolean }>(`/users/${request.userId}/activate`, {
+      const url = `${API_BASE_URL}/api/users/${request.userId}/activate`;
+      const accessToken = localStorage.getItem('accessToken');
+      
+      const response = await fetch(url, {
         method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           reason: request.reason,
           notifyUser: request.notifyUser
         }),
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to activate user');
+      }
+
+      return data;
     } catch (error) {
       console.error('Error activating user:', error);
       throw error;
@@ -161,13 +176,28 @@ class AdminUserManagementService {
   // Deactivate user
   async deactivateUser(request: UserActionRequest): Promise<ApiResponse<{ success: boolean }>> {
     try {
-      return await this.makeRequest<{ success: boolean }>(`/users/${request.userId}/deactivate`, {
+      const url = `${API_BASE_URL}/api/users/${request.userId}/deactivate`;
+      const accessToken = localStorage.getItem('accessToken');
+      
+      const response = await fetch(url, {
         method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
           reason: request.reason,
           notifyUser: request.notifyUser
         }),
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to deactivate user');
+      }
+
+      return data;
     } catch (error) {
       console.error('Error deactivating user:', error);
       throw error;

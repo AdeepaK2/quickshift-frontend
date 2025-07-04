@@ -382,16 +382,33 @@ class AdminService {
     });
   }
 
-  // Gig Management Methods (using existing gigRequestService)
+  // Gig Management Methods 
   async getAllGigs(filters?: GigFilters): Promise<ApiResponse<{ 
-    gigRequests: GigRequest[], 
+    data: GigRequest[], 
     total: number, 
     page: number, 
-    pages: number 
+    pages: number,
+    count: number
   }>> {
-    // Import and use gigRequestService to get all gigs for admin view
-    const { gigRequestService } = await import('./gigRequestService');
-    return gigRequestService.getAllGigRequests(filters);
+    let queryParams = '';
+    
+    if (filters) {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          params.append(key, String(value));
+        }
+      });
+      queryParams = `?${params.toString()}`;
+    }
+    
+    return await this.makeRequest<{
+      data: GigRequest[],
+      total: number,
+      page: number,
+      pages: number,
+      count: number
+    }>(`/gigs${queryParams}`);
   }
 
   async updateGigStatus(id: string, status: 'draft' | 'active' | 'closed' | 'completed' | 'cancelled'): Promise<ApiResponse<GigRequest>> {

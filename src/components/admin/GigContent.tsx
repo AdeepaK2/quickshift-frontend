@@ -22,13 +22,6 @@ import { Badge } from "@/components/ui/badge";
 import Button from "@/components/ui/button";
 import Select from "@/components/ui/select";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from "@/components/ui/sheet";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -45,7 +38,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { adminService } from '@/services/adminService';
 import { GigRequest } from '@/services/gigRequestService';
 
-type GigStatus = "draft" | "active" | "closed" | "completed" | "cancelled";
+type GigStatus = "draft" | "active" | "closed" | "completed" | "cancelled" | "filled" | "in_progress";
 
 // TypeScript interfaces for filtering
 interface GigFilters {
@@ -72,7 +65,7 @@ interface Gig {
   title: string;
   description: string;
   category: string;
-  status: 'draft' | 'active' | 'closed' | 'completed' | 'cancelled';
+  status: 'draft' | 'active' | 'closed' | 'completed' | 'cancelled' | 'filled' | 'in_progress';
   location: {
     address: string;
     city: string;
@@ -122,7 +115,7 @@ const convertToGig = (gigRequest: GigRequest): Gig => {
 
 export default function GigContent() {
   const [selectedGig, setSelectedGig] = useState<Gig | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [gigToDelete, setGigToDelete] = useState<string | null>(null);
   const [gigs, setGigs] = useState<Gig[]>([]);
@@ -169,13 +162,34 @@ export default function GigContent() {
       const response = await adminService.getAllGigs(gigFilters);
 
       if (response.success && response.data) {
-        const convertedGigs = response.data.gigRequests.map(convertToGig);
+        // Handle different response formats
+        let gigRequests: GigRequest[] = [];
+        let total = 0;
+        let pages = 1;
+        
+        // Check if response.data is the expected admin service format
+        if (response.data.data && Array.isArray(response.data.data)) {
+          // Standard admin API format: { data: { data: [...], total, pages } }
+          gigRequests = response.data.data;
+          total = response.data.total || 0;
+          pages = response.data.pages || 1;
+        } else if (Array.isArray(response.data)) {
+          // Direct array format
+          gigRequests = response.data;
+          total = response.data.length;
+          pages = 1;
+        } else {
+          console.error('Unexpected response format:', response.data);
+          gigRequests = [];
+        }
+        
+        const convertedGigs = gigRequests.map(convertToGig);
         setGigs(convertedGigs);
-        setTotalRecords(response.data.total);
-        setTotalPages(response.data.pages);
+        setTotalRecords(total);
+        setTotalPages(pages);
         
         // If current page is greater than total pages and there are pages
-        if (currentPage > response.data.pages && response.data.pages > 0) {
+        if (currentPage > pages && pages > 0) {
           setCurrentPage(1);
         }
       } else {
@@ -219,7 +233,9 @@ export default function GigContent() {
     "active", 
     "closed",
     "completed",
-    "cancelled"
+    "cancelled",
+    "filled",
+    "in_progress"
   ];
 
   // Debounced search handler
@@ -264,7 +280,7 @@ export default function GigContent() {
   // Handle actions
   const handleViewGig = (gig: Gig) => {
     setSelectedGig(gig);
-    setIsSheetOpen(true);
+    setViewDialogOpen(true);
   };
 
   const handleDeleteClick = (gigId: string) => {
@@ -294,7 +310,14 @@ export default function GigContent() {
 
   const handleStatusChange = async (gigId: string, newStatus: string) => {
     try {
-      const response = await adminService.updateGigStatus(gigId, newStatus as GigStatus);
+      // Only allow valid status values that the backend accepts
+      const validStatuses = ['draft', 'active', 'closed', 'completed', 'cancelled'];
+      if (!validStatuses.includes(newStatus)) {
+        toast.error("Invalid status value");
+        return;
+      }
+      
+      const response = await adminService.updateGigStatus(gigId, newStatus as 'draft' | 'active' | 'closed' | 'completed' | 'cancelled');
       if (response.success) {
         setGigs(prev => prev.map(gig => 
           gig.id === gigId ? { ...gig, status: newStatus as GigStatus } : gig
@@ -626,7 +649,9 @@ export default function GigContent() {
                             { value: "active", label: "Active" },
                             { value: "closed", label: "Closed" },
                             { value: "completed", label: "Completed" },
-                            { value: "cancelled", label: "Cancelled" }
+                            { value: "cancelled", label: "Cancelled" },
+                            { value: "filled", label: "Filled" },
+                            { value: "in_progress", label: "In Progress" }
                           ]}
                           className="text-xs"
                         />
@@ -691,22 +716,22 @@ export default function GigContent() {
         </div>
       )}
 
-      {/* Gig Details Sheet */}
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
+      {/* Gig Details Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white ml-auto mr-4 mt-4 mb-4" style={{ marginLeft: '240px' }}>
           {selectedGig && (
             <>
-              <SheetHeader className="mb-6">
-                <SheetTitle>{selectedGig.title}</SheetTitle>
-                <SheetDescription>
+              <DialogHeader className="mb-6">
+                <DialogTitle className="text-xl font-bold text-gray-900">{selectedGig.title}</DialogTitle>
+                <DialogDescription className="text-gray-600">
                   Detailed information about this gig
-                </SheetDescription>
-              </SheetHeader>
+                </DialogDescription>
+              </DialogHeader>
 
-              <div className="space-y-6">
+              <div className="space-y-6 bg-white">
                 {/* Basic Info */}
-                <div>
-                  <h4 className="text-lg font-medium mb-3">Overview</h4>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <h4 className="text-lg font-medium mb-3 text-gray-900">Overview</h4>
                   <div className="space-y-2">
                     <p className="text-sm text-gray-700">{selectedGig.description}</p>
                     <div className="flex items-center space-x-4 pt-2">
@@ -721,13 +746,13 @@ export default function GigContent() {
                 <Separator />
 
                 {/* Pay and Positions */}
-                <div>
-                  <h4 className="text-lg font-medium mb-3">Payment & Positions</h4>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <h4 className="text-lg font-medium mb-3 text-gray-900">Payment & Positions</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex items-center">
                       <DollarSign className="h-5 w-5 mr-2 text-gray-600" />
                       <div>
-                        <p className="text-sm font-medium">Pay Rate</p>
+                        <p className="text-sm font-medium text-gray-900">Pay Rate</p>
                         <p className="text-sm text-gray-600">
                           ${selectedGig.payRate.amount} per {selectedGig.payRate.rateType}
                         </p>
@@ -736,7 +761,7 @@ export default function GigContent() {
                     <div className="flex items-center">
                       <Users className="h-5 w-5 mr-2 text-gray-600" />
                       <div>
-                        <p className="text-sm font-medium">Positions</p>
+                        <p className="text-sm font-medium text-gray-900">Positions</p>
                         <p className="text-sm text-gray-600">
                           {selectedGig.filledPositions} / {selectedGig.totalPositions} filled
                         </p>
@@ -748,8 +773,8 @@ export default function GigContent() {
                 <Separator />
 
                 {/* Location */}
-                <div>
-                  <h4 className="text-lg font-medium mb-3">Location</h4>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <h4 className="text-lg font-medium mb-3 text-gray-900">Location</h4>
                   <div className="flex items-start">
                     <MapPin className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                     <div>
@@ -766,15 +791,15 @@ export default function GigContent() {
                 {/* Time Slots */}
                 {selectedGig.timeSlots && selectedGig.timeSlots.length > 0 && (
                   <>
-                    <div>
-                      <h4 className="text-lg font-medium mb-3">Time Slots</h4>
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                      <h4 className="text-lg font-medium mb-3 text-gray-900">Time Slots</h4>
                       <div className="space-y-2">
                         {selectedGig.timeSlots.map((slot, index) => (
-                          <div key={index} className="bg-gray-50 p-3 rounded-md">
+                          <div key={index} className="bg-gray-50 p-3 rounded-md border border-gray-100">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center">
                                 <Calendar className="h-4 w-4 mr-2 text-gray-600" />
-                                <span className="text-sm font-medium">
+                                <span className="text-sm font-medium text-gray-900">
                                   {formatDate(typeof slot.date === 'string' ? slot.date : slot.date.toISOString())}
                                 </span>
                               </div>
@@ -799,8 +824,8 @@ export default function GigContent() {
                 {/* Requirements */}
                 {selectedGig.requirements && selectedGig.requirements.length > 0 && (
                   <>
-                    <div>
-                      <h4 className="text-lg font-medium mb-3">Requirements</h4>
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                      <h4 className="text-lg font-medium mb-3 text-gray-900">Requirements</h4>
                       <ul className="list-disc list-inside space-y-1">
                         {selectedGig.requirements.map((req, index) => (
                           <li key={index} className="text-sm text-gray-700">{req}</li>
@@ -814,8 +839,8 @@ export default function GigContent() {
                 {/* Skills Required */}
                 {selectedGig.skillsRequired && selectedGig.skillsRequired.length > 0 && (
                   <>
-                    <div>
-                      <h4 className="text-lg font-medium mb-3">Skills Required</h4>
+                    <div className="bg-white p-4 rounded-lg border border-gray-200">
+                      <h4 className="text-lg font-medium mb-3 text-gray-900">Skills Required</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedGig.skillsRequired.map((skill, index) => (
                           <Badge key={index} variant="secondary">
@@ -829,24 +854,30 @@ export default function GigContent() {
                 )}
 
                 {/* Stats */}
-                <div>
-                  <h4 className="text-lg font-medium mb-3">Statistics</h4>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <h4 className="text-lg font-medium mb-3 text-gray-900">Statistics</h4>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-3 bg-gray-50 rounded-md">
+                    <div className="text-center p-3 bg-gray-50 rounded-md border border-gray-100">
                       <p className="text-2xl font-bold text-gray-900">{selectedGig.views || 0}</p>
                       <p className="text-sm text-gray-600">Views</p>
                     </div>
-                    <div className="text-center p-3 bg-gray-50 rounded-md">
+                    <div className="text-center p-3 bg-gray-50 rounded-md border border-gray-100">
                       <p className="text-2xl font-bold text-gray-900">{selectedGig.applicationsCount || 0}</p>
                       <p className="text-sm text-gray-600">Applications</p>
                     </div>
                   </div>
                 </div>
               </div>
+
+              <DialogFooter className="mt-6 bg-white border-t border-gray-200 pt-4">
+                <DialogClose asChild>
+                  <Button variant="outline" className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">Close</Button>
+                </DialogClose>
+              </DialogFooter>
             </>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

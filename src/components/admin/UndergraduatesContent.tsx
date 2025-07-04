@@ -20,6 +20,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Users,
+  AlertTriangle,
 } from "lucide-react";
 import Button from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,6 +46,7 @@ import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { UNDERGRADUATE_CONSTANTS } from "@/lib/undergraduate-constants";
 import { adminService, AdminUserData } from '@/services/adminService';
+import { adminUserManagementService, UserActionRequest } from '@/services/adminUserManagementService';
 
 // TypeScript interfaces for Undergraduate data
 interface Undergraduate {
@@ -147,6 +149,14 @@ export default function UndergraduatesContent() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    userId: string;
+    currentStatus: string;
+    action: 'activate' | 'deactivate';
+    userName: string;
+  } | null>(null);
   
   // Debug logging
   useEffect(() => {
@@ -368,6 +378,58 @@ export default function UndergraduatesContent() {
   const handleViewUndergraduate = (undergraduate: Undergraduate) => {
     setSelectedUndergraduate(undergraduate);
     setIsSheetOpen(true);
+  };
+
+  // Handle activating/deactivating user
+  const handleToggleUserStatus = async (userId: string, currentStatus: string, userName: string) => {
+    const isCurrentlyActive = currentStatus === 'active';
+    setPendingAction({
+      userId,
+      currentStatus,
+      action: isCurrentlyActive ? 'deactivate' : 'activate',
+      userName
+    });
+    setShowConfirmDialog(true);
+  };
+
+  // Confirm and execute the action
+  const confirmAction = async () => {
+    if (!pendingAction) return;
+
+    try {
+      setActionLoading(pendingAction.userId);
+      setShowConfirmDialog(false);
+      
+      const isCurrentlyActive = pendingAction.currentStatus === 'active';
+      const actionRequest: UserActionRequest = {
+        userId: pendingAction.userId,
+        reason: isCurrentlyActive ? 'Account deactivated by admin' : 'Account activated by admin',
+        notifyUser: true
+      };
+
+      if (isCurrentlyActive) {
+        await adminUserManagementService.deactivateUser(actionRequest);
+        toast.success('User account deactivated successfully');
+      } else {
+        await adminUserManagementService.activateUser(actionRequest);
+        toast.success('User account activated successfully');
+      }
+
+      // Refresh the data
+      await fetchUndergraduates();
+    } catch (error) {
+      console.error('Error toggling user status:', error);
+      toast.error('Failed to update user status. Please check the console for details.');
+    } finally {
+      setActionLoading(null);
+      setPendingAction(null);
+    }
+  };
+
+  // Cancel the action
+  const cancelAction = () => {
+    setShowConfirmDialog(false);
+    setPendingAction(null);
   };
 
   // Export functionality
@@ -592,15 +654,36 @@ export default function UndergraduatesContent() {
                     >
                       {formatStatusText(undergraduate.accountStatus)}
                     </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewUndergraduate(undergraduate)}
-                      className="text-xs px-2 py-1"
-                    >
-                      <Eye className="h-3 w-3 mr-1" />
-                      View
-                    </Button>
+                    <div className="flex space-x-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewUndergraduate(undergraduate)}
+                        className="text-xs px-2 py-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
+                      </Button>
+                      <Button
+                        variant={undergraduate.accountStatus === 'active' ? 'secondary' : 'primary'}
+                        size="sm"
+                        onClick={() => handleToggleUserStatus(undergraduate.id, undergraduate.accountStatus, undergraduate.fullName)}
+                        disabled={actionLoading === undergraduate.id}
+                        className={`text-xs px-2 py-1 ${
+                          undergraduate.accountStatus === 'active' 
+                            ? 'bg-red-500 hover:bg-red-600 text-white' 
+                            : 'bg-green-500 hover:bg-green-600 text-white'
+                        }`}
+                      >
+                        {actionLoading === undergraduate.id ? (
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : undergraduate.accountStatus === 'active' ? (
+                          'Deactivate'
+                        ) : (
+                          'Activate'
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -638,18 +721,25 @@ export default function UndergraduatesContent() {
           </Button>
         </div>
       </div>
-      {/* User Details Sheet */}
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-          {selectedUndergraduate && (
-            <>
-              <SheetHeader className="mb-6">
-                <SheetTitle>Undergraduate Details</SheetTitle>
-                <SheetDescription>
-                  Comprehensive information about the selected undergraduate
-                  student
-                </SheetDescription>
-              </SheetHeader>
+      {/* User Details Modal */}
+      {isSheetOpen && selectedUndergraduate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold">Undergraduate Details</h2>
+                  <p className="text-gray-600">Comprehensive information about the selected undergraduate student</p>
+                </div>
+                <button
+                  onClick={() => setIsSheetOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
               <div className="space-y-6">
                 {/* User Profile Header */}
@@ -908,10 +998,69 @@ export default function UndergraduatesContent() {
                     </>
                   )}
               </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && pendingAction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="h-6 w-6 text-orange-500 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Confirm {pendingAction.action === 'activate' ? 'Activation' : 'Deactivation'}
+              </h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700">
+                Are you sure you want to {pendingAction.action} the account for{' '}
+                <span className="font-semibold">{pendingAction.userName}</span>?
+              </p>
+              
+              {pendingAction.action === 'deactivate' && (
+                <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                  <p className="text-sm text-orange-800">
+                    <strong>Warning:</strong> Deactivating this account will prevent the user from logging in 
+                    and accessing their profile until reactivated.
+                  </p>
+                </div>
+              )}
+              
+              {pendingAction.action === 'activate' && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                  <p className="text-sm text-green-800">
+                    This will restore the user's access to their account and allow them to log in normally.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={cancelAction}
+                className="px-4 py-2"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={pendingAction.action === 'activate' ? 'primary' : 'secondary'}
+                onClick={confirmAction}
+                className={`px-4 py-2 ${
+                  pendingAction.action === 'activate' 
+                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                    : 'bg-red-600 hover:bg-red-700 text-white'
+                }`}
+              >
+                {pendingAction.action === 'activate' ? 'Activate Account' : 'Deactivate Account'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
