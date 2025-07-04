@@ -89,18 +89,25 @@ class GigCompletionService {
       const accessToken = localStorage.getItem('accessToken');
       const url = `${API_BASE_URL}/api/gig-completions${endpoint}`;
       
+      console.log(`Making request to: ${url}`); // Debug log
+      console.log(`Access token present: ${!!accessToken}`); // Debug log
+      
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          ...(accessToken && { 'Authorization': `Bearer ${accessToken}` }),
           ...options.headers,
         },
         ...options,
       });
 
+      console.log(`Response status: ${response.status}`); // Debug log
+
       const data = await response.json();
+      console.log('Response data:', data); // Debug log
 
       if (!response.ok) {
+        console.error('API Error Response:', data); // Debug log
         throw new Error(data.message || 'Request failed');
       }
 

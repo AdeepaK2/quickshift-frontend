@@ -39,51 +39,69 @@ interface Payment {
   invoiceUrl?: string;
 }
 
-// Convert GigCompletion to Payment interface
-const convertToPayment = (gigCompletion: GigCompletion): Payment | null => {
-  const gigRequest = gigCompletion.gigRequest;
-  
-  // Find the current user's worker entry
-  // For now, we'll assume the first worker is the current user
-  // In a real implementation, you'd match by worker ID
-  const myWorkerData = gigCompletion.workers?.[0];
-  
-  if (!myWorkerData) {
-    console.warn('No worker data found for completion:', gigCompletion._id);
+// API response type for completions
+interface CompletionApiResponse {
+  _id: string;
+  gigRequest: {
+    _id: string;
+    title: string;
+    category?: string;
+    location?: any;
+    payRate?: any;
+  };
+  employer: {
+    _id: string;
+    companyName: string;
+    logo?: string;
+  };
+  status: string;
+  completedAt: string;
+  myWork: {
+    payment: {
+      status: string;
+      amount: number;
+      paymentDate?: string;
+    };
+    completedTimeSlots: Array<{
+      hoursWorked: number;
+    }>;
+    totalHours: number;
+    performance?: any;
+  };
+}
+
+// Convert API response to Payment interface
+const convertToPayment = (completion: CompletionApiResponse): Payment | null => {
+  if (!completion.myWork) {
+    console.warn('No myWork data found for completion:', completion._id);
     return null;
   }
   
+  const { myWork, gigRequest, employer } = completion;
+  
   let status = 'pending';
-  if (myWorkerData.payment.status === 'paid') {
+  if (myWork.payment.status === 'paid') {
     status = 'paid';
-  } else if (myWorkerData.payment.status === 'processing') {
+  } else if (myWork.payment.status === 'processing') {
     status = 'processing';
-  } else if (myWorkerData.payment.status === 'failed') {
+  } else if (myWork.payment.status === 'failed') {
     status = 'failed';
   }
 
-  // Get employer name from the completion data or gigRequest
-  let employerName = 'Unknown Employer';
-  if (typeof gigCompletion.employer !== 'string' && gigCompletion.employer?.companyName) {
-    employerName = gigCompletion.employer.companyName;
-  } else if (typeof gigRequest !== 'string' && gigRequest.employer?.companyName) {
-    employerName = gigRequest.employer.companyName;
-  }
-
-  // Calculate total hours from completed time slots
-  const totalHours = myWorkerData.completedTimeSlots?.reduce((total, slot) => total + slot.hoursWorked, 0) || 0;
+  const employerName = employer?.companyName || 'Unknown Employer';
+  const totalHours = myWork.totalHours || 0;
 
   return {
-    id: gigCompletion._id,
-    gigId: typeof gigRequest === 'string' ? gigRequest : gigRequest._id,
-    gigTitle: typeof gigRequest === 'string' ? 'Unknown Job' : gigRequest.title,
+    id: completion._id,
+    gigId: gigRequest._id,
+    gigTitle: gigRequest.title || 'Unknown Job',
     employerName,
-    amount: myWorkerData.payment.amount || 0,
+    amount: myWork.payment.amount || 0,
     currency: 'LKR',
     status,
-    paymentDate: undefined, // Payment date would need to be added to the API response
-    completionDate: gigCompletion.completedAt ? format(new Date(gigCompletion.completedAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
-    description: `Payment for ${typeof gigRequest === 'string' ? 'gig work' : gigRequest.title} (${totalHours} hours)`,
+    paymentDate: myWork.payment.paymentDate,
+    completionDate: completion.completedAt ? format(new Date(completion.completedAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+    description: `Payment for ${gigRequest.title} (${totalHours} hours)`,
     paymentMethod: undefined, // Payment method would need to be added to the API response
     transactionId: undefined // Transaction ID would need to be added to the API response
   };
@@ -93,16 +111,27 @@ const MyPayments: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [summary, setSummary] = useState<PaymentSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  // We'll use setError but not directly accessing error in this component
-  const [, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'processing' | 'failed'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debugMode, setDebugMode] = useState(false);
+
+  // Debug info
+  const debugInfo = {
+    hasToken: !!localStorage.getItem('accessToken'),
+    apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000',
+    paymentsCount: payments.length,
+    summaryExists: !!summary,
+    currentFilter: filter
+  };
 
   useEffect(() => {
     const fetchPayments = async () => {
       try {
         setLoading(true);
         setError(null);
+        
+        console.log('Fetching payments with filter:', filter);
         
         // Fetch gig completions as payments
         const response = await gigCompletionService.getMyCompletions({
@@ -111,18 +140,22 @@ const MyPayments: React.FC = () => {
           sortOrder: 'desc'
         });
         
+        console.log('API Response:', response);
+        
         if (response.success && response.data?.completions) {
           // Convert backend format to frontend format
           const convertedPayments = response.data.completions
-            .filter(completion => completion.workers && completion.workers.length > 0) // Only include completions with worker data
-            .map(convertToPayment)
+            .map((completion: any) => convertToPayment(completion as CompletionApiResponse))
             .filter((payment): payment is Payment => payment !== null); // Filter out null values and assert type
           
+          console.log('Converted payments:', convertedPayments);
           setPayments(convertedPayments);
           
           // Fetch payment stats
           try {
             const statsResponse = await gigCompletionService.getPaymentStats();
+            console.log('Stats Response:', statsResponse);
+            
             if (statsResponse.success && statsResponse.data) {
               setSummary({
                 totalEarnings: statsResponse.data.totalPaid,
@@ -158,12 +191,13 @@ const MyPayments: React.FC = () => {
             });
           }
         } else {
+          console.error('Failed to load payments - invalid response:', response);
           setPayments([]);
-          setError('Failed to load payment data');
+          setError(response.message || 'Failed to load payment data');
         }
       } catch (error) {
         console.error('Error fetching payments:', error);
-        setError('Error loading your payment data');
+        setError('Error loading your payment data. Please check your connection and try again.');
       } finally {
         setLoading(false);
       }
@@ -287,8 +321,52 @@ const MyPayments: React.FC = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg shadow p-12 text-center">
+        <div className="text-red-500 text-4xl mb-4">⚠️</div>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Payments</h3>
+        <p className="text-gray-600 mb-6">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="bg-quickshift-primary text-white px-6 py-2 rounded-lg hover:bg-quickshift-secondary transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Debug Panel */}
+      {debugMode && (
+        <div className="bg-gray-100 border border-gray-300 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-gray-900">Debug Information</h3>
+            <button 
+              onClick={() => setDebugMode(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+          <pre className="text-xs text-gray-700 overflow-auto">
+            {JSON.stringify(debugInfo, null, 2)}
+          </pre>
+        </div>
+      )}
+
+      {/* Debug Toggle Button */}
+      {!debugMode && (
+        <button 
+          onClick={() => setDebugMode(true)}
+          className="fixed bottom-4 right-4 bg-gray-600 text-white px-3 py-2 rounded-full text-xs hover:bg-gray-700 z-50"
+        >
+          Debug
+        </button>
+      )}
+
       {/* Summary Cards */}
       {summary && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
