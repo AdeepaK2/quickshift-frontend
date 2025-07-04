@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Download,
   Filter,
+  AlertTriangle,
 } from "lucide-react";
 import Button from "@/components/ui/button";
 import Select from "@/components/ui/select";
@@ -22,6 +23,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ErrorState } from "@/components/ui/error-state";
 import { LoadingState } from "@/components/ui/loading";
 import { AdminEmployerData, adminService } from '@/services/adminService';
+import { adminEmployerManagementService, EmployerActionRequest } from '@/services/adminEmployerManagementService';
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -49,6 +51,14 @@ export default function EmployerContent() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    employerId: string;
+    currentStatus: boolean;
+    action: 'activate' | 'deactivate';
+    employerName: string;
+  } | null>(null);
 
   // Debug logging
   useEffect(() => {
@@ -280,6 +290,56 @@ export default function EmployerContent() {
     setIsSheetOpen(true);
   };
 
+  // Handle activating/deactivating employer
+  const handleToggleEmployerStatus = async (employerId: string, currentStatus: boolean, employerName: string) => {
+    setPendingAction({
+      employerId,
+      currentStatus,
+      action: currentStatus ? 'deactivate' : 'activate',
+      employerName
+    });
+    setShowConfirmDialog(true);
+  };
+
+  // Confirm and execute the action
+  const confirmAction = async () => {
+    if (!pendingAction) return;
+
+    try {
+      setActionLoading(pendingAction.employerId);
+      setShowConfirmDialog(false);
+      
+      const actionRequest: EmployerActionRequest = {
+        employerId: pendingAction.employerId,
+        reason: pendingAction.currentStatus ? 'Account deactivated by admin' : 'Account activated by admin',
+        notifyEmployer: true
+      };
+
+      if (pendingAction.currentStatus) {
+        await adminEmployerManagementService.deactivateEmployer(actionRequest);
+        toast.success('Employer account deactivated successfully');
+      } else {
+        await adminEmployerManagementService.activateEmployer(actionRequest);
+        toast.success('Employer account activated successfully');
+      }
+
+      // Refresh the data
+      await fetchEmployers();
+    } catch (error) {
+      console.error('Error toggling employer status:', error);
+      toast.error('Failed to update employer status. Please check the console for details.');
+    } finally {
+      setActionLoading(null);
+      setPendingAction(null);
+    }
+  };
+
+  // Cancel the action
+  const cancelAction = () => {
+    setShowConfirmDialog(false);
+    setPendingAction(null);
+  };
+
   // Export functionality
   const handleExportData = () => {
     if (!filteredEmployers || filteredEmployers.length === 0) {
@@ -495,15 +555,42 @@ export default function EmployerContent() {
                     >
                       {employer.isVerified ? "Verified" : "Not Verified"}
                     </Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleViewEmployer(employer)}
-                      className="text-xs px-2 py-1"
+                    <Badge
+                      variant={employer.isActive ? "success" : "secondary"}
+                      className="text-xs"
                     >
-                      <Eye className="h-3 w-3 mr-1" />
-                      View
-                    </Button>
+                      {employer.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                    <div className="flex space-x-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewEmployer(employer)}
+                        className="text-xs px-2 py-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+                      >
+                        <Eye className="h-3 w-3 mr-1" />
+                        View
+                      </Button>
+                      <Button
+                        variant={employer.isActive ? 'secondary' : 'primary'}
+                        size="sm"
+                        onClick={() => handleToggleEmployerStatus(employer._id, employer.isActive, employer.companyName)}
+                        disabled={actionLoading === employer._id}
+                        className={`text-xs px-2 py-1 ${
+                          employer.isActive 
+                            ? 'bg-red-500 hover:bg-red-600 text-white' 
+                            : 'bg-green-500 hover:bg-green-600 text-white'
+                        }`}
+                      >
+                        {actionLoading === employer._id ? (
+                          <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : employer.isActive ? (
+                          'Deactivate'
+                        ) : (
+                          'Activate'
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -512,17 +599,25 @@ export default function EmployerContent() {
         </div>
       )}
 
-      {/* Employer Details Sheet */}
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-          {selectedEmployer && (
-            <>
-              <SheetHeader className="mb-6">
-                <SheetTitle>Employer Details</SheetTitle>
-                <SheetDescription>
-                  Comprehensive information about {selectedEmployer.companyName}
-                </SheetDescription>
-              </SheetHeader>
+      {/* Employer Details Modal */}
+      {isSheetOpen && selectedEmployer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-semibold">Employer Details</h2>
+                  <p className="text-gray-600">Comprehensive information about {selectedEmployer.companyName}</p>
+                </div>
+                <button
+                  onClick={() => setIsSheetOpen(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
 
               <div className="space-y-6">
                 {/* Company Profile Header */}
@@ -544,7 +639,7 @@ export default function EmployerContent() {
                       <Badge variant={selectedEmployer.isVerified ? "success" : "warning"}>
                         {selectedEmployer.isVerified ? "Verified" : "Not Verified"}
                       </Badge>
-                      <Badge variant={selectedEmployer.isActive ? "success" : "destructive"}>
+                      <Badge variant={selectedEmployer.isActive ? "success" : "secondary"}>
                         {selectedEmployer.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </div>
@@ -651,10 +746,69 @@ export default function EmployerContent() {
                   </div>
                 </div>
               </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && pendingAction && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="h-6 w-6 text-orange-500 mr-3" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Confirm {pendingAction.action === 'activate' ? 'Activation' : 'Deactivation'}
+              </h3>
+            </div>
+            
+            <div className="mb-6">
+              <p className="text-gray-700">
+                Are you sure you want to {pendingAction.action} the account for{' '}
+                <span className="font-semibold">{pendingAction.employerName}</span>?
+              </p>
+              
+              {pendingAction.action === 'deactivate' && (
+                <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-md">
+                  <p className="text-sm text-orange-800">
+                    <strong>Warning:</strong> Deactivating this account will prevent the employer from logging in 
+                    and posting new gigs until reactivated.
+                  </p>
+                </div>
+              )}
+              
+              {pendingAction.action === 'activate' && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
+                  <p className="text-sm text-green-800">
+                    This will restore the employer's access to their account and allow them to log in and post gigs normally.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={cancelAction}
+                className="px-4 py-2"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant={pendingAction.action === 'activate' ? 'primary' : 'secondary'}
+                onClick={confirmAction}
+                className={`px-4 py-2 ${
+                  pendingAction.action === 'activate' 
+                    ? 'bg-green-600 hover:bg-green-700 text-white' 
+                    : 'bg-red-600 hover:bg-red-700 text-white'
+                }`}
+              >
+                {pendingAction.action === 'activate' ? 'Activate Account' : 'Deactivate Account'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
