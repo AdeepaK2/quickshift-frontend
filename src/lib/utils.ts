@@ -72,7 +72,7 @@ export function isValidPhone(phone: string): boolean {
  */
 export function getStatusVariant(
   status: string | undefined
-): "default" | "success" | "warning" | "destructive" {
+): "default" | "success" | "warning" | "destructive" | "info" {
   if (!status) return "default";
 
   switch (status.toLowerCase()) {
@@ -83,8 +83,13 @@ export function getStatusVariant(
       return "success";
     case "pending":
     case "draft":
+      return "info"; // Changed from warning to info (blue)
     case "in-progress":
-      return "warning";
+    case "in_progress":
+      return "info"; // Changed from warning to info (blue)
+    case "cancelled":
+    case "canceled":
+      return "destructive"; // Red for cancelled
     case "rejected":
     case "suspended":
     case "inactive":

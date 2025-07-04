@@ -4,9 +4,7 @@
  */
 
 const API_BASE_URL =
-  process.env.NODE_ENV === "development"
-    ? "http://localhost:5000"
-    : "https://quickshift-9qjun.ondigitalocean.app";
+  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000";
 
 // Environment check
 const isDevelopment = process.env.NODE_ENV === "development";
@@ -30,8 +28,57 @@ export interface ApiResponse<T> {
   pages?: number;
 }
 
+export interface Gig {
+  id: string;
+  title: string;
+  employer: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  category: string;
+  status: "draft" | "open" | "in_progress" | "completed" | "cancelled";
+  city: string;
+  totalPositions: number;
+  filledPositions: number;
+  applicationDeadline: string;
+  description: string;
+  payRate?: {
+    type: "hourly" | "fixed" | "daily";
+    min?: number;
+    max?: number;
+    amount?: number;
+    currency: string;
+  };
+  timeSlots: Array<{
+    date: string;
+    startTime: string;
+    endTime: string;
+    peopleNeeded: number;
+    peopleAssigned: number;
+  }>;
+  location: {
+    address: string;
+    city: string;
+    postalCode: string;
+  };
+  skills?: string[];
+  experience?: string;
+  dressCode?: string;
+  equipment?: string;
+  isAcceptingApplications: boolean;
+  applicants: Array<{
+    id: string;
+    name: string;
+    status: "pending" | "accepted" | "rejected";
+    appliedAt: string;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /**
- * Generic API call function using deployed API
+ * Generic API call function with fallback to local API
  */
 async function apiCall<T>(
   endpoint: string,
@@ -44,7 +91,7 @@ async function apiCall<T>(
 
   // Add authentication token if available
   if (typeof window !== "undefined") {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("accessToken");
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
@@ -55,57 +102,26 @@ async function apiCall<T>(
     headers,
   };
 
-  const apiUrl = `${API_BASE_URL}${endpoint}`;
-
-  // Add debugging for development
-  if (isDevelopment) {
-    console.log(`API Call: ${requestOptions.method || "GET"} ${apiUrl}`);
-    console.log("API Base URL:", API_BASE_URL);
-    console.log("Environment:", process.env.NODE_ENV);
-  }
-  let response: Response;
-
   try {
-    // Add timeout to prevent hanging requests
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    // Direct backend API call
+    const backendUrl = `${API_BASE_URL}${endpoint}`;
+    if (isDevelopment) {
+      console.log(`API Call: ${requestOptions.method || "GET"} ${backendUrl}`);
+    }
 
-    response = await fetch(apiUrl, {
-      ...requestOptions,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
+    const response = await fetch(backendUrl, requestOptions);
 
     if (!response.ok) {
-      throw new ApiError(
-        `API request failed with status ${response.status}: ${response.statusText}`
-      );
+      throw new ApiError(`API request failed with status ${response.status}`);
     }
+
+    const data = await response.json();
+    return data;
   } catch (error) {
-    console.error(`API call failed for ${endpoint}:`, error);
-
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new ApiError("Request timed out - please check your connection");
-    }
-
+    console.error(`API request failed for ${endpoint}:`, error);
     throw new ApiError(
       `API request failed: ${
         error instanceof Error ? error.message : "Unknown error"
-      }`
-    );
-  }
-
-  try {
-    const data = await response.json();
-    return data;
-  } catch (parseError) {
-    console.error(`Failed to parse response for ${endpoint}:`, parseError);
-    throw new ApiError(
-      `Failed to parse API response: ${
-        parseError instanceof Error
-          ? parseError.message
-          : "Unknown parsing error"
       }`
     );
   }
@@ -129,39 +145,6 @@ export type Employer = {
   companyDescription?: string;
   createdAt: string;
   updatedAt: string;
-};
-
-// Define Undergraduate type here for API typing
-export type Undergraduate = {
-  _id: string;
-  firstName: string;
-  lastName: string;
-  fullName?: string;
-  email: string;
-  phone?: string;
-  profilePicture?: string;
-  dateOfBirth?: string;
-  gender?: string;
-  university?: string;
-  faculty?: string;
-  yearOfStudy?: number;
-  studentIdVerified: boolean;
-  bio?: string;
-  address?: string;
-  city?: string;
-  postalCode?: string;
-  role: string;
-  isActive: boolean;
-  isVerified: boolean;
-  lastLoginAt?: string;
-  skillsAndInterests?: string[];
-  documentsUploaded?: string[];
-  gpa?: number;
-  createdAt: string;
-  updatedAt: string;
-  // Computed fields for compatibility
-  accountStatus?: string;
-  verificationStatus?: string;
 };
 
 /**
@@ -189,6 +172,32 @@ export const employersApi = {
 /**
  * Students/Undergraduates API
  */
+export type Undergraduate = {
+  id: string;
+  _id: string;
+  profilePicture?: string | null;
+  fullName: string;
+  email: string;
+  university: string;
+  yearOfStudy: number;
+  studentIdVerified: boolean;
+  phoneNumber: string;
+  faculty: string;
+  gender: string;
+  dateOfBirth: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  accountStatus: string;
+  verificationStatus: string;
+  lastLogin: string;
+  bio: string;
+  gpa: number;
+  skillsAndInterests: string[];
+  documentsUploaded: string[];
+  joinDate: string;
+  verified: boolean;
+};
 
 export const studentsApi = {
   getAll: async (): Promise<ApiResponse<Undergraduate[]>> => {
@@ -212,8 +221,6 @@ export const studentsApi = {
 /**
  * Gigs API
  */
-import type { Gig } from "@/lib/api/gigsApi";
-
 export const gigsApi = {
   getAll: async (): Promise<ApiResponse<Gig[]>> => {
     return apiCall(API_ENDPOINTS.GIGS);
@@ -264,14 +271,11 @@ export const undergraduatesApi = {
     });
   },
   activate: async (id: string): Promise<ApiResponse<Undergraduate>> => {
-    return apiCall(`${API_ENDPOINTS.USERS}/${id}/activate`, {
+    return apiCall(`${API_ENDPOINTS.USERS}/${id}/verify`, {
       method: "PATCH",
     });
   },
-  update: async (
-    id: string,
-    data: Partial<Undergraduate>
-  ): Promise<ApiResponse<Undergraduate>> => {
+  update: async (id: string, data: Partial<Undergraduate>): Promise<ApiResponse<Undergraduate>> => {
     return apiCall(`${API_ENDPOINTS.USERS}/${id}`, {
       method: "PUT",
       body: JSON.stringify(data),
@@ -288,9 +292,7 @@ export const undergraduatesApi = {
  * Analytics API
  */
 export const analyticsApi = {
-  getDashboardStats: async (): Promise<
-    ApiResponse<Record<string, unknown>>
-  > => {
+  getDashboardStats: async (): Promise<ApiResponse<Record<string, unknown>>> => {
     return apiCall(`${API_ENDPOINTS.ANALYTICS}/dashboard`);
   },
   getUserStats: async (): Promise<ApiResponse<Record<string, unknown>>> => {

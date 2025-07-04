@@ -1,71 +1,19 @@
+// app/employer/layout.tsx
 "use client";
 
-import { useState, useEffect } from 'react';
-import { authService } from '@/services/authService';
-import Sidebar from '@/components/layout/Sidebar';
-import { JobProvider } from '@/contexts/JobContext';
+import React from 'react';
 
-interface EmployerUser {
-  companyName?: string;
-  email?: string;
-}
-
-export default function EmployerLayout({
+function EmployerLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [user, setUser] = useState<unknown>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Load user data from localStorage
-    const userData = authService.getUser();
-    if (userData) {
-      setUser(userData);
-    }
-    setLoading(false);
-  }, []);
-
-  const handleLogout = async () => {
-    if (confirm("Are you sure you want to logout?")) {
-      try {
-        const refreshToken = authService.getRefreshToken();
-        if (refreshToken) {
-          await authService.logout(refreshToken);
-        }
-        // Clear all auth data
-        authService.clearTokens();
-        // Redirect to login
-        window.location.href = '/auth/login';
-      } catch (error) {
-        console.error('Logout error:', error);
-        // Force logout even if API call fails
-        authService.clearTokens();
-        window.location.href = '/auth/login';
-      }
-    }
-  };
-
-  // Show loading state while user data loads
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0077B6] mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
-  }
   return (
-    <JobProvider>
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar user={user as EmployerUser} onLogout={handleLogout} />
-        <main className="flex-1 p-6">
-          {children}
-        </main>
-      </div>
-    </JobProvider>
+    <div className="dashboard-container">
+      {children}
+    </div>
   );
 }
+
+// Export directly since middleware handles auth protection
+export default EmployerLayout;

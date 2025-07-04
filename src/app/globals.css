@@ -3,51 +3,76 @@
 @tailwind utilities;
 
 :root {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 9.02%;
+  --background: 248 250 252; /* slate-50 */
+  --foreground: 15 23 42; /* slate-800 */
   --radius: 0.625rem;
   
-  /* shadcn/ui variables */
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 9.02%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 9.02%;
-  --primary: 0 0% 9.02%;
-  --primary-foreground: 0 0% 98.04%;
-  --secondary: 0 0% 95.69%;
-  --secondary-foreground: 0 0% 9.02%;
-  --muted: 0 0% 95.69%;
-  --muted-foreground: 0 0% 44.71%;
-  --accent: 0 0% 95.69%;
-  --accent-foreground: 0 0% 9.02%;
+  /* QuickShift Brand Colors - Consis  .sidebar-nav-item {
+    @apply flex items-center justify-between px-2 py-1.5 text-xs font-medium transition-all duration-200 rounded-lg;
+    color: white !important;
+    outline: none !important;
+    border: none !important;
+    font-weight: 600 !important;
+  }ross all dashboards */
+  --primary: 197 100% 35%; /* #0077B6 - QuickShift Primary Blue */
+  --primary-foreground: 248 250 252; /* White text on primary */
+  --secondary: 188 100% 42%; /* #00B4D8 - QuickShift Secondary */
+  --secondary-foreground: 15 23 42;
+  
+  /* Dashboard-specific variables for consistent theming */
+  --sidebar-bg: 217 91% 19%; /* #03045E - QuickShift Dark */
+  --sidebar-text: 248 250 252;
+  --sidebar-active: 197 100% 35%;
+  --sidebar-hover: 217 91% 25%;
+  
+  /* Card and surface colors */
+  --card: 255 255 255;
+  --card-foreground: 15 23 42;
+  --popover: 255 255 255;
+  --popover-foreground: 15 23 42;
+  
+  /* Neutral colors for better text contrast */
+  --muted: 241 245 249; /* slate-100 */
+  --muted-foreground: 71 85 105; /* slate-600 */
+  --accent: 240 246 252; /* blue-50 */
+  --accent-foreground: 30 41 59; /* slate-700 */
+  
+  /* Status colors */
   --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98.04%;
-  --border: 0 0% 89.41%;
-  --input: 0 0% 89.41%;
-  --ring: 217.2 91.2% 59.8%;
+  --destructive-foreground: 248 250 252;
+  --success: 142 76% 36%;
+  --success-foreground: 248 250 252;
+  --warning: 215 20% 65%; /* Changed to neutral gray instead of orange */
+  --warning-foreground: 15 23 42;
+  
+  /* Borders and inputs */
+  --border: 226 236 246; /* slate-200 */
+  --input: 241 245 249; /* slate-100 */
+  --ring: 197 100% 35%; /* Focus ring matches primary */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: 0 0% 3.92%;
-    --foreground: 0 0% 92.94%;
-    --card: 0 0% 9.02%;
-    --card-foreground: 0 0% 98.04%;
-    --popover: 0 0% 9.02%;
-    --popover-foreground: 0 0% 98.04%;
-    --primary: 0 0% 98.04%;
-    --primary-foreground: 0 0% 9.02%;
-    --secondary: 0 0% 15.29%;
-    --secondary-foreground: 0 0% 98.04%;
-    --muted: 0 0% 15.29%;
-    --muted-foreground: 0 0% 63.53%;
-    --accent: 0 0% 15.29%;
-    --accent-foreground: 0 0% 98.04%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98.04%;
-    --border: 0 0% 15.29%;
-    --input: 0 0% 15.29%;
-    --ring: 217.2 91.2% 59.8%;
+    /* Keep consistent theme even in dark mode preference */
+    --background: 248 250 252;
+    --foreground: 15 23 42;
+    --card: 255 255 255;
+    --card-foreground: 15 23 42;
+    --popover: 255 255 255;
+    --popover-foreground: 15 23 42;
+    --primary: 197 100% 35%;
+    --primary-foreground: 248 250 252;
+    --secondary: 188 100% 42%;
+    --secondary-foreground: 15 23 42;
+    --muted: 241 245 249;
+    --muted-foreground: 71 85 105;
+    --accent: 240 246 252;
+    --accent-foreground: 30 41 59;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 248 250 252;
+    --border: 226 236 246;
+    --input: 241 245 249;
+    --ring: 197 100% 35%;
   }
 }
 
@@ -55,9 +80,404 @@
   * {
     @apply border-border;
   }
+  
+  /* Force all borders to be gray and override any yellow/orange styling */
+  .border, [class*="border-"]:not([class*="border-red"]):not([class*="border-green"]):not([class*="border-blue"]):not([class*="border-purple"]) {
+    border-color: #e2e8f0 !important; /* slate-200 */
+  }
+  
+  /* Specifically override any yellow/orange borders */
+  .border-yellow-200, .border-orange-200, .border-amber-200,
+  .border-yellow-300, .border-orange-300, .border-amber-300,
+  .border-yellow-400, .border-orange-400, .border-amber-400 {
+    border-color: #e2e8f0 !important; /* slate-200 */
+  }
+  
+  /* Force override any yellow/orange badge backgrounds */
+  .bg-yellow-100, .bg-orange-100, .bg-amber-100,
+  .bg-yellow-200, .bg-orange-200, .bg-amber-200,
+  .bg-yellow-50, .bg-orange-50, .bg-amber-50 {
+    background-color: #f1f5f9 !important; /* slate-100 */
+  }
+  
+  .text-yellow-800, .text-orange-800, .text-amber-800,
+  .text-yellow-700, .text-orange-700, .text-amber-700,
+  .text-yellow-600, .text-orange-600, .text-amber-600 {
+    color: #475569 !important; /* slate-600 */
+  }
+
+  /* Override any yellow/orange utility classes that might appear */
+  *[class*="yellow"], *[class*="orange"], *[class*="amber"] {
+    background-color: #f1f5f9 !important;
+    border-color: #e2e8f0 !important;
+    color: #475569 !important;
+  }
+  
+  /* Prevent autofill yellow backgrounds and borders */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px white inset !important;
+    -webkit-text-fill-color: #1e293b !important;
+    border-color: #e2e8f0 !important;
+  }
+  
+  /* Override any focus states that might be yellow */
+  *:focus {
+    outline: none !important;
+    box-shadow: 0 0 0 2px hsl(var(--ring)) !important;
+  }
+  
   body {
     @apply bg-background text-foreground;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: 'Inter', 'Poppins', Arial, Helvetica, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevent any yellow/background color artifacts */
+    background-color: #F8FAFC !important;
+    /* Prevent any yellow background bleeding through */
+    margin: 0;
+    padding: 0;
+  }
+  
+  html {
+    /* Prevent any yellow/background color artifacts */
+    background-color: #F8FAFC !important;
+  }
+  
+  /* Dashboard Layout Improvements */
+  .dashboard-container {
+    @apply min-h-screen bg-slate-50;
+    /* Prevent any yellow/background color artifacts */
+    background: #F8FAFC !important;
+  }
+  
+  /* Force better text visibility across all dashboards */
+  .dashboard-container h1,
+  .dashboard-container h2,
+  .dashboard-container h3,
+  .dashboard-container h4 {
+    color: #1e293b !important; /* slate-800 */
+    font-weight: 700 !important;
+  }
+  
+  .dashboard-container p,
+  .dashboard-container span {
+    color: #334155 !important; /* slate-700 */
+    font-weight: 500 !important;
+  }
+  
+  /* Ensure proper contrast for text elements */
+  .text-gray-600 {
+    color: #475569 !important; /* slate-600 -> slate-700 for better visibility */
+  }
+  
+  .text-gray-500 {
+    color: #64748b !important; /* slate-500 -> slate-600 for better visibility */
+  }
+  
+  /* Sidebar Styling - Consistent across all dashboards */
+  .dashboard-sidebar {
+    @apply fixed inset-y-0 left-0 z-50 w-52;
+    background: hsl(var(--sidebar-bg)) !important;
+    color: hsl(var(--sidebar-text));
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    /* Ensure full height coverage */
+    min-height: 100vh !important;
+    /* Prevent any background showing through */
+    background-color: #03045E !important;
+  }
+
+  /* Force all sidebar text to be white and readable */
+  .dashboard-sidebar * {
+    color: white !important;
+  }
+
+  .dashboard-sidebar h1, 
+  .dashboard-sidebar h2, 
+  .dashboard-sidebar h3, 
+  .dashboard-sidebar h4, 
+  .dashboard-sidebar h5, 
+  .dashboard-sidebar h6 {
+    color: white !important;
+    font-weight: 700 !important;
+  }
+
+  .dashboard-sidebar p, 
+  .dashboard-sidebar span, 
+  .dashboard-sidebar div {
+    color: white !important;
+  }
+  
+  /* Prevent scrollbar styling issues */
+  .dashboard-sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .dashboard-sidebar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .dashboard-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+  }
+  
+  .dashboard-sidebar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+  
+  .sidebar-nav-item {
+    @apply flex items-center justify-between px-3 py-2 text-xs font-medium transition-all duration-200 rounded-lg;
+    color: white !important;
+    outline: none !important;
+    border: none !important;
+    font-weight: 600 !important;
+  }
+  
+  .sidebar-nav-item:hover {
+    background: hsl(var(--sidebar-hover));
+    color: white !important;
+    outline: none !important;
+  }
+  
+  .sidebar-nav-item:focus {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  
+  .sidebar-nav-item.active {
+    background: hsl(var(--sidebar-active));
+    color: white !important;
+    border-right: 3px solid white;
+    outline: none !important;
+    font-weight: 700 !important;
+  }
+  
+  /* Main Content Area */
+  .main-content {
+    @apply ml-52 min-h-screen bg-slate-50;
+    /* Ensure consistent background */
+    background-color: #F8FAFC !important;
+  }
+  
+  /* Card Improvements */
+  .dashboard-card {
+    @apply bg-white rounded-lg shadow-sm border border-slate-200 p-4;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  }
+  
+  .dashboard-card:hover {
+    @apply shadow-md;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  
+  /* Text Contrast Improvements */
+  .text-primary {
+    @apply text-slate-900 font-medium;
+  }
+  
+  .text-secondary {
+    @apply text-slate-700;
+  }
+  
+  .text-muted {
+    @apply text-slate-600;
+  }
+  
+  .text-light {
+    @apply text-slate-500;
+  }
+  
+  /* Button Improvements */
+  .btn-primary {
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    @apply px-4 py-2 rounded-md font-medium transition-all duration-200 shadow-sm;
+  }
+  
+  .btn-primary:hover {
+    background: hsl(var(--primary) / 0.9);
+    @apply shadow-md;
+  }
+  
+  .btn-secondary {
+    background: hsl(var(--secondary));
+    color: hsl(var(--secondary-foreground));
+    @apply px-4 py-2 rounded-md font-medium transition-all duration-200 shadow-sm;
+  }
+  
+  .btn-secondary:hover {
+    background: hsl(var(--secondary) / 0.9);
+    @apply shadow-md;
+  }
+  
+  /* Status Badge Improvements */
+  .status-badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+  
+  .status-active {
+    @apply bg-green-100 text-green-800 border border-green-200;
+  }
+  
+  .status-pending {
+    @apply bg-blue-100 text-blue-800 border border-blue-200;
+  }
+  
+  .status-inactive {
+    @apply bg-red-100 text-red-800 border border-red-200;
+  }
+  
+  .status-processing {
+    @apply bg-blue-100 text-blue-800 border border-blue-200;
+  }
+  
+  /* Table Improvements */
+  .dashboard-table {
+    @apply w-full bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden;
+  }
+  
+  .dashboard-table th {
+    @apply bg-slate-50 px-6 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider border-b border-slate-200;
+  }
+  
+  .dashboard-table td {
+    padding: 1rem 1.5rem;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: #0f172a;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  
+  .dashboard-table tr:hover {
+    background-color: #f8fafc;
+  }
+  
+  /* Form Improvements */
+  .form-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.375rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    color: #0f172a;
+  }
+  
+  .form-input::placeholder {
+    color: #94a3b8;
+  }
+  
+  .form-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #0077B6;
+    border-color: #0077B6;
+  }
+  
+  .form-label {
+    display: block;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    font-weight: 500;
+    color: #334155;
+    margin-bottom: 0.25rem;
+  }
+    /* Header Improvements - Blue background like sidebar */
+  .dashboard-header {
+    background: linear-gradient(135deg, #1e40af, #3b82f6, #6366f1) !important;
+    background-color: #1e40af !important; /* Fallback blue background */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+    @apply px-2 py-1.5;
+    /* Ensure proper sizing and styling */
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 80px !important;
+    height: auto !important;
+    line-height: 1.3 !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    border-radius: 0.5rem !important;
+  }
+
+  /* Also target any header container or wrapper */
+  .header-container,
+  .header-wrapper,
+  [class*="header"],
+  .dashboard-header-container {
+    background: #03045E !important;
+    background-color: #03045E !important;
+  }
+
+  /* Force dashboard header text to be white for good contrast */
+  .dashboard-header h1,
+  .dashboard-header h2,
+  .dashboard-header h3 {
+    color: white !important;
+    font-weight: 700 !important;
+  }
+
+  .dashboard-header p,
+  .dashboard-header span,
+  .dashboard-header div {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-weight: 500 !important;
+  }
+
+  /* Dashboard stats cards - pure white background with excellent contrast */
+  .dashboard-header .bg-white\/80,
+  .dashboard-header .bg-white,
+  .dashboard-header [class*="bg-white"] {
+    background-color: #ffffff !important; /* Pure white, no transparency */
+    backdrop-filter: none !important;
+    border: 1px solid #e2e8f0 !important; /* Light gray border */
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+    border-radius: 0.5rem !important;
+  }
+
+  /* All text in stats cards - dark and highly visible */
+  .dashboard-header .bg-white\/80 *,
+  .dashboard-header .bg-white *,
+  .dashboard-header [class*="bg-white"] * {
+    color: #0f172a !important; /* slate-900 - darkest for maximum contrast */
+    font-weight: 600 !important;
+  }
+
+  /* Large numbers and main metrics - extra bold */
+  .dashboard-header .bg-white\/80 .text-2xl,
+  .dashboard-header .bg-white\/80 .text-3xl,
+  .dashboard-header .bg-white\/80 .text-4xl,
+  .dashboard-header .bg-white [class*="text-"][class*="xl"],
+  .dashboard-header .bg-white .text-2xl,
+  .dashboard-header .bg-white .text-3xl,
+  .dashboard-header .bg-white .text-4xl,
+  .dashboard-header [class*="bg-white"] .text-2xl,
+  .dashboard-header [class*="bg-white"] .text-3xl,
+  .dashboard-header [class*="bg-white"] .text-4xl,
+  .dashboard-header [class*="bg-white"] [class*="text-"][class*="xl"] {
+    color: #0f172a !important; /* slate-900 for maximum contrast */
+    font-weight: 800 !important; /* Extra bold */
+  }
+
+  /* Secondary text in stats cards - still dark but slightly lighter */
+  .dashboard-header .bg-white\/80 .text-sm,
+  .dashboard-header .bg-white\/80 .text-xs,
+  .dashboard-header .bg-white .text-sm,
+  .dashboard-header .bg-white .text-xs,
+  .dashboard-header [class*="bg-white"] .text-sm,
+  .dashboard-header [class*="bg-white"] .text-xs {
+    color: #334155 !important; /* slate-700 for secondary text */
+    font-weight: 600 !important;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-slate-900;
+  }
+
+  .page-subtitle {
+    @apply text-slate-600 mt-1;
   }
 }
 
@@ -107,4 +527,94 @@
 
 .animate-fade-in-up {
   animation: fade-in-up 0.8s ease-out forwards;
+}
+
+/* Mobile Dashboard Responsive Utilities */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0;
+  }
+  
+  .dashboard-header {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  
+  .dashboard-card {
+    padding: 0.75rem;
+  }
+  
+  .sidebar-nav-item {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+
+  /* Mobile-specific dashboard header fixes - handled by Tailwind classes */
+
+  /* Smaller stat card text and padding on mobile for better fit */
+  @media (max-width: 640px) {
+    .dashboard-header .grid > div {
+      padding: 0.75rem !important;
+    }
+
+    .dashboard-header .grid > div .text-lg,
+    .dashboard-header .grid > div .text-xl,
+    .dashboard-header .grid > div .text-2xl {
+      font-size: 1rem !important;
+      line-height: 1.25rem !important;
+    }
+
+    .dashboard-header .grid > div .text-xs,
+    .dashboard-header .grid > div .text-sm {
+      font-size: 0.625rem !important;
+      line-height: 1rem !important;
+    }
+  }
+}
+
+/* Touch targets for mobile */
+@media (max-width: 768px) {
+  .sidebar-nav-item,
+  .mobile-menu-button,
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Z-index hierarchy for mobile */
+  .mobile-menu-button {
+    z-index: 80 !important;
+  }
+  
+  .dashboard-sidebar {
+    z-index: 60 !important;
+  }
+  
+  .dashboard-header {
+    z-index: 20 !important;
+  }
+}
+
+/* Dashboard Grid Improvements */
+.dashboard-grid {
+  @apply grid gap-4;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+@media (max-width: 475px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile Card Enhancements */
+.mobile-card {
+  @apply bg-white rounded-xl shadow-lg p-4 border border-gray-200;
+}
+
+@media (min-width: 640px) {
+  .mobile-card {
+    @apply p-6;
+  }
 }

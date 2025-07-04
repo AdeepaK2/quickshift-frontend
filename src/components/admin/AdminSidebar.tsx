@@ -8,46 +8,22 @@ import {
   Briefcase,
   Settings,
   LogOut,
-  Copyright,
   Menu,
   X,
   User,
 } from "lucide-react";
-
-// Navigation items for the admin panel
-const navItems = [
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    id: "undergraduate",
-    label: "Undergraduates",
-    icon: Users,
-  },
-  {
-    id: "employer",
-    label: "Employers",
-    icon: Users,
-  },
-  {
-    id: "gigs",
-    label: "Gigs",
-    icon: Briefcase,
-  },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: Settings,
-  },
-];
 
 interface AdminSidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   user?: UserType | null;
   onLogout: () => void;
+  stats?: {
+    totalUsers: number;
+    totalEmployers: number;
+    activeGigs: number;
+    totalRevenue: number;
+  };
 }
 
 export default function AdminSidebar({
@@ -55,6 +31,12 @@ export default function AdminSidebar({
   setActiveTab,
   user,
   onLogout,
+  stats = {
+    totalUsers: 0,
+    totalEmployers: 0,
+    activeGigs: 0,
+    totalRevenue: 0
+  }
 }: AdminSidebarProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -65,13 +47,45 @@ export default function AdminSidebar({
     setIsMobileMenuOpen(false); // Close mobile menu on navigation
   };
 
+  // Navigation items for the admin panel
+  const navItems = [
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      id: "undergraduate",
+      label: "Undergraduates",
+      icon: Users,
+      badge: stats.totalUsers.toString(),
+    },
+    {
+      id: "employer",
+      label: "Employers",
+      icon: User,
+      badge: stats.totalEmployers.toString(),
+    },
+    {
+      id: "gigs",
+      label: "Gig Requests",
+      icon: Briefcase,
+      badge: stats.activeGigs.toString(),
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: Settings,
+    },
+  ];
+
   return (
     <>
       {/* Mobile menu button */}
-      <div className="fixed top-4 left-4 z-40 md:hidden">
+      <div className="fixed top-4 left-4 z-[80] md:hidden">
         <button
           onClick={toggleMobileMenu}
-          className="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+          className="p-3 rounded-lg bg-[#023E8A] text-white hover:bg-[#0077B6] transition-colors shadow-md"
           aria-expanded={isMobileMenuOpen}
           aria-label="Toggle navigation menu"
         >
@@ -85,81 +99,112 @@ export default function AdminSidebar({
 
       {/* Sidebar */}
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-64 bg-[#023E8A] text-white transform transition-transform duration-200 ease-in-out flex flex-col ${
+        className={`dashboard-sidebar fixed inset-y-0 left-0 z-[60] w-52 transform transition-transform duration-200 ease-in-out flex flex-col bg-gradient-to-b from-blue-600 via-blue-700 to-indigo-800 ${
           isMobileMenuOpen
             ? "translate-x-0"
             : "-translate-x-full md:translate-x-0"
         }`}
       >
-        {/* Header */}
-        <div className="p-4">
-          <div className="text-2xl font-semibold text-[#CAF0F8] mb-2 pt-16 md:pt-4 text-center md:text-left">
-            Admin Panel
+        {/* Logo/Header */}
+        <div className="flex items-center justify-between p-3 border-b border-white/20">
+          <div className="flex items-center pt-12 md:pt-0">
+            <LayoutDashboard className="h-5 w-5 text-blue-300 mr-2" />
+            <div>
+              <h1 className="text-base font-bold text-white">QuickShift</h1>
+              <p className="text-xs text-blue-200">Admin Portal</p>
+            </div>
           </div>
-          {user && (
-            <div className="flex items-center space-x-3 p-3 bg-[#0077B6]/20 rounded-lg mt-4">
-              <div className="w-10 h-10 bg-[#CAF0F8] rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-[#023E8A]" />
+        </div>
+
+        {/* User Info */}
+        {user && (
+          <div className="p-3 border-b border-white/20">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-quickshift-primary rounded-full flex items-center justify-center">
+                <User className="w-4 h-4 text-white" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-white">
+              <div className="ml-2">
+                <p className="text-xs font-medium truncate">
                   {user.firstName ? `${user.firstName} ${user.lastName}` : user.email}
                 </p>
-                <p className="text-xs text-[#90E0EF]">
-                  {user.role === 'super_admin' ? 'Super Admin' : 'Admin'}
+                <p className="text-xs text-blue-200">
+                  {user.role === 'super_admin' ? 'Super Admin' : 'Admin Account'}
                 </p>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}        {/* Navigation */}
+        <nav className="flex-1 px-2 py-3 space-y-1">
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNavItemClick(item.id)}
+                className={`sidebar-nav-item w-full ${isActive ? 'active' : ''} focus:outline-none focus:ring-0 group px-2 py-1.5 text-left flex items-center justify-between rounded-lg mx-2 transition-all duration-200 ${
+                  isActive 
+                    ? 'bg-blue-500/30 text-white border-l-4 border-blue-300' 
+                    : 'text-blue-200 hover:bg-white/10 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center">
+                  <span className="w-4 h-4 mr-2 flex items-center justify-center">
+                    <item.icon className="h-3.5 w-3.5 flex-shrink-0" />
+                  </span>
+                  <span className="text-xs">{item.label}</span>
+                </div>
+                {item.badge && (
+                  <span className={`
+                    px-1.5 py-0.5 text-xs font-medium rounded-full transition-colors
+                    ${isActive ? 'bg-blue-400 text-white' : 'bg-blue-600 text-white'}
+                  `} style={{ fontSize: '0.6rem' }}>
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>        {/* Footer/Logout Section */}
+        <div className="mt-auto p-3 border-t border-white/20">
+          {/* Quick Stats */}
+          <div className="bg-blue-500/20 backdrop-blur-sm rounded-lg p-2 mb-2 border border-blue-400/20">
+            <h3 className="text-xs font-semibold text-blue-200 mb-1 uppercase tracking-wide">
+              Quick Stats
+            </h3>
+            <div className="space-y-0.5">
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-blue-300">Total Users</span>
+                <span className="text-xs font-semibold text-white">{stats.totalUsers}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-blue-300">Active Gigs</span>
+                <span className="text-xs font-semibold text-green-300">{stats.activeGigs}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-blue-300">Employers</span>
+                <span className="text-xs font-semibold text-white">{stats.totalEmployers}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-blue-300">Revenue (MTD)</span>
+                <span className="text-xs font-semibold text-blue-200">LKR {(stats.totalRevenue / 1000).toFixed(1)}K</span>
+              </div>
+            </div>
+          </div>
 
-        {/* Navigation */}
-        <nav className="flex-grow space-y-1 px-2">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => handleNavItemClick(item.id)}
-              className={`flex items-center w-full text-left px-4 py-3 rounded-md transition-colors ${
-                activeTab === item.id
-                  ? "bg-[#0077B6] text-white"
-                  : "text-[#90E0EF] hover:bg-[#0096C7] hover:text-white"
-              }`}
-            >
-              <span className="w-6 h-6 mr-3 flex items-center justify-center">
-                <item.icon size={20} />
-              </span>
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
-        {/* Footer */}
-        <div className="p-2 space-y-2">
-          {/* Logout Button */}
           <button
             onClick={onLogout}
-            className="flex items-center w-full text-left px-4 py-3 mx-2 rounded-md transition-colors text-[#90E0EF] hover:bg-[#0096C7] hover:text-white"
+            className="w-full flex items-center px-2 py-1.5 text-xs font-medium text-red-300 rounded-md hover:bg-red-500/20 hover:text-red-200 transition-all duration-200 border border-red-400/20 hover:border-red-300/40"
           >
-            <span className="w-6 h-6 mr-3 flex items-center justify-center">
-              <LogOut size={20} />
-            </span>
+            <LogOut className="mr-2 h-4 w-4" />
             Logout
           </button>
-
-          {/* Copyright */}
-          <div className="flex items-center text-[#90E0EF] py-2 px-4">
-            <span className="w-6 h-6 mr-3 flex items-center justify-center">
-              <Copyright size={14} />
-            </span>
-            <p className="text-xs">2025 QuickShift</p>
-          </div>
         </div>
       </div>
 
       {/* Overlay for mobile */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-[40] bg-black/40 backdrop-blur-sm md:hidden"
           onClick={toggleMobileMenu}
           aria-hidden="true"
         />

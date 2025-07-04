@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Dashboard Test</title>
+</head>
+<body>
+    <h1>Admin Dashboard Debug</h1>
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        async function testAdminDashboard() {
+            try {
+                // Check localStorage
+                const accessToken = localStorage.getItem('accessToken');
+                const userType = localStorage.getItem('userType');
+                
+                output.innerHTML += `<p><strong>Auth Status:</strong></p>`;
+                output.innerHTML += `<p>Has Access Token: ${!!accessToken}</p>`;
+                output.innerHTML += `<p>User Type: ${userType}</p>`;
+                
+                if (!accessToken) {
+                    output.innerHTML += `<p style="color: red;">No access token found. Please login first.</p>`;
+                    return;
+                }
+                
+                // Test API calls
+                output.innerHTML += `<p><strong>Testing API calls:</strong></p>`;
+                
+                // Test 1: Dashboard stats
+                try {
+                    const dashboardResponse = await fetch('http://localhost:5000/api/admin/dashboard', {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+                    const dashboardData = await dashboardResponse.json();
+                    output.innerHTML += `<p>Dashboard API: ${dashboardData.success ? 'SUCCESS' : 'FAILED'}</p>`;
+                } catch (error) {
+                    output.innerHTML += `<p>Dashboard API: ERROR - ${error.message}</p>`;
+                }
+                
+                // Test 2: Users
+                try {
+                    const usersResponse = await fetch('http://localhost:5000/api/admin/users', {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+                    const usersData = await usersResponse.json();
+                    output.innerHTML += `<p>Users API: ${usersData.success ? 'SUCCESS' : 'FAILED'} - ${usersData.total || 0} users</p>`;
+                } catch (error) {
+                    output.innerHTML += `<p>Users API: ERROR - ${error.message}</p>`;
+                }
+                
+                // Test 3: Employers
+                try {
+                    const employersResponse = await fetch('http://localhost:5000/api/admin/employers', {
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+                    const employersData = await employersResponse.json();
+                    output.innerHTML += `<p>Employers API: ${employersData.success ? 'SUCCESS' : 'FAILED'} - ${employersData.total || 0} employers</p>`;
+                } catch (error) {
+                    output.innerHTML += `<p>Employers API: ERROR - ${error.message}</p>`;
+                }
+                
+            } catch (error) {
+                output.innerHTML += `<p style="color: red;">General error: ${error.message}</p>`;
+            }
+        }
+        
+        // Run test on page load
+        testAdminDashboard();
+    </script>
+</body>
+</html>

@@ -15,11 +15,13 @@ import {
   ClipboardCheck,
   Clock,
   UserCheck,
-  Shield,
-  ShieldCheck,
+  Download,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Users,
 } from "lucide-react";
 import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Select from "@/components/ui/select";
@@ -32,48 +34,45 @@ import {
 } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 
-import { useApi, useMutation } from "@/lib/hooks";
-import { undergraduatesApi, type Undergraduate } from "@/lib/api";
 import {
   formatDate,
   getStatusVariant,
   debounce,
   formatStatusText,
-  getInitials,
 } from "@/lib/utils";
-import { LoadingSpinner } from "@/components/ui/loading";
+import { LoadingState } from "@/components/ui/loading";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { UNDERGRADUATE_CONSTANTS } from "@/lib/undergraduate-constants";
+import { adminService, AdminUserData } from '@/services/adminService';
 
-// LoadingState component for consistency
-const LoadingState = ({ message }: { message: string }) => (
-  <div className="flex flex-col items-center justify-center py-12">
-    <LoadingSpinner size="lg" />
-    <p className="mt-4 text-gray-600">{message}</p>
-  </div>
-);
-
-// Helper function to get full name
-const getFullName = (undergraduate: Undergraduate): string => {
-  if (undergraduate.fullName) return undergraduate.fullName;
-  if (undergraduate.firstName && undergraduate.lastName) {
-    return `${undergraduate.firstName} ${undergraduate.lastName}`;
-  }
-  return undergraduate.firstName || undergraduate.email || "Unknown User";
-};
-
-// Helper function to get computed account status
-const getAccountStatus = (undergraduate: Undergraduate): string => {
-  if (undergraduate.accountStatus) return undergraduate.accountStatus;
-  return undergraduate.isActive ? "active" : "inactive";
-};
-
-// Helper function to get computed verification status
-const getVerificationStatus = (undergraduate: Undergraduate): string => {
-  if (undergraduate.verificationStatus) return undergraduate.verificationStatus;
-  return undergraduate.isVerified ? "verified" : "pending";
-};
+// TypeScript interfaces for Undergraduate data
+interface Undergraduate {
+  id: string;
+  _id: string;
+  profilePicture: string | null;
+  fullName: string;
+  email: string;
+  university: string;
+  yearOfStudy: number;
+  studentIdVerified: boolean;
+  phoneNumber: string;
+  faculty: string;
+  gender: string;
+  dateOfBirth: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  accountStatus: string;
+  verificationStatus: string;
+  lastLogin: string;
+  bio: string;
+  gpa: number;
+  skillsAndInterests: string[];
+  documentsUploaded: string[];
+  joinDate: string;
+  verified: boolean;
+}
 
 interface FilterState {
   search: string;
@@ -83,13 +82,55 @@ interface FilterState {
   accountStatus: string | null;
 }
 
+// Function to convert AdminUserData to Undergraduate format
+const convertToUndergraduate = (user: AdminUserData): Undergraduate => {
+  console.log('Converting user data:', {
+    id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    university: user.university,
+    yearOfStudy: user.yearOfStudy,
+    isActive: user.isActive,
+    isVerified: user.isVerified,
+    fullUser: user
+  });
+  
+  return {
+    id: user._id || 'unknown',
+    _id: user._id || 'unknown',
+    profilePicture: null, // Not available in AdminUserData
+    fullName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown',
+    email: user.email || 'No email provided',
+    university: user.university || 'Not specified',
+    yearOfStudy: user.yearOfStudy || 1,
+    studentIdVerified: user.studentIdVerified || false,
+    phoneNumber: user.phone || 'Not provided',
+    faculty: user.faculty || 'Not specified',
+    gender: 'Not specified', // Not available in AdminUserData
+    dateOfBirth: '', // Not available in AdminUserData
+    address: '', // Not available in AdminUserData
+    city: '', // Not available in AdminUserData
+    postalCode: '', // Not available in AdminUserData
+    accountStatus: user.isActive ? 'active' : 'inactive',
+    verificationStatus: user.isVerified ? 'verified' : 'pending',
+    lastLogin: user.lastLoginAt || user.updatedAt || user.createdAt,
+    bio: '', // Not available in AdminUserData
+    gpa: 0, // Not available in AdminUserData
+    skillsAndInterests: [], // Not available in AdminUserData
+    documentsUploaded: [], // Not available in AdminUserData
+    joinDate: user.createdAt,
+    verified: user.isVerified,
+  };
+};
+
 // Constants for filter options - moved to constants file for better maintainability
 const {
   YEARS_OF_STUDY,
   VERIFICATION_STATUSES,
   ACCOUNT_STATUSES,
   LABELS,
-  TABLE_HEADERS,
+  // TABLE_HEADERS,
   ACTIONS,
   SHEET_SECTIONS,
   FIELD_LABELS,
@@ -99,6 +140,26 @@ export default function UndergraduatesContent() {
   const [selectedUndergraduate, setSelectedUndergraduate] =
     useState<Undergraduate | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [undergraduates, setUndergraduates] = useState<Undergraduate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [itemsPerPage] = useState(10);
+  
+  // Debug logging
+  useEffect(() => {
+    console.log('UndergraduatesContent state:', {
+      undergraduates: undergraduates.length,
+      loading,
+      error,
+      totalRecords,
+      currentPage,
+      totalPages
+    });
+  }, [undergraduates, loading, error, totalRecords, currentPage, totalPages]);
+  
   // Filter states
   const [filters, setFilters] = useState<FilterState>({
     search: "",
@@ -106,57 +167,191 @@ export default function UndergraduatesContent() {
     yearOfStudy: null,
     verificationStatus: null,
     accountStatus: null,
-  }); // API calls with explicit function
-  const fetchUndergraduates = useCallback(() => {
-    console.log("Fetching undergraduates...");
-    return undergraduatesApi.getAll();
-  }, []);
+  });
 
-  const {
-    data: undergraduatesResponse,
-    loading,
-    error,
-    refetch,
-  } = useApi(fetchUndergraduates);
-  const verifyUndergraduateMutation = useMutation();
-  const suspendUndergraduateMutation = useMutation();
-  const activateUndergraduateMutation = useMutation();
+  const fetchUndergraduates = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Check authentication
+      const accessToken = localStorage.getItem('accessToken');
+      const userType = localStorage.getItem('userType');
+      console.log('🔍 fetchUndergraduates - Auth check:', {
+        hasAccessToken: !!accessToken,
+        userType,
+        tokenStart: accessToken?.substring(0, 20) + '...'
+      });
+      
+      if (!accessToken) {
+        throw new Error('No access token found. Please log in again.');
+      }
+      
+      // Build query parameters
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+        role: 'job_seeker', // Only get students
+      };
 
-  // Debug logging
+      // Add search filter if provided
+      if (filters.search && filters.search.trim()) {
+        params.search = filters.search.trim();
+      }
+
+      // Add account status filter if provided
+      if (filters.accountStatus && filters.accountStatus !== 'all') {
+        params.isActive = filters.accountStatus === 'active';
+      }
+
+      // Add verification status filter if provided
+      if (filters.verificationStatus && filters.verificationStatus !== 'all') {
+        params.isVerified = filters.verificationStatus === 'verified';
+      }
+
+      // Add university filter if provided
+      if (filters.university && filters.university !== LABELS.ALL_UNIVERSITIES) {
+        params.university = filters.university;
+      }
+
+      // Add year of study filter if provided
+      if (filters.yearOfStudy !== null) {
+        params.yearOfStudy = filters.yearOfStudy;
+      }
+
+      console.log('🔍 fetchUndergraduates - Making request with params:', params);
+      
+      const response = await adminService.getAllUsers(params);
+
+      console.log('🔍 fetchUndergraduates - Response received:', {
+        success: response.success,
+        message: response.message,
+        hasData: !!response.data,
+        total: response.data?.total,
+        count: response.data?.count,
+        dataLength: response.data?.data?.length,
+        fullResponse: response
+      });
+
+      if (response.success && response.data) {
+        // Check if response.data is directly an array or has a nested structure
+        let userData;
+        if (Array.isArray(response.data)) {
+          userData = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          userData = response.data.data;
+        } else if ((response.data as any).users && Array.isArray((response.data as any).users)) {
+          userData = (response.data as any).users;
+        } else {
+          console.log('🔍 fetchUndergraduates - Unexpected response structure:', response.data);
+          userData = [];
+        }
+
+        if (userData.length > 0) {
+          const convertedUsers = userData.map(convertToUndergraduate);
+          console.log('🔍 fetchUndergraduates - Converted users:', convertedUsers.length);
+          setUndergraduates(convertedUsers);
+          setTotalRecords(response.data.total || userData.length);
+          setTotalPages(Math.ceil((response.data.total || userData.length) / itemsPerPage));
+        } else {
+          console.log('🔍 fetchUndergraduates - No data array found or empty array');
+          setUndergraduates([]);
+          setTotalRecords(0);
+          setTotalPages(1);
+        }
+      } else {
+        console.log('🔍 fetchUndergraduates - Response not successful');
+        throw new Error(response.message || 'Failed to fetch users');
+      }
+    } catch (err) {
+      console.error('Error fetching undergraduates:', err);
+      
+      // Handle authentication errors specifically
+      if (err instanceof Error && (
+        err.message.includes('session has expired') ||
+        err.message.includes('unauthorized') ||
+        err.message.includes('401')
+      )) {
+        // Clear all auth data
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userType');
+        localStorage.removeItem('user');
+        
+        // Redirect to login
+        window.location.href = '/auth/login';
+        return;
+      }
+      
+      setError((err as Error).message);
+      toast.error('Failed to load student data');
+      setUndergraduates([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [currentPage, itemsPerPage, filters]);
+
+  // Fetch users from backend
   useEffect(() => {
-    console.log("UndergraduatesContent Debug:", {
-      loading,
-      error,
-      undergraduatesResponse,
-      dataLength: undergraduatesResponse?.length || 0,
-    });
-  }, [loading, error, undergraduatesResponse]); // Move undergraduates initialization inside useMemo to fix react-hooks/exhaustive-deps warnings
-  const undergraduates = useMemo(() => {
-    // Handle both direct array and API response with data property
-    if (Array.isArray(undergraduatesResponse)) {
-      return undergraduatesResponse as Undergraduate[];
+    fetchUndergraduates();
+  }, [fetchUndergraduates]);
+
+  // Debug function to check raw API response
+  const debugAPIResponse = async () => {
+    try {
+      const accessToken = localStorage.getItem('accessToken');
+      console.log('🔍 DEBUG - Raw API call');
+      
+      const response = await adminService.getAllUsers({
+        page: 1,
+        limit: 5,
+        role: 'job_seeker'
+      });
+      
+      console.log('🔍 DEBUG - Full API Response:', response);
+      
+      if (response.data && response.data.data) {
+        console.log('🔍 DEBUG - Raw user data:', response.data.data);
+        console.log('🔍 DEBUG - First user:', response.data.data[0]);
+      }
+      
+      toast.success('Check console for debug info');
+    } catch (error) {
+      console.error('🔍 DEBUG - API Error:', error);
+      toast.error('Debug failed - check console');
     }
-    if (
-      (undergraduatesResponse as any)?.data &&
-      Array.isArray((undergraduatesResponse as any).data)
-    ) {
-      return (undergraduatesResponse as any).data as Undergraduate[];
-    }
-    return [] as Undergraduate[];
-  }, [undergraduatesResponse]);
+  };
+
+  // Refetch function for refresh button
+  const refetch = async () => {
+    await fetchUndergraduates();
+    toast.success("Data refreshed successfully");
+  };
+
+  // Mock mutation states - will be used when handlers are implemented
+  // const [setVerifyLoading] = useState(false);
+  // const [setSuspendLoading] = useState(false);
+  // const [setActivateLoading] = useState(false);
 
   // Extract unique universities for filter dropdown
   const availableUniversities = useMemo(() => {
-    const universities = new Set(
-      undergraduates
-        .map((undergraduate: Undergraduate) => undergraduate.university)
-        .filter(
-          (university: string | undefined): university is string =>
-            university !== undefined && university.trim() !== ""
-        )
-    );
-    return [LABELS.ALL_UNIVERSITIES, ...Array.from(universities)];
-  }, [undergraduates]);
+    // For now, we'll use a static list of universities since we're doing server-side filtering
+    // In a real application, you might want to fetch this from a separate API endpoint
+    return [
+      LABELS.ALL_UNIVERSITIES,
+      "University of Malaysia",
+      "Universiti Malaya",
+      "Universiti Putra Malaysia",
+      "Universiti Kebangsaan Malaysia",
+      "Universiti Sains Malaysia",
+      "Universiti Teknologi Malaysia",
+      "Universiti Teknologi MARA",
+      "International Islamic University Malaysia",
+      "Universiti Malaysia Sabah",
+      "Universiti Malaysia Sarawak",
+      "Other"
+    ];
+  }, []);
 
   // Debounced search handler
   const debouncedSearch = useMemo(
@@ -164,135 +359,54 @@ export default function UndergraduatesContent() {
       debounce((...args: unknown[]) => {
         const value = args[0] as string;
         setFilters((prev) => ({ ...prev, search: value }));
+        setCurrentPage(1); // Reset to first page when searching
       }, 300),
     []
   );
-
-  // Fix mutation usage by wrapping API calls with unknown
-  const verifyUndergraduate = (params: unknown) =>
-    undergraduatesApi.verify(params as string);
-  const suspendUndergraduate = (params: unknown) =>
-    undergraduatesApi.suspend(params as string);
-  const activateUndergraduate = (params: unknown) =>
-    undergraduatesApi.activate(params as string);
-
-  // Filtered undergraduates with memoization for performance
-  const filteredUndergraduates = useMemo(() => {
-    if (!undergraduates) return [];
-
-    return undergraduates.filter((undergraduate: Undergraduate) => {
-      // Search filter
-      if (filters.search) {
-        const query = filters.search.toLowerCase();
-        const matchesSearch =
-          undergraduate.fullName?.toLowerCase().includes(query) ||
-          undergraduate.email?.toLowerCase().includes(query) ||
-          undergraduate.university?.toLowerCase().includes(query) ||
-          undergraduate.faculty?.toLowerCase().includes(query);
-
-        if (!matchesSearch) return false;
-      } // University filter
-      if (
-        filters.university &&
-        filters.university !== LABELS.ALL_UNIVERSITIES
-      ) {
-        if (undergraduate.university !== filters.university) return false;
-      }
-
-      // Year of study filter
-      if (filters.yearOfStudy !== null) {
-        if (undergraduate.yearOfStudy !== filters.yearOfStudy) return false;
-      }
-
-      // Verification status filter
-      if (filters.verificationStatus) {
-        if (undergraduate.verificationStatus !== filters.verificationStatus)
-          return false;
-      }
-
-      // Account status filter
-      if (filters.accountStatus) {
-        if (undergraduate.accountStatus !== filters.accountStatus) return false;
-      }
-
-      return true;
-    });
-  }, [undergraduates, filters]);
 
   // Handle viewing undergraduate details
   const handleViewUndergraduate = (undergraduate: Undergraduate) => {
     setSelectedUndergraduate(undergraduate);
     setIsSheetOpen(true);
   };
-  // Handle verification action
-  const handleVerifyUndergraduate = async (id: string) => {
-    try {
-      const result = await verifyUndergraduateMutation.mutate(
-        verifyUndergraduate,
-        id
-      );
-      if (result) {
-        toast.success("Undergraduate verified successfully!");
-        await refetch();
-        // Update selected undergraduate if it's currently viewed
-        if (selectedUndergraduate && selectedUndergraduate._id === id) {
-          setSelectedUndergraduate({
-            ...selectedUndergraduate,
-            verificationStatus: "verified",
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Failed to verify undergraduate:", error);
-      toast.error("Failed to verify undergraduate. Please try again.");
-    }
-  };
-  // Handle suspension action
-  const handleSuspendUndergraduate = async (id: string) => {
-    try {
-      const result = await suspendUndergraduateMutation.mutate(
-        suspendUndergraduate,
-        id
-      );
-      if (result) {
-        toast.success("Undergraduate suspended successfully!");
-        await refetch();
-        // Update selected undergraduate if it's currently viewed
-        if (selectedUndergraduate && selectedUndergraduate._id === id) {
-          setSelectedUndergraduate({
-            ...selectedUndergraduate,
-            accountStatus: "suspended",
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Failed to suspend undergraduate:", error);
-      toast.error("Failed to suspend undergraduate. Please try again.");
-    }
-  };
 
-  // Handle activation action
-  const handleActivateUndergraduate = async (id: string) => {
-    try {
-      const result = await activateUndergraduateMutation.mutate(
-        activateUndergraduate,
-        id
-      );
-      if (result) {
-        toast.success("Undergraduate activated successfully!");
-        await refetch();
-        // Update selected undergraduate if it's currently viewed
-        if (selectedUndergraduate && selectedUndergraduate._id === id) {
-          setSelectedUndergraduate({
-            ...selectedUndergraduate,
-            accountStatus: "active",
-          });
-        }
-      }
-    } catch (error) {
-      console.error("Failed to activate undergraduate:", error);
-      toast.error("Failed to activate undergraduate. Please try again.");
+  // Export functionality
+  const handleExportData = () => {
+    if (!undergraduates || undergraduates.length === 0) {
+      toast.error('No data to export');
+      return;
     }
+    
+    const csvData = undergraduates.map(undergraduate => ({
+      'Full Name': undergraduate.fullName,
+      'Email': undergraduate.email,
+      'University': undergraduate.university,
+      'Faculty': undergraduate.faculty,
+      'Year of Study': undergraduate.yearOfStudy,
+      'Account Status': undergraduate.accountStatus,
+      'Verification Status': undergraduate.verificationStatus,
+      'Student ID Verified': undergraduate.studentIdVerified ? 'Yes' : 'No',
+      'Phone Number': undergraduate.phoneNumber,
+      'City': undergraduate.city,
+      'Join Date': formatDate(undergraduate.joinDate),
+      'Last Login': formatDate(undergraduate.lastLogin),
+      'GPA': undergraduate.gpa || 'N/A',
+    }));
+
+    const csvContent = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `undergraduates_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+    
+    toast.success('Data exported successfully!');
   };
 
   // Update search filter with debouncing
@@ -301,11 +415,14 @@ export default function UndergraduatesContent() {
   };
 
   // Update other filters
-  const updateFilter = (
-    key: keyof FilterState,
-    value: string | number | null
-  ) => {
+  const updateFilter = (key: keyof FilterState, value: string | number | null) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
   };
 
   // Loading state
@@ -323,107 +440,115 @@ export default function UndergraduatesContent() {
       />
     );
   }
+  
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Undergraduate Users Management</h1>
+    <div className="p-4 space-y-4">
+      <h1 className="text-2xl font-bold text-gray-900 mb-4">Undergraduates</h1>
+      
       {/* Filter Section */}
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <h2 className="text-lg font-semibold flex items-center">
-            <Filter className="mr-2 h-5 w-5" />
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+            <Filter className="mr-2 h-5 w-5 text-gray-700" />
             Filters
           </h2>
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              label="Search Users"
-              placeholder={LABELS.SEARCH_PLACEHOLDER}
-              className="pl-10"
-              onChange={(e) => handleSearchChange(e.target.value)}
-            />
+          <div className="w-full lg:w-80">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-600 z-10" />
+              <input
+                type="text"
+                placeholder={LABELS.SEARCH_PLACEHOLDER}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder:text-gray-500"
+                onChange={(e) => handleSearchChange(e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
         {/* Filter Options */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">University</label>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-800">University</label>
             <Select
               value={filters.university}
               onChange={(value: string) => updateFilter("university", value)}
-              options={availableUniversities.map((university) => ({
-                value: university as string,
-                label: university as string,
-              }))}
+              options={availableUniversities.map((university) => ({ value: university, label: university }))}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Year of Study</label>
+            <label className="text-sm font-medium text-gray-800">Year of Study</label>
             <Select
               value={filters.yearOfStudy?.toString() || "all"}
-              onChange={(value: string) =>
-                updateFilter(
-                  "yearOfStudy",
-                  value === "all" ? null : parseInt(value)
-                )
-              }
-              options={[
-                { value: LABELS.ALL_YEARS, label: LABELS.ALL_YEARS },
-                ...YEARS_OF_STUDY.map((year) => ({
-                  value: year.toString(),
-                  label: `Year ${year}`,
-                })),
-              ]}
+              onChange={(value: string) => updateFilter("yearOfStudy", value === "all" ? null : parseInt(value))}
+              options={[{ value: LABELS.ALL_YEARS, label: LABELS.ALL_YEARS }, ...YEARS_OF_STUDY.map((year) => ({ value: year.toString(), label: `Year ${year}` }))]}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Verification Status</label>
+            <label className="text-sm font-medium text-gray-800">Verification Status</label>
             <Select
               value={filters.verificationStatus || "all"}
-              onChange={(value: string) =>
-                updateFilter(
-                  "verificationStatus",
-                  value === "all" ? null : value
-                )
-              }
+              onChange={(value: string) => updateFilter("verificationStatus", value === "all" ? null : value)}
               options={[
                 { value: "all", label: LABELS.ALL_STATUSES },
-                ...VERIFICATION_STATUSES.map((status) => ({
-                  value: status,
-                  label: formatStatusText(status),
-                })),
+                ...VERIFICATION_STATUSES.map((status) => ({ value: status, label: formatStatusText(status) }))
               ]}
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Account Status</label>
+            <label className="text-sm font-medium text-gray-800">Account Status</label>
             <Select
               value={filters.accountStatus || "all"}
-              onChange={(value: string) =>
-                updateFilter("accountStatus", value === "all" ? null : value)
-              }
+              onChange={(value: string) => updateFilter("accountStatus", value === "all" ? null : value)}
               options={[
                 { value: "all", label: LABELS.ALL_STATUSES },
-                ...ACCOUNT_STATUSES.map((status) => ({
-                  value: status,
-                  label: formatStatusText(status),
-                })),
+                ...ACCOUNT_STATUSES.map((status) => ({ value: status, label: formatStatusText(status) }))
               ]}
             />
           </div>
         </div>
-      </div>
-      {/* Results Summary */}
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-600">
+      </div>{" "}
+      {/* Results Summary and Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">        <p className="text-sm text-gray-800 font-medium">
           {LABELS.SHOWING_RESULTS.replace(
             "{count}",
-            filteredUndergraduates.length.toString()
-          ).replace("{total}", (undergraduates?.length || 0).toString())}
+            (undergraduates?.length || 0).toString()
+          ).replace("{total}", totalRecords.toString())}
         </p>
-      </div>
+        
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refetch}
+            disabled={loading}
+            className="flex items-center"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            {ACTIONS.REFRESH}
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={debugAPIResponse}
+            className="flex items-center"
+          >
+            🔍 Debug
+          </Button>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportData}
+            disabled={!undergraduates || undergraduates.length === 0}
+            className="flex items-center"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            {ACTIONS.EXPORT}
+          </Button>
+        </div>
+      </div>{" "}
       {/* Users Table */}
-      {filteredUndergraduates.length === 0 ? (
+      {!undergraduates || undergraduates.length === 0 ? (
         <EmptyState
           title={LABELS.NO_RESULTS_TITLE}
           description={LABELS.NO_RESULTS_DESCRIPTION}
@@ -431,167 +556,88 @@ export default function UndergraduatesContent() {
         />
       ) : (
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                
-                <tr className="bg-gray-50 text-left">
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.PROFILE}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.FULL_NAME}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.EMAIL}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.UNIVERSITY}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.YEAR}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.STUDENT_ID}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.VERIFICATION}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.STATUS}
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    {TABLE_HEADERS.ACTIONS}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filteredUndergraduates.map((undergraduate: Undergraduate) => (
-                  <tr key={undergraduate._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Avatar>
-                        
-                        <AvatarImage
-                          src={undergraduate.profilePicture || undefined}
-                          alt={getFullName(undergraduate)}
-                        />
-                        <AvatarFallback className="bg-blue-100 text-blue-800">
-                          {getInitials(getFullName(undergraduate))}
-                        </AvatarFallback>
-                      </Avatar>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      
-                      <div className="font-medium text-gray-900">
-                        {getFullName(undergraduate)}
+          <div className="space-y-4 p-4">
+            {undergraduates.map((undergraduate: Undergraduate) => (
+              <div key={undergraduate.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center space-x-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={undergraduate.profilePicture || undefined} />
+                      <AvatarFallback>
+                        {undergraduate.fullName?.split(' ')[0]?.[0]}{undergraduate.fullName?.split(' ')[1]?.[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        {undergraduate.fullName}
+                      </h3>
+                      <p className="text-xs text-gray-600">{undergraduate.email}</p>
+                      <div className="flex items-center gap-4 mt-1">
+                        <span className="text-xs text-gray-500">{undergraduate.university}</span>
+                        <span className="text-xs text-gray-500">Year {undergraduate.yearOfStudy}</span>
+                        <span className="text-xs text-gray-500">{undergraduate.faculty}</span>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {undergraduate.email || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {undergraduate.university || "N/A"}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      Year {undergraduate.yearOfStudy}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Badge
-                        variant={
-                          undergraduate.studentIdVerified
-                            ? "success"
-                            : "warning"
-                        }
-                      >
-                        {undergraduate.studentIdVerified
-                          ? "Verified"
-                          : "Not Verified"}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      
-                      <Badge
-                        variant={getStatusVariant(
-                          getVerificationStatus(undergraduate)
-                        )}
-                      >
-                        {formatStatusText(getVerificationStatus(undergraduate))}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      
-                      <Badge
-                        variant={getStatusVariant(
-                          getAccountStatus(undergraduate)
-                        )}
-                      >
-                        {formatStatusText(getAccountStatus(undergraduate))}
-                      </Badge>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center space-x-2">
-                        
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewUndergraduate(undergraduate)}
-                          className="flex items-center"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          {ACTIONS.VIEW}
-                        </Button>
-                        {getVerificationStatus(undergraduate) !==
-                          "verified" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              handleVerifyUndergraduate(undergraduate._id)
-                            }
-                            disabled={verifyUndergraduateMutation.loading}
-                            className="flex items-center"
-                          >
-                            <ShieldCheck className="h-4 w-4 mr-1" />
-                            {ACTIONS.VERIFY}
-                          </Button>
-                        )}
-                        {getAccountStatus(undergraduate) === "active" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              handleSuspendUndergraduate(undergraduate._id)
-                            }
-                            disabled={suspendUndergraduateMutation.loading}
-                            className="flex items-center text-red-600 hover:text-red-800"
-                          >
-                            <Shield className="h-4 w-4 mr-1" />
-                            {ACTIONS.SUSPEND}
-                          </Button>
-                        )}
-                        {getAccountStatus(undergraduate) === "suspended" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              handleActivateUndergraduate(undergraduate._id)
-                            }
-                            disabled={activateUndergraduateMutation.loading}
-                            className="flex items-center text-green-600 hover:text-green-800"
-                          >
-                            <UserCheck className="h-4 w-4 mr-1" />
-                            {ACTIONS.ACTIVATE}
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Badge
+                      variant={getStatusVariant(undergraduate.verificationStatus)}
+                      className="text-xs"
+                    >
+                      {formatStatusText(undergraduate.verificationStatus)}
+                    </Badge>
+                    <Badge
+                      variant={getStatusVariant(undergraduate.accountStatus)}
+                      className="text-xs"
+                    >
+                      {formatStatusText(undergraduate.accountStatus)}
+                    </Badge>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewUndergraduate(undergraduate)}
+                      className="text-xs px-2 py-1"
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      View
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row justify-between items-center mt-4">
+        <div className="text-sm text-gray-700">
+          {`Showing ${Math.min((currentPage - 1) * itemsPerPage + 1, totalRecords)}-${
+            Math.min(currentPage * itemsPerPage, totalRecords)
+          } of ${totalRecords} results`}
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="flex items-center"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Previous
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="flex items-center"
+          >
+            <ChevronRight className="h-4 w-4 mr-1" />
+            Next
+          </Button>
+        </div>
+      </div>
       {/* User Details Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="w-full sm:max-w-md overflow-y-auto">
@@ -623,15 +669,14 @@ export default function UndergraduatesContent() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    
+                    {" "}
                     <h3 className="text-xl font-semibold">
                       {selectedUndergraduate.fullName || "N/A"}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
+                    </h3>                    <p className="text-sm text-gray-900 font-medium">
                       {selectedUndergraduate.email || "N/A"}
-                    </p>
+                    </p>{" "}
                     <div className="mt-1 flex items-center space-x-2">
-                      
+                      {" "}
                       <Badge
                         variant={getStatusVariant(
                           selectedUndergraduate.accountStatus
@@ -657,36 +702,35 @@ export default function UndergraduatesContent() {
                     {SHEET_SECTIONS.PERSONAL_INFO}
                   </h4>
 
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="flex items-start">
-                      <Phone className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                  <div className="grid grid-cols-1 gap-3">                    <div className="flex items-start">
+                      <Phone className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />{" "}
                       <div>
-                        
-                        <p className="text-sm font-medium text-gray-500">
+                        {" "}
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.PHONE}
                         </p>
-                        <p>{selectedUndergraduate.phone || "N/A"}</p>
+                        <p className="text-gray-900 font-medium">{selectedUndergraduate.phoneNumber || "N/A"}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <UserIcon className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <UserIcon className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        
-                        <p className="text-sm font-medium text-gray-500">
+                        {" "}
+                        <p className="text-sm font-medium text-gray-700">
                           Gender
                         </p>
-                        <p>{selectedUndergraduate.gender || "N/A"}</p>
+                        <p className="text-gray-900 font-medium">{selectedUndergraduate.gender || "N/A"}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <Calendar className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <Calendar className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />{" "}
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           Date of Birth
                         </p>
-                        <p>
+                        <p className="text-gray-900 font-medium">
                           {selectedUndergraduate.dateOfBirth
                             ? formatDate(selectedUndergraduate.dateOfBirth)
                             : "N/A"}
@@ -695,12 +739,12 @@ export default function UndergraduatesContent() {
                     </div>
 
                     <div className="flex items-start">
-                      <MapPin className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <MapPin className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           Address
-                        </p>
-                        <p>
+                        </p>{" "}
+                        <p className="text-gray-900 font-medium">
                           {[
                             selectedUndergraduate.address,
                             selectedUndergraduate.city,
@@ -719,41 +763,40 @@ export default function UndergraduatesContent() {
                     {SHEET_SECTIONS.ACADEMIC_INFO}
                   </h4>
 
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="flex items-start">
-                      <School className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                  <div className="grid grid-cols-1 gap-3">                    <div className="flex items-start">
+                      <School className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />{" "}
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.UNIVERSITY}
                         </p>
-                        <p>{selectedUndergraduate.university || "N/A"}</p>
+                        <p className="text-gray-900 font-medium">{selectedUndergraduate.university || "N/A"}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <BookOpen className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <BookOpen className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />{" "}
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.FACULTY}
                         </p>
-                        <p>{selectedUndergraduate.faculty || "N/A"}</p>
+                        <p className="text-gray-900 font-medium">{selectedUndergraduate.faculty || "N/A"}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <UserCheck className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <UserCheck className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.YEAR_OF_STUDY}
                         </p>
-                        <p>Year {selectedUndergraduate.yearOfStudy}</p>
+                        <p className="text-gray-900 font-medium">Year {selectedUndergraduate.yearOfStudy}</p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <UserCheck className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <UserCheck className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.STUDENT_ID_VERIFICATION}
                         </p>
                         <Badge
@@ -770,14 +813,13 @@ export default function UndergraduatesContent() {
                       </div>
                     </div>
 
-                    {selectedUndergraduate.gpa && (
-                      <div className="flex items-start">
-                        <ClipboardCheck className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                    {selectedUndergraduate.gpa && (                      <div className="flex items-start">
+                        <ClipboardCheck className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                         <div>
-                          <p className="text-sm font-medium text-gray-500">
+                          <p className="text-sm font-medium text-gray-700">
                             {FIELD_LABELS.GPA}
                           </p>
-                          <p>{selectedUndergraduate.gpa}</p>
+                          <p className="text-gray-900 font-medium">{selectedUndergraduate.gpa}</p>
                         </div>
                       </div>
                     )}
@@ -789,43 +831,38 @@ export default function UndergraduatesContent() {
                     {SHEET_SECTIONS.ACCOUNT_INFO}
                   </h4>
 
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="flex items-start">
-                      <Calendar className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                  <div className="grid grid-cols-1 gap-3">                    <div className="flex items-start">
+                      <Calendar className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.JOIN_DATE}
                         </p>
-                        <p>
-                          
-                          {selectedUndergraduate.createdAt
-                            ? formatDate(selectedUndergraduate.createdAt)
+                        <p className="text-gray-900 font-medium">
+                          {selectedUndergraduate.joinDate
+                            ? formatDate(selectedUndergraduate.joinDate)
                             : "N/A"}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-start">
-                      <Clock className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                      <Clock className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.LAST_LOGIN}
                         </p>
-                        <p>
-                          
-                          {selectedUndergraduate.lastLoginAt
-                            ? formatDate(selectedUndergraduate.lastLoginAt)
+                        <p className="text-gray-900 font-medium">
+                          {selectedUndergraduate.lastLogin
+                            ? formatDate(selectedUndergraduate.lastLogin)
                             : "N/A"}
                         </p>
                       </div>
-                    </div>
-
-                    <div className="flex items-start">
-                      <ClipboardCheck className="h-5 w-5 mr-2 text-gray-500 mt-0.5" />
+                    </div>                    <div className="flex items-start">
+                      <ClipboardCheck className="h-5 w-5 mr-2 text-gray-600 mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium text-gray-500">
+                        <p className="text-sm font-medium text-gray-700">
                           {FIELD_LABELS.VERIFICATION_STATUS}
-                        </p>
+                        </p>{" "}
                         <Badge
                           variant={getStatusVariant(
                             selectedUndergraduate.verificationStatus
@@ -839,13 +876,12 @@ export default function UndergraduatesContent() {
                     </div>
                   </div>
                 </div>
-                <Separator /> {/* Bio */}
-                {selectedUndergraduate.bio && (
+                <Separator /> {/* Bio */}                {selectedUndergraduate.bio && (
                   <div className="space-y-2">
                     <h4 className="text-lg font-medium">
                       {SHEET_SECTIONS.BIO}
                     </h4>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-800 leading-relaxed">
                       {selectedUndergraduate.bio}
                     </p>
                   </div>

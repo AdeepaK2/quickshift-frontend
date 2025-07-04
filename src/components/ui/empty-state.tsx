@@ -3,12 +3,12 @@
  */
 
 import React from "react";
-import { Search, Users, Briefcase } from "lucide-react";
+import { Search, Users, Briefcase, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Button from "@/components/ui/button";
 
 interface EmptyStateProps {
-  icon?: "search" | "users" | "briefcase" | React.ReactNode;
+  icon?: "search" | "users" | "briefcase" | "building" | React.ReactNode;
   title: string;
   description: string;
   action?: {
@@ -34,6 +34,7 @@ export function EmptyState({
       search: Search,
       users: Users,
       briefcase: Briefcase,
+      building: Building,
     };
 
     const IconComponent = iconMap[icon as keyof typeof iconMap];

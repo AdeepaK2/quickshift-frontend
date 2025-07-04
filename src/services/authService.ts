@@ -357,12 +357,18 @@ class AuthService {
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('refreshToken', refreshToken);
       
-      // Set in cookies for middleware access with proper expiration
+      // Set in cookies for middleware access with proper settings for development
       const accessTokenExpiry = 24 * 60 * 60; // 24 hours in seconds
       const refreshTokenExpiry = 7 * 24 * 60 * 60; // 7 days in seconds
       
-      document.cookie = `accessToken=${accessToken}; path=/; max-age=${accessTokenExpiry}; secure; samesite=strict`;
-      document.cookie = `refreshToken=${refreshToken}; path=/; max-age=${refreshTokenExpiry}; secure; samesite=strict`;
+      // Check if we're in development mode to set appropriate cookie settings
+      const isProduction = window.location.protocol === 'https:';
+      const cookieSettings = isProduction 
+        ? 'path=/; secure; samesite=strict' 
+        : 'path=/; samesite=lax';
+      
+      document.cookie = `accessToken=${accessToken}; ${cookieSettings}; max-age=${accessTokenExpiry}`;
+      document.cookie = `refreshToken=${refreshToken}; ${cookieSettings}; max-age=${refreshTokenExpiry}`;
       
       console.log('AuthService: Tokens set successfully');
     } catch (error) {
@@ -419,8 +425,14 @@ class AuthService {
       
       console.log('AuthService: Setting userType:', userType);
       localStorage.setItem('userType', userType);
-      // Also set in cookies for middleware access
-      document.cookie = `userType=${userType}; path=/; max-age=2592000; secure; samesite=strict`;
+      
+      // Also set in cookies for middleware access with appropriate settings
+      const isProduction = window.location.protocol === 'https:';
+      const cookieSettings = isProduction 
+        ? 'path=/; secure; samesite=strict' 
+        : 'path=/; samesite=lax';
+      
+      document.cookie = `userType=${userType}; ${cookieSettings}; max-age=2592000`;
     } catch (error) {
       console.error('Error setting user type:', error);
     }
