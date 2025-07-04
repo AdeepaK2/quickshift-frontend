@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { FaMoneyBillWave, FaCreditCard, FaCalendarAlt, FaCheckCircle, FaClock, FaDownload, FaEye, FaSearch } from 'react-icons/fa';
-import { gigCompletionService } from '@/services/gigCompletionService';
+import { gigCompletionService, GigCompletion } from '@/services/gigCompletionService';
 import { format } from 'date-fns';
 
 interface GigRequest {
@@ -11,16 +11,6 @@ interface GigRequest {
   employer: {
     companyName: string;
   } | string;
-}
-
-interface GigCompletion {
-  _id: string;
-  gigRequest: GigRequest | string;
-  paymentAmount: number;
-  paymentStatus: string;
-  paymentDate?: string;
-  completionDate: string;
-  hoursWorked: number;
 }
 
 interface PaymentSummary {
@@ -50,28 +40,52 @@ interface Payment {
 }
 
 // Convert GigCompletion to Payment interface
-const convertToPayment = (gigCompletion: GigCompletion): Payment => {
+const convertToPayment = (gigCompletion: GigCompletion): Payment | null => {
   const gigRequest = gigCompletion.gigRequest;
-  let status = 'Pending';
   
-  if (gigCompletion.paymentStatus === 'completed') {
-    status = 'Completed';
-  } else if (gigCompletion.paymentStatus === 'failed') {
-    status = 'Failed';
+  // Find the current user's worker entry
+  // For now, we'll assume the first worker is the current user
+  // In a real implementation, you'd match by worker ID
+  const myWorkerData = gigCompletion.workers?.[0];
+  
+  if (!myWorkerData) {
+    console.warn('No worker data found for completion:', gigCompletion._id);
+    return null;
   }
+  
+  let status = 'pending';
+  if (myWorkerData.payment.status === 'paid') {
+    status = 'paid';
+  } else if (myWorkerData.payment.status === 'processing') {
+    status = 'processing';
+  } else if (myWorkerData.payment.status === 'failed') {
+    status = 'failed';
+  }
+
+  // Get employer name from the completion data or gigRequest
+  let employerName = 'Unknown Employer';
+  if (typeof gigCompletion.employer !== 'string' && gigCompletion.employer?.companyName) {
+    employerName = gigCompletion.employer.companyName;
+  } else if (typeof gigRequest !== 'string' && gigRequest.employer?.companyName) {
+    employerName = gigRequest.employer.companyName;
+  }
+
+  // Calculate total hours from completed time slots
+  const totalHours = myWorkerData.completedTimeSlots?.reduce((total, slot) => total + slot.hoursWorked, 0) || 0;
 
   return {
     id: gigCompletion._id,
     gigId: typeof gigRequest === 'string' ? gigRequest : gigRequest._id,
     gigTitle: typeof gigRequest === 'string' ? 'Unknown Job' : gigRequest.title,
-    employerName: typeof gigRequest === 'string' ? 'Unknown Employer' : 
-      typeof gigRequest.employer === 'string' ? 'Unknown Employer' : gigRequest.employer.companyName,
-    amount: gigCompletion.paymentAmount,
+    employerName,
+    amount: myWorkerData.payment.amount || 0,
     currency: 'LKR',
     status,
-    paymentDate: gigCompletion.paymentDate ? format(new Date(gigCompletion.paymentDate), 'yyyy-MM-dd') : undefined,
-    completionDate: format(new Date(gigCompletion.completionDate), 'yyyy-MM-dd'),
-    description: `Payment for ${typeof gigRequest === 'string' ? 'gig work' : gigRequest.title} (${gigCompletion.hoursWorked} hours)`
+    paymentDate: undefined, // Payment date would need to be added to the API response
+    completionDate: gigCompletion.completedAt ? format(new Date(gigCompletion.completedAt), 'yyyy-MM-dd') : format(new Date(), 'yyyy-MM-dd'),
+    description: `Payment for ${typeof gigRequest === 'string' ? 'gig work' : gigRequest.title} (${totalHours} hours)`,
+    paymentMethod: undefined, // Payment method would need to be added to the API response
+    transactionId: undefined // Transaction ID would need to be added to the API response
   };
 };
 
@@ -93,13 +107,17 @@ const MyPayments: React.FC = () => {
         // Fetch gig completions as payments
         const response = await gigCompletionService.getMyCompletions({
           paymentStatus: filter === 'all' ? undefined : filter,
-          sortBy: 'completionDate',
+          sortBy: 'completedAt',
           sortOrder: 'desc'
         });
         
         if (response.success && response.data?.completions) {
           // Convert backend format to frontend format
-          const convertedPayments = response.data.completions.map(convertToPayment);
+          const convertedPayments = response.data.completions
+            .filter(completion => completion.workers && completion.workers.length > 0) // Only include completions with worker data
+            .map(convertToPayment)
+            .filter((payment): payment is Payment => payment !== null); // Filter out null values and assert type
+          
           setPayments(convertedPayments);
           
           // Fetch payment stats
@@ -111,11 +129,11 @@ const MyPayments: React.FC = () => {
                 totalEarned: statsResponse.data.totalPaid,
                 thisMonth: statsResponse.data.thisMonthEarnings,
                 pendingPayments: statsResponse.data.pendingAmount,
-                completedPayments: convertedPayments.filter(p => p.status === 'Completed').length,
+                completedPayments: convertedPayments.filter(p => p.status === 'paid').length,
                 averagePayment: convertedPayments.length > 0 
                   ? convertedPayments.reduce((acc, curr) => acc + curr.amount, 0) / convertedPayments.length 
                   : 0,
-                completedGigs: convertedPayments.filter(p => p.status === 'Completed').length
+                completedGigs: convertedPayments.filter(p => p.status === 'paid').length
               });
             }
           } catch (statsError) {
@@ -156,18 +174,18 @@ const MyPayments: React.FC = () => {
 
   useEffect(() => {
     if (payments.length > 0) {
-      const completedPayments = payments.filter(p => p.status === 'Completed');
-      const pendingPayments = payments.filter(p => p.status === 'Pending');
-      const totalPaid = completedPayments.reduce((acc, curr) => acc + curr.amount, 0);
+      const paidPayments = payments.filter(p => p.status === 'paid');
+      const pendingPayments = payments.filter(p => p.status === 'pending');
+      const totalPaid = paidPayments.reduce((acc, curr) => acc + curr.amount, 0);
 
       setSummary({
         totalEarnings: totalPaid,
         totalEarned: totalPaid,
-        thisMonth: totalPaid,
+        thisMonth: totalPaid, // This could be calculated more accurately with date filtering
         pendingPayments: pendingPayments.length,
-        completedPayments: completedPayments.length,
-        averagePayment: completedPayments.length > 0 ? totalPaid / completedPayments.length : 0,
-        completedGigs: completedPayments.length
+        completedPayments: paidPayments.length,
+        averagePayment: paidPayments.length > 0 ? totalPaid / paidPayments.length : 0,
+        completedGigs: paidPayments.length
       });
     }
   }, [payments, setSummary]);
