@@ -3,21 +3,28 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function QuickShiftLandingPage() {
   const { isAuthenticated, userType, logout } = useAuth();
   const router = useRouter();
   const [isVisible, setIsVisible] = useState(false);
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
 
   useEffect(() => {
     setIsVisible(true);
+    
+    // Auto-rotate testimonials
+    const interval = setInterval(() => {
+      setActiveTestimonial(prev => (prev + 1) % 3);
+    }, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const handleGetStarted = () => {
     if (isAuthenticated) {
-      // Redirect to appropriate dashboard
       switch (userType) {
         case 'admin':
           router.push('/admin');
@@ -52,440 +59,516 @@ export default function QuickShiftLandingPage() {
     }
   };
 
+  const jobCategories = [
+    {
+      title: "Tutoring & Teaching",
+      description: "Share your knowledge and earn money by tutoring fellow students.",
+      icon: "📚",
+      gradient: "from-blue-500 to-indigo-600"
+    },
+    {
+      title: "Freelancing & Remote Work", 
+      description: "Flexible online work that fits your schedule perfectly.",
+      icon: "💻",
+      gradient: "from-purple-500 to-pink-600"
+    },
+    {
+      title: "Delivery & Distribution",
+      description: "Earn money through food delivery and handbill distribution.",
+      icon: "🚴",
+      gradient: "from-green-500 to-teal-600"
+    },
+    {
+      title: "Campus & Event Work",
+      description: "Work at campus events, promotions, and university functions.",
+      icon: "🎯",
+      gradient: "from-orange-500 to-red-600"
+    }
+  ];
+
+  const testimonials = [
+    {
+      quote: "QuickShift helped me find flexible tutoring opportunities that fit perfectly around my engineering classes. I've earned enough to cover my textbooks and even save for next semester!",
+      name: "Sarah Chen",
+      role: "Computer Science Student",
+      avatar: "👩‍💻"
+    },
+    {
+      quote: "The delivery jobs through QuickShift are perfect for my schedule. I can work between classes and on weekends. The pay is fair and helps me cover my living expenses without stress.",
+      name: "Marcus Rodriguez", 
+      role: "Business Major",
+      avatar: "👨‍🎓"
+    },
+    {
+      quote: "I found amazing freelance graphic design projects through QuickShift. Working remotely allows me to build my portfolio while earning money for my art supplies and materials.",
+      name: "Emma Thompson",
+      role: "Art & Design Student",
+      avatar: "👩‍🎨"
+    }
+  ];
+
   return (
-    <div className="flex overflow-hidden flex-col bg-white">
-      <div className="flex flex-col pr-5 pl-12 w-full max-md:pl-5 max-md:max-w-full">
-        {/* Header Navigation */}
-        <div className="flex flex-wrap gap-5 justify-between w-full text-sm font-medium max-w-[1314px] text-neutral-600 max-md:max-w-full">          
-          <Image
-            src="/bird_2.jpg"
-            alt="QuickShift Logo"
-            width={150}
-            height={88}
-            className="object-contain shrink-0 max-w-full aspect-[1.7] w-[150px]"
-            priority
-          />
-          <div className="flex flex-wrap gap-8 items-center self-start mt-3.5 max-md:max-w-full">
-            <div className="grow self-stretch my-auto text-neutral-600 hover:text-[#0077B6] cursor-pointer transition-colors">
-              How It Works
-            </div>
-            <div className="self-stretch my-auto text-neutral-600 hover:text-[#0077B6] cursor-pointer transition-colors">
-              Job Categories
-            </div>
-            <div className="self-stretch my-auto text-neutral-600 hover:text-[#0077B6] cursor-pointer transition-colors">
-              Contact Us
-            </div>
-            
-            {/* Conditional Navigation based on auth status */}
-            {isAuthenticated ? (
-              <div className="flex items-center gap-4">
-                <Link 
-                  href={userType === 'admin' ? '/admin' : userType === 'employer' ? '/employer' : '/undergraduate'}
-                  className="gap-2.5 self-stretch p-2.5 text-xs text-center rounded-md text-[#0077B6] hover:bg-blue-50 transition-colors"
-                >
-                  Dashboard
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="gap-2.5 self-stretch p-2.5 text-xs text-center bg-red-600 rounded-md shadow-sm text-slate-50 hover:bg-red-700 transition-colors w-[80px]"
-                >
-                  Logout
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-4">
-                <Link 
-                  href="/auth/login"
-                  className="gap-2.5 self-stretch p-2.5 w-16 text-xs text-center rounded-md text-neutral-600 hover:text-[#0077B6] hover:bg-blue-50 transition-colors"
-                >
-                  Log In
-                </Link>
-                <Link 
-                  href="/auth/register"
-                  className="gap-2.5 self-stretch p-2.5 text-xs text-center bg-sky-600 rounded-md shadow-sm text-slate-50 hover:bg-sky-700 transition-colors w-[80px]"
-                >
-                  Sign Up
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Hero Section */}
-        <div className="self-end mt-15 w-full max-w-[1339px] max-md:mt-10 max-md:max-w-full">
-          <div className="flex gap-5 max-md:flex-col max-md:">
-            <div className="w-6/12 max-md:ml-0 max-md:w-full">
-              <div className="flex flex-col pb-3 mt-16 w-full max-md:mt-10 max-md:max-w-full ">
-                <div className="max-md:max-w-full">
-                  <div className={`text-5xl font-bold text-stone-900 max-md:max-w-full max-md:text-4xl transition-all duration-700 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
-                    Find Your Perfect Part-Time Job Today!
-                  </div>
-                  <div className={`mt-10 pb-10 text-2xl text-black max-md:max-w-full transition-all duration-700 delay-200 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
-                    <p className="text-4xl font-bold mb-10">
-                      Work. Earn. Succeed.
-                    </p>
-                 
-                    <div className={"mt-0"}>
-                    
-                    <span className="text-base">
-                      Connect with flexible job opportunities perfect for university students - from tutoring and freelancing to delivery and promotional work.
-                    </span>
-
-                    </div>
-                   
-                  </div>
-                </div>
-                
-                {/* CTA Button */}
-                <button
-                  onClick={handleFindJobs}
-                  className={`flex gap-2 justify-center items-center self-start px-6 py-5 mt-16 text-lg font-semibold leading-none text-white bg-sky-600 rounded-2xl shadow-sm hover:bg-sky-700 transition-all duration-300 hover:scale-105 max-md:mt-10 ${isVisible ? 'animate-fade-in-up delay-500' : 'opacity-0'}`}
-                >
-                  <div className="self-stretch my-auto text-white">
-                    {isAuthenticated ? 'Go to Dashboard' : 'Find Jobs Now'}
-                  </div>
-                  <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
-                  </svg>
-                </button>
-
-              
-              </div>
-            </div>
-            <div className="ml-5 w-6/12 max-md:ml-0 max-md:w-full">
-              <Image
-                src="/Girl photo.png"
-                className={`grow w-full aspect-[0.98] max-md:mt-10 max-md:max-w-full transition-all duration-700 delay-300 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}
-                alt="A girl working on a laptop"
-                width={600}
-                height={690}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Section */}
-      <div className="flex flex-col justify-center items-start px-16 py-16 w-full bg-cyan-100 max-md:px-5 max-md:max-w-full">
-        <div className="px-20 py-14 max-w-full rounded-[200px] w-[1320px] max-md:px-5">
-          <div className="flex gap-5 max-md:flex-col max-md:">
-            <div className="w-9/12 max-md:ml-0 max-md:w-full">
-              <div className="flex grow gap-5 justify-between leading-none text-sky-950 max-md:mt-10">
-                <Image
-                  src="https://cdn.builder.io/api/v1/image/assets/TEMP/30268fe193f6d4ce42d1af1c1042492e142e73bc?placeholderIfAbsent=true"
-                  className="object-contain shrink-0 aspect-square rounded-[39px] w-[78px]"
-                  alt="Open Opportunities icon"
-                  width={78}
-                  height={78}
-                />
-                <div className="flex flex-col my-auto">
-                  <div className="self-start text-4xl font-bold">450+</div>
-                  <div className="mt-7 text-lg">Open Opportunities</div>
-                </div>
-                <Image
-                  src="https://cdn.builder.io/api/v1/image/assets/TEMP/d9311bdf9014d2c9159e63f60430d4a53ac56d9a?placeholderIfAbsent=true"
-                  className="object-contain shrink-0 aspect-square rounded-[39px] w-[78px]"
-                  alt="Students Employed icon"
-                  width={78}
-                  height={78}
-                />
-                <div className="flex flex-col my-auto">
-                  <div className="self-start text-4xl font-bold">1.2K+</div>
-                  <div className="mt-7 text-lg">Students Employed</div>
-                </div>
-                <Image
-                  src="https://cdn.builder.io/api/v1/image/assets/TEMP/6b9b66fa873989f083fe0f017ee88389925ebbf4?placeholderIfAbsent=true"
-                  className="object-contain shrink-0 aspect-square rounded-[39px] w-[78px]"
-                  alt="Placement Rate icon"
-                  width={78}
-                  height={78}
-                />
-                <div className="flex flex-col my-auto">
-                  <div className="self-start text-4xl font-bold">92%</div>
-                  <div className="mt-7 text-lg">Placement Rate</div>
-                </div>
-              </div>
-            </div>
-            <div className="ml-5 w-3/12 max-md:ml-0 max-md:w-full">
-              <div className="flex grow gap-5 leading-none text-sky-950 max-md:mt-10">
-                <Image
-                  src="https://cdn.builder.io/api/v1/image/assets/TEMP/8709b69cce85b3d079e8c6c9bf0810adf3fb225b?placeholderIfAbsent=true"
-                  className="object-contain shrink-0 aspect-square rounded-[39px] w-[78px]"
-                  alt="Active Students icon"
-                  width={78}
-                  height={78}
-                />
-                <div className="flex flex-col my-auto">
-                  <div className="self-start text-4xl font-bold">3.5K+</div>
-                  <div className="mt-7 text-lg">Active Students</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* About Section */}
-      <div className="self-center mt-24 w-full max-w-[1298px] max-md:mt-10 max-md:max-w-full">
-        <div className="flex gap-5 max-md:flex-col max-md:">
-          <div className="w-6/12 max-md:ml-0 max-md:w-full">
-            <Image
-              src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-              alt="Students working together on laptops"
-              className="object-contain grow w-full aspect-[0.98] max-md:mt-10 max-md:max-w-full"
-              width={800}
-              height={800}
-            />
-          </div>
-          <div className="ml-5 w-6/12 max-md:ml-0 max-md:w-full">
-            <div className="flex flex-col mt-20 w-full max-md:mt-10 max-md:max-w-full">
-              <div className="flex gap-1.5 self-start text-lg leading-loose text-cyan-500 uppercase">
-                <Image
-                  src="https://cdn.builder.io/api/v1/image/assets/TEMP/d08d92b7d1e75018b774046dc399ea474fcd93a6?placeholderIfAbsent=true"
-                  className="object-contain shrink-0 w-3.5 aspect-[0.87]"
-                  alt="About Us icon"
-                  width={14}
-                  height={14}
-                />
-                <div>about us</div>
-              </div>
-              <div className="flex flex-col items-start pl-1.5 mt-8 max-md:max-w-full">
-                <div className="text-4xl font-bold leading-[50px] text-sky-950 max-md:max-w-full max-md:text-4xl max-md:leading-[49px]">
-                  Connecting Students with Perfect Part-Time Opportunities
-                </div>
-                <div className="self-stretch mt-7 text-base leading-8 text-neutral-600 max-md:max-w-full">
-                  At QuickShift, we understand that university life requires financial flexibility. Our platform connects ambitious students with part-time job opportunities that fit their schedules. Whether you&apos;re looking to earn through tutoring, freelancing, delivery services, promotional work, or handbill distribution, we make it easy to find legitimate, student-friendly employment that works around your studies.
-                </div>
-                <button
-                  onClick={handleGetStarted}
-                  className="px-16 py-6 mt-11 text-base leading-4 text-center text-white uppercase bg-sky-600 rounded-md shadow-sm hover:bg-sky-700 transition-all duration-300 hover:scale-105 max-md:px-5 max-md:mt-10"
-                >
-                  {isAuthenticated ? 'Go to Dashboard' : 'Join Now'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Job Categories Section */}
-      <div className="flex flex-col px-7 pt-20 pb-40 mt-12 w-full bg-teal-200 bg-opacity-40 max-md:px-5 max-md:pb-24 max-md:mt-10 max-md:max-w-full">
-        <div className="self-center text-5xl font-bold leading-none text-center text-sky-950 max-md:max-w-full max-md:text-4xl">
-          Explore Our Job Categories
-        </div>
-        <div className="mt-24 mb-0 max-md:mt-10 max-md:mb-2.5 max-md:max-w-full">
-          <div className="flex gap-5 max-md:flex-col max-md:">
-            {/* Job Category Cards */}
-            {[
-              {
-                title: "Tutoring & Teaching",
-                description: "Share your knowledge and earn money by tutoring fellow students.",
-                icon: "0d1c9b10efd5ef7e0569d6a82bc09cb99ec4ae7b"
-              },
-              {
-                title: "Freelancing & Remote Work", 
-                description: "Flexible online work that fits your schedule perfectly.",
-                icon: "06d35471050634b8a68f7ac8e71af600c2a80b2d"
-              },
-              {
-                title: "Delivery & Distribution",
-                description: "Earn money through food delivery and handbill distribution.",
-                icon: "3c2d6fcdfa0195d2f066d6b9003de37b3483edf7"
-              },
-              {
-                title: "Campus & Event Work",
-                description: "Work at campus events, promotions, and university functions.",
-                icon: "8f6c66c5bb131860440ec411f33afb40fe1f800b"
-              }
-            ].map((category, index) => (
-              <div key={index} className="w-3/12 max-md:ml-0 max-md:w-full">
-                <div className="flex flex-col items-center px-2 py-9 mx-auto w-full text-center bg-white rounded-3xl shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:shadow-lg transition-all duration-300 hover:scale-105 max-md:mt-10">
-                  <Image
-                    src={`https://cdn.builder.io/api/v1/image/assets/TEMP/${category.icon}?placeholderIfAbsent=true`}
-                    className="object-contain max-w-full aspect-square rounded-[45px] w-[108px]"
-                    alt={`${category.title} icon`}
-                    width={108}
-                    height={108}
-                  />
-                  <div className="mt-6 text-2xl font-bold leading-6 text-sky-950">
-                    {category.title}
-                  </div>
-                  <div className="self-stretch mt-7 text-base leading-8 text-indigo-900">
-                    {category.description}
-                  </div>
-                  <button
-                    onClick={handleFindJobs}
-                    className="flex gap-3.5 px-7 py-6 mt-11 max-w-full text-base tracking-normal leading-4 text-white bg-gradient-to-r from-sky-600 to-blue-600 rounded-[200px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:from-sky-700 hover:to-blue-700 transition-all duration-300 hover:scale-105 w-[156px] max-md:mt-10"
-                  >
-                    <div>View Details</div>
-                    <Image
-                      src="https://cdn.builder.io/api/v1/image/assets/TEMP/5fa84eddbccfb8e58a2c48fc7fbe7610e214c7dd?placeholderIfAbsent=true"
-                      className="object-contain shrink-0 aspect-[1.21] w-[17px]"
-                      alt="View Details icon"
-                      width={17}
-                      height={17}
-                    />
-                  </button>
-                </div>
-              </div>
+    <div className="relative min-h-screen overflow-hidden bg-slate-900">
+      {/* Animated Background */}
+      <div className="fixed inset-0 z-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900"></div>
+        
+        {/* Floating Elements */}
+        <div className="absolute top-20 left-10 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-bounce" style={{animationDuration: '6s'}}></div>
+        <div className="absolute bottom-20 left-1/4 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+        
+        {/* Animated Grid */}
+        <div className="absolute inset-0 opacity-20">
+          <div className="grid grid-cols-12 gap-4 h-full p-8">
+            {Array.from({length: 48}).map((_, i) => (
+              <div 
+                key={i} 
+                className="border border-white/5 rounded-lg animate-pulse"
+                style={{animationDelay: `${i * 0.1}s`}}
+              ></div>
             ))}
           </div>
         </div>
+        
+        {/* Floating Icons */}
+        <div className="absolute top-1/4 left-1/3 text-6xl animate-bounce" style={{animationDuration: '4s', animationDelay: '1s'}}>💼</div>
+        <div className="absolute top-1/2 right-1/4 text-4xl animate-bounce" style={{animationDuration: '5s', animationDelay: '2s'}}>🎓</div>
+        <div className="absolute bottom-1/3 left-1/5 text-5xl animate-bounce" style={{animationDuration: '6s', animationDelay: '3s'}}>💰</div>
       </div>
 
-      {/* Testimonials Section */}
-      <div className="flex z-10 flex-wrap gap-1.5 self-start mt-36 max-md:mt-10">
-        <div className="flex shrink-0 self-end mt-56 w-10 rounded-3xl bg-sky-600 bg-opacity-0 h-[301px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] max-md:mt-10" />
-        <div className="grow shrink-0 basis-0 w-fit max-md:max-w-full">
-          <div className="flex flex-col pb-20 pl-11 w-full max-w-[1350px] max-md:pl-5 max-md:max-w-full">
-            <div className="z-10 self-center mt-0 max-w-full w-[697px]">
-              <div className="flex gap-5 max-md:flex-col max-md:">
-                <div className="w-[24%] max-md:ml-0 max-md:w-full">
-                  <div className="flex shrink-0 mx-auto w-60 rounded-full aspect-square bg-cyan-500 bg-opacity-20 h-[234px]" />
+      {/* Main Content */}
+      <div className="relative z-10">
+        {/* Header Navigation */}
+        <nav className="backdrop-blur-xl bg-white/10 border-b border-white/20 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                  <span className="text-xl font-bold text-white">Q</span>
                 </div>
-                <div className="ml-5 w-[57%] max-md:ml-0 max-md:w-full">
-                  <div className="flex flex-col mt-20 mr-0 text-center max-md:mt-10 max-md:max-w-full">
-                    <div className="self-center px-6 py-3 max-w-full text-sm leading-loose text-cyan-500 uppercase whitespace-nowrap bg-white rounded-md w-[142px] max-md:px-5">
-                      testimonial
-                    </div>
-                    <div className="mt-8 text-5xl font-bold leading-[59px] text-sky-950 max-md:max-w-full max-md:text-4xl max-md:leading-[58px]">
-                      Success Stories from Our
-                      <br />
-                      Student Community.
-                    </div>
+                <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  QuickShift
+                </span>
+              </div>
+              
+              <div className="hidden md:flex items-center space-x-8">
+                <a href="#how-it-works" className="text-white/80 hover:text-white transition-colors duration-300">How It Works</a>
+                <a href="#categories" className="text-white/80 hover:text-white transition-colors duration-300">Job Categories</a>
+                <a href="#contact" className="text-white/80 hover:text-white transition-colors duration-300">Contact Us</a>
+              </div>
+
+              {/* Auth Buttons */}
+              {isAuthenticated ? (
+                <div className="flex items-center space-x-4">
+                  <Link 
+                    href={userType === 'admin' ? '/admin' : userType === 'employer' ? '/employer' : '/undergraduate'}
+                    className="px-4 py-2 text-sm bg-white/10 backdrop-blur-sm text-white rounded-lg hover:bg-white/20 transition-all duration-300"
+                  >
+                    Dashboard
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="px-4 py-2 text-sm bg-red-500/80 backdrop-blur-sm text-white rounded-lg hover:bg-red-500 transition-all duration-300"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center space-x-4">
+                  <Link 
+                    href="/auth/login"
+                    className="px-4 py-2 text-sm text-white/80 hover:text-white transition-colors duration-300"
+                  >
+                    Log In
+                  </Link>
+                  <Link 
+                    href="/auth/register"
+                    className="px-6 py-2 text-sm bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105"
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </nav>
+
+        {/* Enhanced Hero Section */}
+        <section className="min-h-screen flex items-center">
+          <div className="max-w-7xl mx-auto px-6 py-8">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              {/* Left Content */}
+              <div className={`space-y-8 transition-all duration-1000 ${isVisible ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0'}`}>
+                <div className="space-y-6">
+                  <h1 className="text-5xl lg:text-7xl font-black text-white leading-tight">
+                    Find Your
+                    <span className="bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent block">
+                      Perfect
+                    </span>
+                    Part-Time Job Today!
+                  </h1>
+                  
+                  <div className="space-y-4">
+                    <p className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent">
+                      Work. Earn. Succeed.
+                    </p>
+                    <p className="text-lg text-white/70 leading-relaxed max-w-lg">
+                      Connect with flexible job opportunities perfect for university students - from tutoring and freelancing to delivery and promotional work.
+                    </p>
                   </div>
                 </div>
-                <div className="ml-5 w-[19%] max-md:ml-0 max-md:w-full">
-                  <div className="flex shrink-0 mx-auto mt-20 rounded-full bg-sky-600 bg-opacity-10 h-[195px] w-[195px] max-md:mt-10" />
+
+                <button
+                  onClick={handleFindJobs}
+                  className="group relative px-8 py-5 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-2xl overflow-hidden transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/25"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  <div className="relative flex items-center space-x-3">
+                    <span className="text-lg">
+                      {isAuthenticated ? 'Go to Dashboard' : 'Find Jobs Now'}
+                    </span>
+                    <svg className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path>
+                    </svg>
+                  </div>
+                </button>
+              </div>
+
+              {/* Right Image */}
+              <div className={`relative transition-all duration-1000 delay-300 ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-10 opacity-0'}`}>
+                <div className="relative">
+                  {/* Glowing background effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 rounded-3xl blur-3xl scale-110 animate-pulse"></div>
+                  
+                  {/* Glass morphism container */}
+                  <div className="relative backdrop-blur-sm bg-white/5 p-6 rounded-3xl border border-white/20 hover:bg-white/10 transition-all duration-500">
+                    {/* Image container with modern styling */}
+                    <div className="relative overflow-hidden rounded-2xl">
+                      <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 z-10"></div>
+                      <Image
+                        src="/Girl photo.png"
+                        alt="A girl working on a laptop - QuickShift student success"
+                        width={600}
+                        height={690}
+                        className="w-full h-auto object-cover transition-transform duration-700 hover:scale-105"
+                        priority
+                      />
+                      
+                      {/* Floating stats overlay */}
+                      <div className="absolute top-6 left-6 z-20">
+                        <div className="backdrop-blur-md bg-white/20 border border-white/30 rounded-xl p-4 text-white">
+                          <div className="text-2xl font-black">450+</div>
+                          <div className="text-sm font-medium text-white/80">Jobs Available</div>
+                        </div>
+                      </div>
+                      
+                      <div className="absolute bottom-6 right-6 z-20">
+                        <div className="backdrop-blur-md bg-white/20 border border-white/30 rounded-xl p-4 text-white">
+                          <div className="text-2xl font-black">92%</div>
+                          <div className="text-sm font-medium text-white/80">Success Rate</div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Decorative elements */}
+                    <div className="absolute -top-4 -right-4 w-8 h-8 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full animate-bounce" style={{animationDelay: '0.5s'}}></div>
+                    <div className="absolute -bottom-4 -left-4 w-6 h-6 bg-gradient-to-r from-green-400 to-teal-500 rounded-full animate-bounce" style={{animationDelay: '1s'}}></div>
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
+        </section>
 
-            {/* Testimonial Cards */}
-            <div className="mt-8 max-md:mr-0 max-md:max-w-full">
-              <div className="flex gap-5 max-md:flex-col max-md:">
+        {/* Stats Section */}
+        <section className="py-20">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
                 {[
-                  {
-                    quote: "QuickShift helped me find flexible tutoring opportunities that fit perfectly around my engineering classes. I've earned enough to cover my textbooks and even save for next semester!",
-                    name: "Sarah Chen",
-                    role: "Computer Science Student"
-                  },
-                  {
-                    quote: "The delivery jobs through QuickShift are perfect for my schedule. I can work between classes and on weekends. The pay is fair and helps me cover my living expenses without stress.",
-                    name: "Marcus Rodriguez", 
-                    role: "Business Major"
-                  },
-                  {
-                    quote: "I found amazing freelance graphic design projects through QuickShift. Working remotely allows me to build my portfolio while earning money for my art supplies and materials.",
-                    name: "Emma Thompson",
-                    role: "Art & Design Student"
-                  }
-                ].map((testimonial, index) => (
-                  <div key={index} className="w-[33%] max-md:ml-0 max-md:w-full">
-                    <div className="grow pb-9 w-full text-lg bg-blue-50 rounded-3xl shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:shadow-lg transition-all duration-300 hover:scale-105 max-md:mt-10">
-                      <Image
-                        src={`https://cdn.builder.io/api/v1/image/assets/TEMP/${index === 0 ? 'cafe4f8ac438a458c3105fc1b0f1253c79858fc1' : index === 1 ? 'd36b16ce378eb0d3ead9e49471eedd39d398569f' : '9dd232a8d1db8bf453da9c1a927defe1085fd6bd'}?placeholderIfAbsent=true`}
-                        className="object-contain aspect-[3] w-[51px]"
-                        alt={`Success Story ${index + 1} icon`}
-                        width={51}
-                        height={51}
-                      />
-                      <div className="flex flex-col items-start px-8 mt-6 max-md:px-5">                      
-                        <div className="self-stretch leading-8 text-neutral-700">
-                          &quot;{testimonial.quote}&quot;
-                        </div>
-                        <div className="mt-6 text-xl font-bold leading-none text-sky-950">
-                          {testimonial.name}
-                        </div>
-                        <div className="mt-5 leading-loose text-neutral-600">
-                          {testimonial.role}
-                        </div>
-                      </div>
+                  { value: "450+", label: "Open Opportunities", icon: "💼" },
+                  { value: "1.2K+", label: "Students Employed", icon: "👥" },
+                  { value: "92%", label: "Placement Rate", icon: "📈" },
+                  { value: "3.5K+", label: "Active Students", icon: "🎓" }
+                ].map((stat, index) => (
+                  <div key={index} className="text-center space-y-4 group">
+                    <div className="text-4xl group-hover:scale-110 transition-transform duration-300">
+                      {stat.icon}
+                    </div>
+                    <div className="text-3xl lg:text-4xl font-black text-white">
+                      {stat.value}
+                    </div>
+                    <div className="text-white/70 font-medium">
+                      {stat.label}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* CTA Section */}
-      <div className="px-20 pt-32 pb-0.5 w-full bg-cyan-100 max-md:px-5 max-md:pt-24 max-md:max-w-full">
-        <div className="flex gap-5 max-md:flex-col max-md:">
-          <div className="w-[56%] max-md:ml-0 max-md:w-full">
-            <div className="flex flex-col max-md:mt-10 max-md:max-w-full">
-              <div className="self-start text-5xl font-bold leading-[59px] text-sky-950 max-md:max-w-full max-md:text-4xl max-md:leading-[58px]">
-                Start Earning Today with QuickShift!
-              </div>
-              <div className="flex flex-col pl-1.5 mt-11 max-md:mt-10 max-md:max-w-full">
-                <div className="text-lg leading-8 text-neutral-600 max-md:max-w-full">
-                  <span className="text-xl font-bold">
-                    Your next part-time job is just a click away!
-                  </span>
-                  <br />
-                  At QuickShift, we make it simple for university students to find flexible, well-paying part-time work that fits around their studies. Join thousands of students who are already earning money through our platform.
+        {/* About Section */}
+        <section className="py-20">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 to-teal-500/20 rounded-3xl blur-2xl"></div>
+                <div className="relative backdrop-blur-sm bg-white/10 p-8 rounded-3xl border border-white/20">
+                  <div className="aspect-square bg-gradient-to-br from-green-400 to-teal-600 rounded-2xl flex items-center justify-center">
+                    <div className="text-white text-center space-y-4">
+                      <div className="text-6xl">🤝</div>
+                      <div className="text-xl font-bold">Connecting Students</div>
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-cyan-400 rounded-full"></div>
+                    <span className="text-cyan-400 font-medium uppercase tracking-wider">About Us</span>
+                  </div>
+                  <h2 className="text-4xl lg:text-5xl font-black text-white leading-tight">
+                    Connecting Students with
+                    <span className="bg-gradient-to-r from-green-400 to-teal-400 bg-clip-text text-transparent block">
+                      Perfect Part-Time Opportunities
+                    </span>
+                  </h2>
+                </div>
+
+                <p className="text-lg text-white/70 leading-relaxed">
+                  At QuickShift, we understand that university life requires financial flexibility. Our platform connects ambitious students with part-time job opportunities that fit their schedules. Whether you're looking to earn through tutoring, freelancing, delivery services, promotional work, or handbill distribution, we make it easy to find legitimate, student-friendly employment that works around your studies.
+                </p>
+
                 <button
                   onClick={handleGetStarted}
-                  className="self-start px-16 py-6 mt-11 text-base leading-4 text-center text-white uppercase bg-sky-600 rounded-md shadow-sm hover:bg-sky-700 transition-all duration-300 hover:scale-105 max-md:px-5 max-md:mt-10"
+                  className="px-8 py-4 bg-gradient-to-r from-green-500 to-teal-600 text-white font-semibold rounded-xl hover:from-green-600 hover:to-teal-700 transition-all duration-300 transform hover:scale-105"
                 >
                   {isAuthenticated ? 'Go to Dashboard' : 'Join Now'}
                 </button>
               </div>
             </div>
           </div>
-          <div className="ml-5 w-[44%] max-md:ml-0 max-md:w-full">
-            <Image
-              src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-              alt="Students earning money through part-time work"
-              className="object-contain grow mt-20 w-full aspect-[0.83] max-md:mt-10 max-md:max-w-full"
-              width={600}
-              height={720}
-            />
+        </section>
+
+        {/* Job Categories Section */}
+        <section id="categories" className="py-20">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center space-y-6 mb-16">
+              <h2 className="text-4xl lg:text-5xl font-black text-white">
+                Explore Our
+                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent block">
+                  Job Categories
+                </span>
+              </h2>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {jobCategories.map((category, index) => (
+                <div
+                  key={index}
+                  className="group relative backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8 hover:bg-white/20 transition-all duration-500 transform hover:-translate-y-2 hover:shadow-2xl"
+                >
+                  <div className="space-y-6">
+                    <div className="relative">
+                      <div className={`w-16 h-16 bg-gradient-to-r ${category.gradient} rounded-2xl flex items-center justify-center text-2xl group-hover:scale-110 transition-transform duration-300`}>
+                        {category.icon}
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h3 className="text-xl font-bold text-white group-hover:text-blue-300 transition-colors duration-300">
+                        {category.title}
+                      </h3>
+                      <p className="text-white/70 leading-relaxed">
+                        {category.description}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={handleFindJobs}
+                      className={`w-full py-3 bg-gradient-to-r ${category.gradient} text-white font-semibold rounded-xl opacity-80 group-hover:opacity-100 transition-all duration-300 transform group-hover:scale-105`}
+                    >
+                      View Details
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
+
+        {/* Testimonials Section */}
+        <section className="py-20">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center space-y-6 mb-16">
+              <div className="inline-block px-6 py-2 bg-white/10 backdrop-blur-sm rounded-full">
+                <span className="text-cyan-400 font-medium uppercase tracking-wider">Testimonials</span>
+              </div>
+              <h2 className="text-4xl lg:text-5xl font-black text-white">
+                Success Stories from Our
+                <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent block">
+                  Student Community
+                </span>
+              </h2>
+            </div>
+
+            <div className="relative">
+              <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8 lg:p-12">
+                <div className="space-y-8">
+                  <div className="text-center space-y-6">
+                    <div className="text-6xl">
+                      {testimonials[activeTestimonial].avatar}
+                    </div>
+                    <blockquote className="text-xl lg:text-2xl text-white/90 italic leading-relaxed max-w-4xl mx-auto">
+                      "{testimonials[activeTestimonial].quote}"
+                    </blockquote>
+                    <div className="space-y-2">
+                      <div className="text-xl font-bold text-white">
+                        {testimonials[activeTestimonial].name}
+                      </div>
+                      <div className="text-white/70">
+                        {testimonials[activeTestimonial].role}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-center space-x-4">
+                    {testimonials.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setActiveTestimonial(index)}
+                        className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                          index === activeTestimonial 
+                            ? 'bg-white scale-125' 
+                            : 'bg-white/30 hover:bg-white/50'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-20">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-3xl blur-2xl"></div>
+              <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-12 lg:p-16">
+                <div className="grid lg:grid-cols-2 gap-12 items-center">
+                  <div className="space-y-8">
+                    <h2 className="text-4xl lg:text-5xl font-black text-white leading-tight">
+                      Start Earning Today with
+                      <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent block">
+                        QuickShift!
+                      </span>
+                    </h2>
+
+                    <div className="space-y-4">
+                      <p className="text-xl font-bold text-white">
+                        Your next part-time job is just a click away!
+                      </p>
+                      <p className="text-lg text-white/70 leading-relaxed">
+                        At QuickShift, we make it simple for university students to find flexible, well-paying part-time work that fits around their studies. Join thousands of students who are already earning money through our platform.
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={handleGetStarted}
+                      className="px-8 py-4 bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 hover:shadow-2xl"
+                    >
+                      {isAuthenticated ? 'Go to Dashboard' : 'Join Now'}
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <div className="aspect-square bg-gradient-to-br from-orange-400 to-pink-600 rounded-3xl flex items-center justify-center">
+                      <div className="text-white text-center space-y-4">
+                        <div className="text-8xl">💪</div>
+                        <div className="text-2xl font-bold">Empower Your Future</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer id="contact" className="py-20 bg-black/50 backdrop-blur-xl border-t border-white/20">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="grid md:grid-cols-3 gap-12">
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-white">Contact</h3>
+                <div className="space-y-3 text-white/70">
+                  <p>2972 Westheimer Rd. Santa Ana, Illinois 85486</p>
+                  <p>support@quickshift.com</p>
+                  <p>+1 (555) 123-4567</p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-white">For Students</h3>
+                <div className="space-y-3">
+                  <Link href={isAuthenticated ? "/undergraduate" : "/auth/register?type=user"} className="block text-white/70 hover:text-white transition-colors duration-300">
+                    Find Jobs
+                  </Link>
+                  <a href="#how-it-works" className="block text-white/70 hover:text-white transition-colors duration-300">How It Works</a>
+                  <a href="#" className="block text-white/70 hover:text-white transition-colors duration-300">Success Stories</a>
+                  <a href="#" className="block text-white/70 hover:text-white transition-colors duration-300">Support</a>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-white">For Employers</h3>
+                <div className="space-y-3">
+                  <Link href={isAuthenticated && userType === 'employer' ? "/employer" : "/auth/register?type=employer"} className="block text-white/70 hover:text-white transition-colors duration-300">
+                    Post a Job
+                  </Link>
+                  <a href="#" className="block text-white/70 hover:text-white transition-colors duration-300">Terms of Service</a>
+                  <a href="#" className="block text-white/70 hover:text-white transition-colors duration-300">Privacy Policy</a>
+                  <a href="#" className="block text-white/70 hover:text-white transition-colors duration-300">About QuickShift</a>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-white/20 mt-12 pt-8 text-center">
+              <div className="flex items-center justify-center space-x-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                  <span className="text-lg font-bold text-white">Q</span>
+                </div>
+                <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                  QuickShift
+                </span>
+              </div>
+              <p className="text-white/50">© 2025 QuickShift. All rights reserved.</p>
+            </div>
+          </div>
+        </footer>
       </div>
 
-      {/* Footer */}
-      <div className="px-20 pt-20 pb-44 w-full bg-sky-600 bg-opacity-70 max-md:px-5 max-md:pb-24 max-md:max-w-full">
-        <div className="flex gap-5 max-md:flex-col max-md:">
-          <div className="w-[33%] max-md:ml-0 max-md:w-full">
-            <div className="flex flex-col font-medium max-md:mt-10">
-              <div className="self-start text-2xl text-neutral-50">Contact</div>
-              <div className="mt-10 text-base text-white max-md:mt-10">
-                2972 Westheimer Rd. Santa Ana, Illinois 85486 <br />
-                support@quickshift.com<br />
-                +1 (555) 123-4567
-              </div>
-            </div>
-          </div>
-          <div className="ml-5 w-[33%] max-md:ml-0 max-md:w-full">
-            <div className="flex flex-col grow text-base font-medium text-white max-md:mt-10">
-              <div className="text-2xl text-neutral-50 max-md:mr-2.5">
-                For Students
-              </div>
-              <Link href={isAuthenticated ? "/undergraduate" : "/auth/register?type=user"} className="self-start mt-9 hover:text-cyan-200 transition-colors">
-                Find Jobs
-              </Link>
-              <div className="mt-7 hover:text-cyan-200 cursor-pointer transition-colors">How It Works</div>
-              <div className="self-start mt-6 hover:text-cyan-200 cursor-pointer transition-colors">Success Stories</div>
-              <div className="self-start mt-6 hover:text-cyan-200 cursor-pointer transition-colors">Support</div>
-            </div>
-          </div>
-          <div className="ml-5 w-[33%] max-md:ml-0 max-md:w-full">
-            <div className="flex flex-col grow items-start text-base font-medium text-white max-md:mt-10">
-              <div className="text-2xl text-neutral-50">For Employers</div>
-              <Link href={isAuthenticated && userType === 'employer' ? "/employer" : "/auth/register?type=employer"} className="self-stretch mt-9 hover:text-cyan-200 transition-colors">
-                Post a Job
-              </Link>
-              <div className="mt-6 hover:text-cyan-200 cursor-pointer transition-colors">Terms of Service</div>
-              <div className="mt-7 hover:text-cyan-200 cursor-pointer transition-colors">Privacy Policy</div>
-              <div className="mt-7 hover:text-cyan-200 cursor-pointer transition-colors">About QuickShift</div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <style jsx>{`
+        @keyframes fade-in {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+          animation: fade-in 0.7s ease-out forwards;
+        }
+        
+        .animate-fade-in-up {
+          animation: fade-in 0.7s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }
