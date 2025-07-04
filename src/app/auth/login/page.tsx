@@ -1,11 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { authService } from '@/services/authService';
-import { UserType, LoginResponse, ApiResponse } from '@/types/auth';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { UserType } from '@/types/auth';
 
 export default function LoginPage() {
+  const { login, isAuthenticated, userType, isLoading } = useAuth();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -14,6 +17,16 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Handle already authenticated users
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && userType) {
+      // User is already authenticated, redirect immediately
+      const redirectPath = getRedirectPath(userType);
+      console.log('🔄 User already authenticated, redirecting to:', redirectPath);
+      router.replace(redirectPath);
+    }
+  }, [isAuthenticated, userType, isLoading, router]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -30,7 +43,7 @@ export default function LoginPage() {
       case 'admin':
         return '/admin';
       case 'employer':
-        return '/employer/dashboard';
+        return '/employer';
       default:
         return '/undergraduate';
     }
@@ -43,44 +56,26 @@ export default function LoginPage() {
     setSuccess('');
     
     try {
-      let response: ApiResponse<LoginResponse>;
+      console.log('🔐 Attempting login with:', { email: formData.email, userType: formData.userType });
       
-      if (formData.userType === 'admin') {
-        response = await authService.adminLogin({
-          email: formData.email,
-          password: formData.password
-        });
-      } else {
-        response = await authService.login(formData);
-      }
-
-      if (response.success && response.data) {
-        // Store auth data
-        authService.setTokens(
-          response.data.tokens.accessToken,
-          response.data.tokens.refreshToken
-        );
-        authService.setUserType(response.data.userType);
-        authService.setUser(response.data.user);
+      await login(formData.email, formData.password, formData.userType);
+      
+      console.log('✅ Login function completed successfully');
+      
+      // Show success message
+      setSuccess('Login successful! Redirecting to your dashboard...');
+      
+      // Use Next.js router for smooth navigation (no page reload)
+      setTimeout(() => {
+        const redirectPath = getRedirectPath(formData.userType);
+        console.log('🔄 Redirecting to:', redirectPath);
         
-        // Show success message
-        const userName = response.data.user.firstName 
-          ? `${response.data.user.firstName} ${response.data.user.lastName}`
-          : response.data.user.companyName || response.data.user.email;
+        // Use Next.js router instead of forcing page reload
+        router.replace(redirectPath);
+      }, 1500); // Reduced delay since no reload needed
         
-        setSuccess(`Welcome back, ${userName}! Redirecting to your dashboard...`);
-        
-        // Redirect after short delay
-        setTimeout(() => {
-          if (response.data) {
-            window.location.href = getRedirectPath(response.data.userType);
-          }
-        }, 1500);
-        
-      } else {
-        setError(response.message || 'Login failed. Please try again.');
-      }
     } catch (err: unknown) {
+      console.error('❌ Login error:', err);
       const errorMessage = (err as Error).message;
       if (errorMessage.includes('Invalid credentials')) {
         setError('Invalid email or password. Please check your credentials and try again.');
@@ -95,11 +90,19 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 flex items-center justify-center px-4">
       <div className="w-full max-w-md">
-        {/* Logo/Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-[#03045E] mb-2">QuickShift</h1>
-          <p className="text-gray-600">Sign in to your account</p>
-        </div>
+        {/* Show loading while checking auth state */}
+        {isLoading ? (
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[#0077B6]"></div>
+            <p className="mt-2 text-gray-600">Loading...</p>
+          </div>
+        ) : (
+          <>
+            {/* Logo/Header */}
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-bold text-[#03045E] mb-2">QuickShift</h1>
+              <p className="text-gray-600">Sign in to your account</p>
+            </div>
 
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
@@ -119,9 +122,7 @@ export default function LoginPage() {
                 <option value="employer" className="text-gray-900 bg-white">Employer</option>
                 <option value="admin" className="text-gray-900 bg-white">Administrator</option>
               </select>
-            </div>
-
-            {/* Email */}
+            </div>            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
@@ -133,12 +134,10 @@ export default function LoginPage() {
                 onChange={handleInputChange}
                 required
                 disabled={loading}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
                 placeholder="Enter your email"
               />
-            </div>
-
-            {/* Password */}
+            </div>            {/* Password */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
@@ -150,7 +149,7 @@ export default function LoginPage() {
                 onChange={handleInputChange}
                 required
                 disabled={loading}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
                 placeholder="Enter your password"
               />
             </div>
@@ -188,21 +187,21 @@ export default function LoginPage() {
                 <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     type="button"
-                    onClick={() => window.location.href = '/undergraduate'}
+                    onClick={() => router.push('/undergraduate')}
                     className="px-4 py-2 bg-[#0077B6] text-white rounded-lg hover:bg-[#005F8A] transition-colors text-sm"
                   >
                     Student Dashboard
                   </button>
                   <button
                     type="button"
-                    onClick={() => window.location.href = '/employer/dashboard'}
+                    onClick={() => router.push('/employer')}
                     className="px-4 py-2 bg-[#00B4D8] text-white rounded-lg hover:bg-[#0096C7] transition-colors text-sm"
                   >
                     Employer Dashboard
                   </button>
                   <button
                     type="button"
-                    onClick={() => window.location.href = '/admin'}
+                    onClick={() => router.push('/admin')}
                     className="px-4 py-2 bg-[#023E8A] text-white rounded-lg hover:bg-[#03045E] transition-colors text-sm"
                   >
                     Admin Dashboard
@@ -263,15 +262,17 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Additional Info */}
-        <div className="text-center mt-8">
-          <p className="text-gray-500 text-sm">
-            Need help? Contact{' '}
-            <a href="mailto:support@quickshift.com" className="text-[#0077B6] hover:underline">
-              support@quickshift.com
-            </a>
-          </p>
-        </div>
+            {/* Additional Info */}
+            <div className="text-center mt-8">
+              <p className="text-gray-500 text-sm">
+                Need help? Contact{' '}
+                <a href="mailto:support@quickshift.com" className="text-[#0077B6] hover:underline">
+                  support@quickshift.com
+                </a>
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

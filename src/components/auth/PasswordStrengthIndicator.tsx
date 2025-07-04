@@ -13,7 +13,7 @@ export function PasswordStrengthIndicator({ password, show = true }: PasswordStr
   
   const strengthColors = {
     weak: 'bg-red-500',
-    fair: 'bg-yellow-500',
+    fair: 'bg-orange-500',
     good: 'bg-blue-500',
     strong: 'bg-green-500',
   };
@@ -36,7 +36,7 @@ export function PasswordStrengthIndicator({ password, show = true }: PasswordStr
         </div>
         <span className={`text-xs font-medium ${
           strength === 'weak' ? 'text-red-600' :
-          strength === 'fair' ? 'text-yellow-600' :
+          strength === 'fair' ? 'text-orange-600' :
           strength === 'good' ? 'text-blue-600' : 'text-green-600'
         }`}>
           {strengthTexts[strength]}

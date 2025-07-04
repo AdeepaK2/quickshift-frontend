@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import Button from "@/components/ui/button";
@@ -14,36 +14,163 @@ import {
   CheckCircleIcon,
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
+import { gigRequestService, CreateGigRequestRequest } from '@/services/gigRequestService';
+import { formatISO } from 'date-fns';
 
-export default function JobForm() {
+// Extended interface for form data with additional fields
+interface JobFormData {
+  title?: string;
+  description?: string;
+  category?: string;
+  payRate?: {
+    amount: number;
+    rateType: 'hourly' | 'fixed' | 'daily';
+  };
+  location?: {
+    address: string;
+    city: string;
+    postalCode?: string;
+    coordinates?: {
+      latitude: number;
+      longitude: number;
+    };
+  };
+  timeSlots?: TimeSlot[];
+  requirements?: string[] | string;
+  benefits?: string[] | string;
+  skillsRequired?: string[];
+  applicationDeadline?: Date | string;
+  experienceRequired?: string;
+  educationRequired?: string;
+  visibility?: 'public' | 'private' | 'targeted';
+  // Additional form fields
+  type?: string;
+  minSalary?: number;
+  maxSalary?: number;
+}
+
+interface TimeSlot {
+  _id?: string;
+  startTime: string | Date;
+  endTime: string | Date;
+  date: string | Date;
+  peopleNeeded: number;
+}
+
+interface JobFormProps {
+  jobId?: string;
+  isEditing?: boolean;
+}
+
+export default function JobForm({ jobId, isEditing = false }: JobFormProps) {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<JobFormData>({
     title: '',
     description: '',
-    location: '',
-    type: 'full-time',
-    minSalary: '',
-    maxSalary: '',
-    requirements: '',
+    category: '',
+    payRate: {
+      amount: 0,
+      rateType: 'hourly'
+    },
+    location: {
+      address: '',
+      city: '',
+    },
+    timeSlots: [{
+      date: formatISO(new Date()).split('T')[0],
+      startTime: new Date().toISOString(),
+      endTime: new Date(Date.now() + 3600000).toISOString(),
+      peopleNeeded: 1
+    }],
+    requirements: [],
+    benefits: [],
+    skillsRequired: [],
   });
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentSection, setCurrentSection] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
 
+  
+  // Fetch job data if editing
+  useEffect(() => {
+    const fetchJobData = async () => {
+      if (isEditing && jobId) {
+        try {
+          const response = await gigRequestService.getGigRequestById(jobId);
+          if (response.success && response.data) {
+            // Convert response data to form data structure
+            const job = response.data;
+            setFormData({
+              title: job.title,
+              description: job.description,
+              category: job.category,
+              payRate: job.payRate,
+              location: job.location,
+              timeSlots: job.timeSlots,
+              requirements: job.requirements || [],
+              benefits: job.benefits || [],
+              skillsRequired: job.skillsRequired || [],
+              applicationDeadline: job.applicationDeadline,
+              experienceRequired: job.experienceRequired,
+              educationRequired: job.educationRequired
+            });
+          }
+        } catch (error) {
+          console.error('Error fetching job data:', error);
+        }
+      }
+    };
+    
+    fetchJobData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing, jobId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API call
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setShowConfetti(true);
-      console.log('Job posted:', formData);
+      // Format data for API
+      const jobData: CreateGigRequestRequest = {
+        title: formData.title || '',
+        description: formData.description || '',
+        category: formData.category || 'General',
+        payRate: formData.payRate || { amount: 0, rateType: 'hourly' },
+        location: formData.location || { address: '', city: '' },
+        timeSlots: formData.timeSlots || [],
+        requirements: Array.isArray(formData.requirements) 
+          ? formData.requirements 
+          : typeof formData.requirements === 'string' 
+            ? formData.requirements.split('\n').filter((req: string) => req.trim() !== '') 
+            : [],
+        benefits: Array.isArray(formData.benefits)
+          ? formData.benefits
+          : typeof formData.benefits === 'string'
+            ? formData.benefits.split('\n').filter((benefit: string) => benefit.trim() !== '')
+            : [],
+        skillsRequired: formData.skillsRequired,
+        experienceRequired: formData.experienceRequired,
+        educationRequired: formData.educationRequired,
+        applicationDeadline: formData.applicationDeadline,
+        visibility: formData.visibility || 'public'
+      };
       
-      setTimeout(() => {
-        router.push('/employer/jobs');
-      }, 1500);
+      let response;
+      if (isEditing && jobId) {
+        response = await gigRequestService.updateGigRequest(jobId, jobData);
+      } else {
+        response = await gigRequestService.createGigRequest(jobData);
+      }
+      
+      if (response.success) {
+        setShowConfetti(true);
+        setTimeout(() => {
+          router.push('/employer');
+        }, 1500);
+      } else {
+        throw new Error(response.message || 'Failed to save job');
+      }
     } catch (error) {
       console.error('Error submitting form:', error);
       setIsSubmitting(false);
@@ -375,7 +502,7 @@ export default function JobForm() {
                 <div className="relative">
                   <input
                     name="location"
-                    value={formData.location}
+                    value={formData.location?.address || ''}
                     onChange={handleChange}
                     placeholder="e.g. New York, NY or Remote"
                     className="w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"

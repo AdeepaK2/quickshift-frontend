@@ -10,7 +10,7 @@ const badgeVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/80",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "bg-gray-100 text-gray-800 hover:bg-gray-200/80 border-gray-200", 
         destructive:
           "bg-red-100 text-red-800 hover:bg-red-200/80 border-red-200",
         outline:
@@ -18,7 +18,7 @@ const badgeVariants = cva(
         success:
           "bg-green-100 text-green-800 hover:bg-green-200/80 border-green-200",
         warning:
-          "bg-yellow-100 text-yellow-800 hover:bg-yellow-200/80 border-yellow-200",
+          "bg-gray-100 text-gray-800 hover:bg-gray-200/80 border-gray-200",
         info: "bg-blue-100 text-blue-800 hover:bg-blue-200/80 border-blue-200",
       },
     },

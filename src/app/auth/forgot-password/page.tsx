@@ -104,8 +104,7 @@ function ForgotPasswordContent() {
         {/* Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Account Type */}
-            <div>
+            {/* Account Type */}            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Account Type
               </label>
@@ -113,15 +112,13 @@ function ForgotPasswordContent() {
                 name="userType"
                 value={formData.userType}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 bg-white"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 bg-white text-gray-900 font-medium"
               >
                 <option value="user">Student/Job Seeker</option>
                 <option value="employer">Employer</option>
                 <option value="admin">Administrator</option>
               </select>
-            </div>
-
-            {/* Email */}
+            </div>            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
@@ -132,7 +129,7 @@ function ForgotPasswordContent() {
                 value={formData.email}
                 onChange={handleInputChange}
                 required
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0077B6] focus:border-transparent transition-all duration-200 text-gray-900 font-medium placeholder:text-gray-400"
                 placeholder="Enter your email address"
               />              <p className="text-xs text-gray-500 mt-2">
                 We&apos;ll send a 6-digit verification code to this email

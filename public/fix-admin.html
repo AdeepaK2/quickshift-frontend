@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix Admin Dashboard</title>
+</head>
+<body>
+    <h1>Fixing Admin Dashboard...</h1>
+    <div id="output"></div>
+    
+    <script>
+// Fix script for admin dashboard
+const fixAdminDashboard = async () => {
+  const output = document.getElementById('output');
+  
+  output.innerHTML += '<p>🔧 Starting admin dashboard fix...</p>';
+  
+  // Step 1: Clear any stale data
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('userType');
+  document.cookie = 'accessToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  document.cookie = 'userType=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  
+  output.innerHTML += '<p>✅ Cleared stale authentication data</p>';
+  
+  // Step 2: Login fresh
+  try {
+    const loginResponse = await fetch('http://localhost:5000/api/auth/admin/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: 'testadmin@quickshift.com',
+        password: 'TestAdmin123!',
+        userType: 'admin'
+      })
+    });
+    
+    const loginData = await loginResponse.json();
+    
+    if (loginData.success) {
+      // Store new tokens
+      const tokens = loginData.data.tokens;
+      localStorage.setItem('accessToken', tokens.accessToken);
+      localStorage.setItem('refreshToken', tokens.refreshToken);
+      localStorage.setItem('userType', 'admin');
+      
+      // Set cookies
+      document.cookie = `accessToken=${tokens.accessToken}; path=/; max-age=86400`;
+      document.cookie = `userType=admin; path=/; max-age=86400`;
+      
+      output.innerHTML += '<p>✅ Admin login successful</p>';
+      
+      // Step 3: Test API calls
+      const testCalls = [
+        { name: 'Dashboard', url: '/api/admin/dashboard' },
+        { name: 'Users', url: '/api/admin/users' },
+        { name: 'Employers', url: '/api/admin/employers' }
+      ];
+      
+      for (const test of testCalls) {
+        try {
+          const response = await fetch(`http://localhost:5000${test.url}`, {
+            headers: {
+              'Authorization': `Bearer ${tokens.accessToken}`
+            }
+          });
+          const data = await response.json();
+          output.innerHTML += `<p>✅ ${test.name} API: ${data.success ? 'SUCCESS' : 'FAILED'} - Total: ${data.total || data.data?.overview?.totalUsers || data.data?.overview?.totalEmployers || 'N/A'}</p>`;
+        } catch (error) {
+          output.innerHTML += `<p>❌ ${test.name} API: ERROR - ${error.message}</p>`;
+        }
+      }
+      
+      // Step 4: Redirect to admin dashboard
+      output.innerHTML += '<p>🔄 Redirecting to admin dashboard in 3 seconds...</p>';
+      setTimeout(() => {
+        window.location.href = '/admin';
+      }, 3000);
+      
+    } else {
+      output.innerHTML += `<p>❌ Login failed: ${loginData.message}</p>`;
+    }
+  } catch (error) {
+    output.innerHTML += `<p>❌ Login error: ${error.message}</p>`;
+  }
+};
+
+// Auto-run the fix
+fixAdminDashboard();
+    </script>
+</body>
+</html>

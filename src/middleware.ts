@@ -25,24 +25,63 @@ const publicRoutes = [
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
-  // Get tokens from cookies or headers - middleware can't access localStorage
-  // We need to rely on cookies or headers for middleware authentication
-  const accessToken = request.cookies.get('accessToken')?.value || 
-                     request.headers.get('authorization')?.replace('Bearer ', '');
+  // Skip middleware for static files and API routes
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname.includes('.')
+  ) {
+    return NextResponse.next();
+  }
+  
+  // Get tokens from cookies - middleware can't access localStorage
+  const accessToken = request.cookies.get('accessToken')?.value;
   const userType = request.cookies.get('userType')?.value;
-    // Check if the route is public
+  
+  // Only log for actual navigation, not for frequent checks
+  if (!pathname.includes('/_next') && !pathname.includes('.')) {
+    console.log('🔍 Middleware check:', { 
+      pathname, 
+      hasToken: !!accessToken, 
+      userType
+    });
+  }
+  
+  // Check if the route is public
   const isPublicRoute = publicRoutes.some(route => 
     pathname === route || pathname.startsWith(route + '/')
   );
   
-  // For middleware, we'll have limited auth functionality since we can't access localStorage
-  // Client-side redirections in login/auth context will handle most auth redirections
+  // Special handling for root path
+  if (pathname === '/') {
+    if (accessToken && userType) {
+      const dashboardUrl = getDashboardUrl(userType);
+      console.log('Root path access with auth, redirecting to dashboard:', dashboardUrl);
+      return NextResponse.redirect(new URL(dashboardUrl, request.url));
+    } else {
+      // Non-authenticated users stay on landing page
+      return NextResponse.next();
+    }
+  }
   
-  // If route is public and user is not accessing a protected route, allow access
-  if (isPublicRoute && !Object.keys(protectedRoutes).some(route => pathname.startsWith(route))) {
+  // For auth pages (login, register, etc.), redirect authenticated users to their dashboard
+  if (pathname.startsWith('/auth/')) {
+    if (accessToken && userType) {
+      const dashboardUrl = getDashboardUrl(userType);
+      console.log('Auth page access with existing auth, redirecting to dashboard:', dashboardUrl);
+      return NextResponse.redirect(new URL(dashboardUrl, request.url));
+    } else {
+      // Allow access to auth pages for non-authenticated users
+      return NextResponse.next();
+    }
+  }
+  
+  // If route is public (but not auth pages), allow access
+  if (isPublicRoute) {
     return NextResponse.next();
   }
-    // Check if route is protected
+  
+  // Check if route is protected
   const protectedRoute = Object.keys(protectedRoutes).find(route => 
     pathname.startsWith(route)
   ) as keyof typeof protectedRoutes;
@@ -50,6 +89,7 @@ export function middleware(request: NextRequest) {
   if (protectedRoute) {
     // If no access token, redirect to login
     if (!accessToken) {
+      console.log('No access token, redirecting to login');
       const loginUrl = new URL('/auth/login', request.url);
       loginUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(loginUrl);
@@ -57,12 +97,23 @@ export function middleware(request: NextRequest) {
     
     // If user type doesn't match required types for this route
     if (userType && !(protectedRoutes[protectedRoute] as readonly string[]).includes(userType)) {
+      console.log('Wrong user type, redirecting to correct dashboard', { userType, requiredTypes: protectedRoutes[protectedRoute] });
       const dashboardUrl = getDashboardUrl(userType);
       return NextResponse.redirect(new URL(dashboardUrl, request.url));
     }
+    
+    // Allow access to protected route
+    return NextResponse.next();
   }
   
-  // Continue with the request
+  // For any other routes with authenticated users, redirect to their dashboard
+  if (accessToken && userType) {
+    const dashboardUrl = getDashboardUrl(userType);
+    console.log('Authenticated user on unprotected route, redirecting to dashboard:', dashboardUrl);
+    return NextResponse.redirect(new URL(dashboardUrl, request.url));
+  }
+  
+  // Continue with the request for non-authenticated users on non-protected routes
   return NextResponse.next();
 }
 

@@ -79,7 +79,7 @@ export default function SecuritySettings({ settings, onUpdate }: SecuritySetting
             initial={{ width: 0 }}
             animate={{ width: settings.twoFactorAuth ? '100%' : '40%' }}
             transition={{ duration: 0.8, ease: "easeOut" }}
-            className={`h-2.5 rounded-full ${settings.twoFactorAuth ? 'bg-green-500' : 'bg-yellow-500'}`}
+            className={`h-2.5 rounded-full ${settings.twoFactorAuth ? 'bg-green-500' : 'bg-orange-500'}`}
           ></motion.div>
         </div>
         
