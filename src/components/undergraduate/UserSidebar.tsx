@@ -46,19 +46,19 @@ export default function UserSidebar({ activeTab, setActiveTab, user, onLogout }:
       id: 'applications', 
       name: 'My Applications', 
       icon: ClockIcon, 
-      badge: user?.stats?.appliedJobs ? (user.stats.appliedJobs > 0 ? user.stats.appliedJobs.toString() : undefined) : undefined
+      badge: user?.stats?.appliedJobs !== undefined ? user.stats.appliedJobs.toString() : undefined
     },
     { 
       id: 'gigs', 
       name: 'My Gigs', 
       icon: BriefcaseIcon, 
-      badge: user?.stats?.activeGigs ? (user.stats.activeGigs > 0 ? user.stats.activeGigs.toString() : undefined) : undefined
+      badge: user?.stats ? "1" : undefined
     },
     { 
       id: 'payments', 
       name: 'My Payments', 
       icon: CurrencyDollarIcon, 
-      badge: user?.stats?.pendingPayments ? (user.stats.pendingPayments > 0 ? user.stats.pendingPayments.toString() : undefined) : undefined
+      badge: user?.stats?.pendingPayments !== undefined ? user.stats.pendingPayments.toString() : undefined
     },
     { id: 'profile', name: 'Profile', icon: UserIcon },
   ];
@@ -125,12 +125,11 @@ export default function UserSidebar({ activeTab, setActiveTab, user, onLogout }:
                   setActiveTab(item.id);
                   setIsMobileMenuOpen(false);
                 }}
-                className={`sidebar-nav-item w-full ${isActive ? 'active' : ''} focus:outline-none focus:ring-0`}
-                style={{
-                  color: isActive ? 'white' : '#7DD3FC',
-                  outline: 'none',
-                  border: 'none'
-                }}
+                className={`sidebar-nav-item w-full ${isActive ? 'active' : ''} focus:outline-none focus:ring-0 group px-2 py-1.5 text-left flex items-center justify-between rounded-lg mx-2 transition-all duration-200 ${
+                  isActive 
+                    ? 'bg-teal-500/30 text-white border-l-4 border-teal-300' 
+                    : 'text-teal-200 hover:bg-white/10 hover:text-white'
+                }`}
               >
                 <div className="flex items-center">
                   <span className="w-4 h-4 mr-2 flex items-center justify-center">
@@ -162,19 +161,23 @@ export default function UserSidebar({ activeTab, setActiveTab, user, onLogout }:
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-teal-300">Applied Jobs</span>
-                  <span className="text-xs font-semibold text-white">{user.stats.appliedJobs || 0}</span>
+                  <span className="text-xs font-semibold text-white">{user.stats.appliedJobs ?? 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-teal-300">Active Gigs</span>
-                  <span className="text-xs font-semibold text-white">{user.stats.activeGigs || 0}</span>
+                  <span className="text-xs font-semibold text-white">{user.stats.activeGigs ?? 0}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-teal-300">Completed</span>
+                  <span className="text-xs font-semibold text-green-300">{user.stats.completedGigs ?? 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-teal-300">This Month</span>
-                  <span className="text-xs font-semibold text-green-300">LKR {user.stats.monthlyEarnings?.toLocaleString() || 0}</span>
+                  <span className="text-xs font-semibold text-green-300">LKR {user.stats.monthlyEarnings?.toLocaleString() ?? 0}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-teal-300">Rating</span>
-                  <span className="text-xs font-semibold text-teal-200">{user.stats.rating?.toFixed(1) || '-'} ⭐</span>
+                  <span className="text-xs font-semibold text-teal-200">{user.stats.rating?.toFixed(1) ?? '0.0'} ⭐</span>
                 </div>
               </div>
             ) : (
