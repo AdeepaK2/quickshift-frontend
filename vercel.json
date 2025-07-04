@@ -5,8 +5,33 @@
   "installCommand": "npm install",
   "framework": "nextjs",
   "outputDirectory": ".next",
-  "rewrites": [],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://quickshift-9qjun.ondigitalocean.app/api/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
+      ]
+    }
+  ],
   "env": {
-    "NEXT_PUBLIC_VERCEL_DEPLOYMENT": "true"
+    "NEXT_PUBLIC_VERCEL_DEPLOYMENT": "true",
+    "NEXT_PUBLIC_API_BASE_URL": "https://quickshift-9qjun.ondigitalocean.app"
   }
 }
