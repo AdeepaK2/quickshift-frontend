@@ -5,7 +5,7 @@
 import React from "react";
 import { Search, Users, Briefcase, Building } from "lucide-react";
 import { cn } from "@/lib/utils";
-import Button from "./button";
+import Button from "@/components/ui/button";
 
 interface EmptyStateProps {
   icon?: "search" | "users" | "briefcase" | "building" | React.ReactNode;

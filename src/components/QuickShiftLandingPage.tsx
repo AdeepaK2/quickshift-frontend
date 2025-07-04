@@ -112,22 +112,27 @@ export default function QuickShiftLandingPage() {
         </div>
 
         {/* Hero Section */}
-        <div className="self-end mt-24 w-full max-w-[1339px] max-md:mt-10 max-md:max-w-full">
+        <div className="self-end mt-15 w-full max-w-[1339px] max-md:mt-10 max-md:max-w-full">
           <div className="flex gap-5 max-md:flex-col max-md:">
             <div className="w-6/12 max-md:ml-0 max-md:w-full">
-              <div className="flex flex-col pb-8 mt-16 w-full max-md:mt-10 max-md:max-w-full">
+              <div className="flex flex-col pb-3 mt-16 w-full max-md:mt-10 max-md:max-w-full ">
                 <div className="max-md:max-w-full">
                   <div className={`text-5xl font-bold text-stone-900 max-md:max-w-full max-md:text-4xl transition-all duration-700 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
                     Find Your Perfect Part-Time Job Today!
                   </div>
-                  <div className={`mt-10 text-2xl text-black max-md:max-w-full transition-all duration-700 delay-200 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
-                    <span className="text-4xl font-bold">
+                  <div className={`mt-10 pb-10 text-2xl text-black max-md:max-w-full transition-all duration-700 delay-200 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}>
+                    <p className="text-4xl font-bold mb-10">
                       Work. Earn. Succeed.
-                    </span>
-                    <br />
+                    </p>
+                 
+                    <div className={"mt-0"}>
+                    
                     <span className="text-base">
                       Connect with flexible job opportunities perfect for university students - from tutoring and freelancing to delivery and promotional work.
                     </span>
+
+                    </div>
+                   
                   </div>
                 </div>
                 
@@ -144,19 +149,13 @@ export default function QuickShiftLandingPage() {
                   </svg>
                 </button>
 
-                <Image
-                  src="https://cdn.builder.io/api/v1/image/assets/TEMP/73a9136882a46ffb2c0990fdb50c7a3d45d94cd0?placeholderIfAbsent=true"
-                  alt="Step 1 icon"
-                  className="object-contain z-10 self-center mt-0 w-9 aspect-square"
-                  width={36}
-                  height={36}
-                />
+              
               </div>
             </div>
             <div className="ml-5 w-6/12 max-md:ml-0 max-md:w-full">
               <Image
-                src="/Girl 2.png"
-                className={`object-contain grow w-full aspect-[0.87] max-md:mt-10 max-md:max-w-full transition-all duration-700 delay-300 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}
+                src="/Girl photo.png"
+                className={`grow w-full aspect-[0.98] max-md:mt-10 max-md:max-w-full transition-all duration-700 delay-300 ${isVisible ? 'animate-fade-in' : 'opacity-0'}`}
                 alt="A girl working on a laptop"
                 width={600}
                 height={690}
@@ -239,7 +238,7 @@ export default function QuickShiftLandingPage() {
             />
           </div>
           <div className="ml-5 w-6/12 max-md:ml-0 max-md:w-full">
-            <div className="flex flex-col mt-28 w-full max-md:mt-10 max-md:max-w-full">
+            <div className="flex flex-col mt-20 w-full max-md:mt-10 max-md:max-w-full">
               <div className="flex gap-1.5 self-start text-lg leading-loose text-cyan-500 uppercase">
                 <Image
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/d08d92b7d1e75018b774046dc399ea474fcd93a6?placeholderIfAbsent=true"
@@ -251,10 +250,10 @@ export default function QuickShiftLandingPage() {
                 <div>about us</div>
               </div>
               <div className="flex flex-col items-start pl-1.5 mt-8 max-md:max-w-full">
-                <div className="text-5xl font-bold leading-[50px] text-sky-950 max-md:max-w-full max-md:text-4xl max-md:leading-[49px]">
+                <div className="text-4xl font-bold leading-[50px] text-sky-950 max-md:max-w-full max-md:text-4xl max-md:leading-[49px]">
                   Connecting Students with Perfect Part-Time Opportunities
                 </div>
-                <div className="self-stretch mt-7 text-lg leading-8 text-neutral-600 max-md:max-w-full">
+                <div className="self-stretch mt-7 text-base leading-8 text-neutral-600 max-md:max-w-full">
                   At QuickShift, we understand that university life requires financial flexibility. Our platform connects ambitious students with part-time job opportunities that fit their schedules. Whether you&apos;re looking to earn through tutoring, freelancing, delivery services, promotional work, or handbill distribution, we make it easy to find legitimate, student-friendly employment that works around your studies.
                 </div>
                 <button
@@ -316,9 +315,9 @@ export default function QuickShiftLandingPage() {
                   </div>
                   <button
                     onClick={handleFindJobs}
-                    className="flex gap-3.5 px-5 py-6 mt-11 max-w-full text-base tracking-normal leading-4 text-white bg-gradient-to-r from-sky-600 to-blue-600 rounded-[200px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:from-sky-700 hover:to-blue-700 transition-all duration-300 hover:scale-105 w-[156px] max-md:mt-10"
+                    className="flex gap-3.5 px-7 py-6 mt-11 max-w-full text-base tracking-normal leading-4 text-white bg-gradient-to-r from-sky-600 to-blue-600 rounded-[200px] shadow-[0px_4px_4px_rgba(0,0,0,0.25)] hover:from-sky-700 hover:to-blue-700 transition-all duration-300 hover:scale-105 w-[156px] max-md:mt-10"
                   >
-                    <div>view details</div>
+                    <div>View Details</div>
                     <Image
                       src="https://cdn.builder.io/api/v1/image/assets/TEMP/5fa84eddbccfb8e58a2c48fc7fbe7610e214c7dd?placeholderIfAbsent=true"
                       className="object-contain shrink-0 aspect-[1.21] w-[17px]"
