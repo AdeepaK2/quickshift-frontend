@@ -21,7 +21,11 @@ class AuthService {
     try {
       const url = `${API_BASE_URL}/api/auth${endpoint}`;
       
+      console.log(`Making request to: ${url}`); // Debug log
+      
       const response = await fetch(url, {
+        mode: 'cors',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,
@@ -29,9 +33,13 @@ class AuthService {
         ...options,
       });
 
+      console.log(`Response status: ${response.status}`); // Debug log
+
       const data = await response.json();
 
       if (!response.ok) {
+        console.error('API Error Response:', data); // Debug log
+        
         // Handle different error scenarios
         if (response.status === 400 && data.errors) {
           // Validation errors
@@ -52,7 +60,10 @@ class AuthService {
 
       return data;
     } catch (error) {
-      if (error instanceof Error) {
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        console.error('Network Error - likely CORS or server unavailable:', error);
+        throw new Error('Unable to connect to server. Please check your internet connection and try again.');
+      } else if (error instanceof Error) {
         console.error('API Request Error:', error.message);
         throw error;
       } else {
