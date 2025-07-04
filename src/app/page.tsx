@@ -25,7 +25,7 @@ export default function HomePage() {
     }
   }, [isAuthenticated, userType, isLoading]);
 
-  // Show loading state while checking authentication
+  // Sholoading state while checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
