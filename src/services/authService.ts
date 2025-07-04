@@ -14,7 +14,7 @@ import {
   UserProfileResponse
 } from '@/types/auth';
 
-const API_BASE_URL = 'https://quickshift-9qjun.ondigitalocean.app';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:5000';
 
 class AuthService {
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
