@@ -27,6 +27,19 @@ export default function Profile() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Helper function to refresh employer statistics
+  const refreshEmployerStats = async (): Promise<EmployerStats | null> => {
+    try {
+      const statsResponse = await employerService.getStats();
+      if (statsResponse.success && statsResponse.data) {
+        return statsResponse.data;
+      }
+    } catch (statsError) {
+      console.error('Error fetching employer stats:', statsError);
+    }
+    return null;
+  };
+
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -53,11 +66,10 @@ export default function Profile() {
           });
         }
         
-        // Get stats
-        const statsResponse = await employerService.getStats();
-        
-        if (statsResponse.success && statsResponse.data) {
-          setStats(statsResponse.data);
+        // Refresh stats
+        const statsData = await refreshEmployerStats();
+        if (statsData) {
+          setStats(statsData);
         }
       } catch (err) {
         console.error('Error fetching profile data:', err);
@@ -106,6 +118,12 @@ export default function Profile() {
       
       if (response.success && response.data) {
         setSuccessMessage('Profile updated successfully!');
+        
+        // Refresh employer stats to get the latest statistics after profile update
+        const updatedStats = await refreshEmployerStats();
+        if (updatedStats) {
+          setStats(updatedStats);
+        }
         
         // Update user context if needed
         if (user) {

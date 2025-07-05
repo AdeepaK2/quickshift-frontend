@@ -85,7 +85,7 @@ export default function AdminSidebar({
       <div className="fixed top-4 left-4 z-[80] md:hidden">
         <button
           onClick={toggleMobileMenu}
-          className="p-3 rounded-lg bg-[#023E8A] text-white hover:bg-[#0077B6] transition-colors shadow-md"
+          className="p-3 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-md"
           aria-expanded={isMobileMenuOpen}
           aria-label="Toggle navigation menu"
         >
@@ -99,7 +99,7 @@ export default function AdminSidebar({
 
       {/* Sidebar */}
       <div
-        className={`dashboard-sidebar fixed inset-y-0 left-0 z-[60] w-52 transform transition-transform duration-200 ease-in-out flex flex-col bg-gradient-to-b from-blue-600 via-blue-700 to-indigo-800 ${
+        className={`dashboard-sidebar fixed inset-y-0 left-0 z-[60] w-52 transform transition-transform duration-200 ease-in-out flex flex-col bg-gradient-to-b from-slate-900 via-blue-900 to-indigo-900 ${
           isMobileMenuOpen
             ? "translate-x-0"
             : "-translate-x-full md:translate-x-0"
@@ -120,7 +120,7 @@ export default function AdminSidebar({
         {user && (
           <div className="p-3 border-b border-white/20">
             <div className="flex items-center">
-              <div className="w-8 h-8 bg-quickshift-primary rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                 <User className="w-4 h-4 text-white" />
               </div>
               <div className="ml-2">
@@ -143,7 +143,7 @@ export default function AdminSidebar({
                 onClick={() => handleNavItemClick(item.id)}
                 className={`sidebar-nav-item w-full ${isActive ? 'active' : ''} focus:outline-none focus:ring-0 group px-2 py-1.5 text-left flex items-center justify-between rounded-lg mx-2 transition-all duration-200 ${
                   isActive 
-                    ? 'bg-blue-500/30 text-white border-l-4 border-blue-300' 
+                    ? 'bg-gradient-to-r from-blue-500/30 to-purple-600/30 text-white border-l-4 border-blue-300' 
                     : 'text-blue-200 hover:bg-white/10 hover:text-white'
                 }`}
               >
@@ -156,7 +156,7 @@ export default function AdminSidebar({
                 {item.badge && (
                   <span className={`
                     px-1.5 py-0.5 text-xs font-medium rounded-full transition-colors
-                    ${isActive ? 'bg-blue-400 text-white' : 'bg-blue-600 text-white'}
+                    ${isActive ? 'bg-gradient-to-r from-blue-400 to-purple-400 text-white' : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'}
                   `} style={{ fontSize: '0.6rem' }}>
                     {item.badge}
                   </span>
@@ -167,7 +167,7 @@ export default function AdminSidebar({
         </nav>        {/* Footer/Logout Section */}
         <div className="mt-auto p-3 border-t border-white/20">
           {/* Quick Stats */}
-          <div className="bg-blue-500/20 backdrop-blur-sm rounded-lg p-2 mb-2 border border-blue-400/20">
+          <div className="bg-gradient-to-r from-blue-500/20 to-purple-600/20 backdrop-blur-sm rounded-lg p-2 mb-2 border border-blue-400/20">
             <h3 className="text-xs font-semibold text-blue-200 mb-1 uppercase tracking-wide">
               Quick Stats
             </h3>

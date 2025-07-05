@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { gigApplyService, GigApplication } from '@/services/gigApplyService';
 import { formatDistanceToNow } from 'date-fns';
+import toast from 'react-hot-toast';
 
 interface ApplicationsModalProps {
   isOpen: boolean;
@@ -63,8 +64,21 @@ export default function ApplicationsModal({ isOpen, onClose, jobId, jobTitle }: 
           app._id === applicationId ? { ...app, status: newStatus } : app
         )
       );
+
+      // Show success toast message
+      const application = applications.find(app => app._id === applicationId);
+      const applicantName = application?.user ? `${application.user.firstName} ${application.user.lastName}` : 'Applicant';
+      
+      if (newStatus === 'accepted') {
+        toast.success(`✅ Application accepted! ${applicantName} has been successfully accepted for this position.`);
+      } else if (newStatus === 'rejected') {
+        toast.error(`❌ Application rejected. ${applicantName}'s application has been declined.`);
+      } else if (newStatus === 'reviewed') {
+        toast.success(`👁️ Application marked as reviewed for ${applicantName}.`);
+      }
     } catch (err) {
       console.error('Error updating application status:', err);
+      toast.error('Failed to update application status. Please try again.');
     }
   };
 

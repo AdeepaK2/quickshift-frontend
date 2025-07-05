@@ -39,8 +39,8 @@ interface Job {
 const navigationItems = [
   { id: 'dashboard', label: 'Dashboard', icon: FaUser },
   { id: 'jobs', label: 'Browse Jobs', icon: FaSearch },
-  { id: 'applications', label: 'My Applications', icon: FaHistory, badge: '2' },
-  { id: 'gigs', label: 'My Gigs', icon: FaBriefcase, badge: '2' },
+  { id: 'applications', label: 'My Applications', icon: FaHistory },
+  { id: 'gigs', label: 'My Gigs', icon: FaBriefcase },
   { id: 'payments', label: 'My Payments', icon: FaMoneyBillWave },
   { id: 'profile', label: 'Profile', icon: FaUser },
 ];
@@ -100,28 +100,28 @@ function UndergraduatePage() {
         setLoading(true);
         const response = await userService.getStats();
         if (response.success && response.data) {
-          // Force correct stats to match actual UI state
+          // Use actual API data instead of hardcoded values
           setStats({
-            appliedJobs: 4, // Force to match badge
-            activeGigs: 1, // Force to match badge (there is 1 active gig)
-            completedGigs: 3, // Force to match gig tabs showing "Completed (3)"
-            totalEarnings: 24000, // Hardcode total earnings
-            monthlyEarnings: 8000, // Hardcode monthly earnings
-            rating: 4.5, // Hardcode rating
-            pendingPayments: 1 // Force to match badge
+            appliedJobs: response.data.appliedJobs || 0, // Default to 0 instead of 4
+            activeGigs: response.data.activeGigs || 0,
+            completedGigs: response.data.completedGigs || 0,
+            totalEarnings: response.data.totalEarnings || 0,
+            monthlyEarnings: response.data.monthlyEarnings || 0,
+            rating: response.data.rating || 0,
+            pendingPayments: response.data.pendingPayments || 0
           });
         }
       } catch (error) {
         console.error('Error fetching user stats:', error);
-        // Set default stats if API fails
+        // Set default stats if API fails - all should start at 0
         setStats({
-          appliedJobs: 4, // Match current UI
-          activeGigs: 1, // Match badge (1 active gig)
-          completedGigs: 3, // Match gig tabs showing "Completed (3)"
-          totalEarnings: 24000, // Hardcode total earnings
-          monthlyEarnings: 8000, // Hardcode monthly earnings
-          rating: 4.5, // Hardcode rating
-          pendingPayments: 1 // Match the UI showing "Pending (1)"
+          appliedJobs: 0, // Default to 0 as requested
+          activeGigs: 0, 
+          completedGigs: 0,
+          totalEarnings: 0,
+          monthlyEarnings: 0,
+          rating: 0,
+          pendingPayments: 0
         });
       } finally {
         setLoading(false);

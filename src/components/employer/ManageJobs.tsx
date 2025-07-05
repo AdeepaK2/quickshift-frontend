@@ -7,6 +7,7 @@ import { gigCompletionService, GigCompletion } from '@/services/gigCompletionSer
 import { format } from 'date-fns';
 import JobPostModal from './JobPostModal';
 import ApplicationsModal from './ApplicationsModal';
+import toast from 'react-hot-toast';
 
 // Loading skeleton component
 const JobSkeleton = () => (
@@ -138,11 +139,33 @@ export default function ManageJobs() {
   const handleStatusChange = async (jobId: string, newStatus: 'active' | 'closed' | 'draft' | 'cancelled') => {
     try {
       await gigRequestService.changeGigRequestStatus(jobId, newStatus);
+      
+      // Find the job to get its title for the toast message
+      const job = jobs.find(j => j._id === jobId);
+      const jobTitle = job?.title || 'Job';
+      
       setJobs(prevJobs => (prevJobs || []).map(job => 
         job._id === jobId ? { ...job, status: newStatus } : job
       ));
+      
+      // Show success toast message based on status
+      switch (newStatus) {
+        case 'active':
+          toast.success(`📢 Job published! "${jobTitle}" is now live and accepting applications.`);
+          break;
+        case 'closed':
+          toast.success(`🔒 Applications closed for "${jobTitle}". No new applications will be accepted.`);
+          break;
+        case 'cancelled':
+          toast.error(`❌ Job cancelled. "${jobTitle}" has been cancelled.`);
+          break;
+        case 'draft':
+          toast.success(`📝 Job saved as draft. "${jobTitle}" can be edited before publishing.`);
+          break;
+      }
     } catch (err) {
       console.error('Error changing job status:', err);
+      toast.error('Failed to update job status. Please try again.');
     }
   };
 
@@ -151,6 +174,13 @@ export default function ManageJobs() {
       const response = await gigRequestService.startJob(jobId);
 
       if (response.success) {
+        // Find the job to get its title for the toast message
+        const job = jobs.find(j => j._id === jobId);
+        const jobTitle = job?.title || 'Job';
+        
+        // Show success toast message
+        toast.success(`🚀 Job started successfully! "${jobTitle}" is now in progress.`);
+        
         // Refresh jobs list
         if (statusFilter === 'completed') {
           fetchCompletedJobs(true);
@@ -158,10 +188,12 @@ export default function ManageJobs() {
           fetchJobs(true);
         }
       } else {
+        toast.error(response.message || 'Failed to start job');
         setError(response.message || 'Failed to start job');
       }
     } catch (err) {
       console.error('Error starting job:', err);
+      toast.error('An error occurred while starting the job');
       setError('An error occurred while starting the job');
     }
   };
@@ -171,6 +203,13 @@ export default function ManageJobs() {
       const response = await gigRequestService.completeJob(jobId, completionData);
 
       if (response.success) {
+        // Find the job to get its title for the toast message
+        const job = jobs.find(j => j._id === jobId);
+        const jobTitle = job?.title || 'Job';
+        
+        // Show success toast message
+        toast.success(`✅ Job completed successfully! "${jobTitle}" has been marked as completed.`);
+        
         // Refresh jobs list
         if (statusFilter === 'completed') {
           fetchCompletedJobs(true);
@@ -178,10 +217,12 @@ export default function ManageJobs() {
           fetchJobs(true);
         }
       } else {
+        toast.error(response.message || 'Failed to complete job');
         setError(response.message || 'Failed to complete job');
       }
     } catch (err) {
       console.error('Error completing job:', err);
+      toast.error('An error occurred while completing the job');
       setError('An error occurred while completing the job');
     }
   };

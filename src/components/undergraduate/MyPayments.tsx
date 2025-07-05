@@ -115,6 +115,13 @@ const MyPayments: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'paid' | 'pending' | 'processing' | 'failed'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [debugMode, setDebugMode] = useState(false);
+  
+  // Modal states
+  const [showGigDetailsModal, setShowGigDetailsModal] = useState(false);
+  const [showPaymentDetailsModal, setShowPaymentDetailsModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [gigDetails, setGigDetails] = useState<any>(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Debug info
   const debugInfo = {
@@ -286,6 +293,48 @@ const MyPayments: React.FC = () => {
   };
 
   const statusCounts = getStatusCounts();
+
+  // Modal handlers
+  const fetchGigDetails = async (gigId: string) => {
+    try {
+      console.log('Fetching gig details for ID:', gigId);
+      setLoadingDetails(true);
+      setGigDetails(null); // Clear previous data
+      const response = await gigCompletionService.getCompletionById(gigId);
+      console.log('Gig details response:', response);
+      if (response.success && response.data) {
+        setGigDetails(response.data);
+      } else {
+        console.error('Failed to fetch gig details:', response.message);
+        setGigDetails(null);
+      }
+    } catch (error) {
+      console.error('Error fetching gig details:', error);
+      setGigDetails(null);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const handleViewGigDetails = async (payment: Payment) => {
+    console.log('handleViewGigDetails called with payment:', payment);
+    setSelectedPayment(payment);
+    setShowGigDetailsModal(true);
+    await fetchGigDetails(payment.id);
+  };
+
+  const handleViewPaymentDetails = (payment: Payment) => {
+    console.log('handleViewPaymentDetails called with payment:', payment);
+    setSelectedPayment(payment);
+    setShowPaymentDetailsModal(true);
+  };
+
+  const closeModals = () => {
+    setShowGigDetailsModal(false);
+    setShowPaymentDetailsModal(false);
+    setSelectedPayment(null);
+    setGigDetails(null);
+  };
 
   if (loading) {
     return (
@@ -555,7 +604,10 @@ const MyPayments: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-                <button className="text-blue-600 hover:text-blue-800 font-medium text-sm">
+                <button 
+                  onClick={() => handleViewGigDetails(payment)}
+                  className="text-blue-600 hover:text-blue-800 font-medium text-sm"
+                >
                   View Gig Details
                 </button>
                 <div className="space-x-2">
@@ -570,7 +622,10 @@ const MyPayments: React.FC = () => {
                       Report Issue
                     </button>
                   )}
-                  <button className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 font-medium text-sm">
+                  <button 
+                    onClick={() => handleViewPaymentDetails(payment)}
+                    className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 font-medium text-sm"
+                  >
                     <FaEye />
                     <span>Details</span>
                   </button>
@@ -602,6 +657,201 @@ const MyPayments: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Gig Details Modal */}
+      {showGigDetailsModal && selectedPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={closeModals}>
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl p-6 m-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Gig Details</h2>
+              <button 
+                onClick={closeModals}
+                className="text-gray-500 hover:text-gray-700 text-xl px-2"
+              >
+                ✕
+              </button>
+            </div>
+
+            {loadingDetails ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3 text-gray-600">Loading gig details...</span>
+              </div>
+            ) : (
+              gigDetails && gigDetails.gigRequest && gigDetails.employer ? (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {gigDetails.gigRequest?.title || 'Unknown Job'}
+                  </h3>
+                  <p className="text-gray-700 mb-4">
+                    <strong>Employer:</strong> {gigDetails.employer?.companyName || 'Unknown Employer'}
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <p className="text-gray-600 text-sm mb-1">Gig ID</p>
+                      <p className="font-medium text-gray-900">{gigDetails._id || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 text-sm mb-1">Category</p>
+                      <p className="font-medium text-gray-900">{gigDetails.gigRequest?.category || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 text-sm mb-1">Location</p>
+                      <p className="font-medium text-gray-900">
+                        {gigDetails.gigRequest?.location ? 
+                          (typeof gigDetails.gigRequest.location === 'string' ? 
+                            gigDetails.gigRequest.location : 
+                            gigDetails.gigRequest.location.address || 
+                            gigDetails.gigRequest.location.city || 
+                            'Location specified'
+                          ) : 'N/A'
+                        }
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-gray-600 text-sm mb-1">Pay Rate</p>
+                      <p className="font-medium text-gray-900">
+                        {gigDetails.gigRequest?.payRate ? 
+                          (typeof gigDetails.gigRequest.payRate === 'number' ? 
+                            `LKR ${gigDetails.gigRequest.payRate}` : 
+                            typeof gigDetails.gigRequest.payRate === 'object' && gigDetails.gigRequest.payRate.amount ?
+                            `LKR ${gigDetails.gigRequest.payRate.amount}` :
+                            'Pay rate specified'
+                          ) : 'N/A'
+                        }
+                      </p>
+                    </div>
+                  </div>
+
+                  {gigDetails.myWork && (
+                    <div className="border-t border-gray-200 pt-4 mt-4">
+                      <h4 className="text-md font-semibold text-gray-900 mb-2">Completion Details</h4>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4">
+                        <div className="flex-1 mb-2 sm:mb-0">
+                          <p className="text-gray-600 text-sm mb-1">Completion Date</p>
+                          <p className="font-medium text-gray-900">
+                            {gigDetails.completedAt ? new Date(gigDetails.completedAt).toLocaleDateString() : 'N/A'}
+                          </p>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-gray-600 text-sm mb-1">Total Hours</p>
+                          <p className="font-medium text-gray-900">
+                            {gigDetails.myWork?.totalHours || 0} hours
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between">
+                        <div className="flex-1 mb-2 sm:mb-0">
+                          <p className="text-gray-600 text-sm mb-1">Payment Status</p>
+                          <p className="font-medium text-gray-900">
+                            {gigDetails.myWork?.payment?.status ? 
+                              gigDetails.myWork.payment.status.charAt(0).toUpperCase() + gigDetails.myWork.payment.status.slice(1) 
+                              : 'N/A'
+                            }
+                          </p>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-gray-600 text-sm mb-1">Amount</p>
+                          <p className="font-medium text-gray-900">
+                            LKR {gigDetails.myWork?.payment?.amount?.toLocaleString() || '0'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-gray-600">Unable to load gig details. Please try again.</p>
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Payment Details Modal */}
+      {showPaymentDetailsModal && selectedPayment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={closeModals}>
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6 m-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Payment Details</h2>
+              <button 
+                onClick={closeModals}
+                className="text-gray-500 hover:text-gray-700 text-xl px-2"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Payment ID</p>
+                <p className="font-medium text-gray-900">{selectedPayment.id}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Gig Title</p>
+                <p className="font-medium text-gray-900">{selectedPayment.gigTitle}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Employer</p>
+                <p className="font-medium text-gray-900">{selectedPayment.employerName}</p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Amount</p>
+                <p className="font-medium text-gray-900">
+                  {selectedPayment.currency} {selectedPayment.amount.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Status</p>
+                <p className="font-medium text-gray-900">
+                  {selectedPayment.status.charAt(0).toUpperCase() + selectedPayment.status.slice(1)}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Payment Date</p>
+                <p className="font-medium text-gray-900">
+                  {selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString() : 'N/A'}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Completion Date</p>
+                <p className="font-medium text-gray-900">
+                  {new Date(selectedPayment.completionDate).toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Payment Method</p>
+                <p className="font-medium text-gray-900">
+                  {getPaymentMethodLabel(selectedPayment.paymentMethod)}
+                </p>
+              </div>
+              {selectedPayment.transactionId && (
+                <div>
+                  <p className="text-gray-600 text-sm mb-1">Transaction ID</p>
+                  <p className="font-medium text-gray-900">
+                    {selectedPayment.transactionId}
+                  </p>
+                </div>
+              )}
+              {selectedPayment.invoiceUrl && (
+                <div>
+                  <p className="text-gray-600 text-sm mb-1">Invoice</p>
+                  <a 
+                    href={selectedPayment.invoiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    View Invoice
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

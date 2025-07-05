@@ -25,28 +25,28 @@ const getUserTypeConfig = (userType: string) => {
       return {
         greeting: 'Welcome back',
         subtitle: 'Manage your QuickShift platform from this admin dashboard.',
-        primaryColor: theme.primary.gradient,
+        primaryColor: 'from-blue-500 to-purple-600',
         icon: '👨‍💼'
       };
     case 'employer':
       return {
         greeting: 'Welcome back',
         subtitle: 'Manage your job postings and track applicants.',
-        primaryColor: theme.primary.gradient,
+        primaryColor: 'from-blue-500 to-purple-600',
         icon: '🏢'
       };
     case 'undergraduate':
       return {
         greeting: 'Welcome back',
         subtitle: 'Ready to find your next opportunity or manage your current gigs?',
-        primaryColor: theme.primary.gradient,
+        primaryColor: 'from-blue-500 to-purple-600',
         icon: '👨‍🎓'
       };
     default:
       return {
         greeting: 'Welcome back',
         subtitle: 'Dashboard overview',
-        primaryColor: 'from-[#0077B6] to-[#00B4D8]',
+        primaryColor: 'from-blue-500 to-purple-600',
         icon: '👋'
       };
   }
@@ -105,8 +105,8 @@ export default function DashboardHeader({
     switch (userType) {
       case 'admin':
         return {
-          outerBg: 'bg-gradient-to-br from-blue-50 to-indigo-100/50',
-          innerBg: 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700',
+          outerBg: 'bg-gradient-to-br from-slate-50 to-blue-100/50',
+          innerBg: 'bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900',
           border: 'border-blue-300/50',
           statBorder: 'border-blue-200/30',
           statText: 'text-blue-900',
@@ -115,28 +115,28 @@ export default function DashboardHeader({
         };
       case 'employer':
         return {
-          outerBg: 'bg-gradient-to-br from-purple-50 to-indigo-100/50',
-          innerBg: 'bg-gradient-to-r from-purple-600 via-purple-700 to-indigo-700',
-          border: 'border-purple-300/50',
-          statBorder: 'border-purple-200/30',
-          statText: 'text-purple-900',
-          statLabel: 'text-purple-700',
-          statDesc: 'text-purple-600/80'
+          outerBg: 'bg-gradient-to-br from-slate-50 to-blue-100/50',
+          innerBg: 'bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900',
+          border: 'border-blue-300/50',
+          statBorder: 'border-blue-200/30',
+          statText: 'text-blue-900',
+          statLabel: 'text-blue-700',
+          statDesc: 'text-blue-600/80'
         };
       case 'undergraduate':
         return {
-          outerBg: 'bg-gradient-to-br from-teal-50 to-blue-100/50',
-          innerBg: 'bg-gradient-to-r from-teal-600 via-blue-600 to-indigo-600',
-          border: 'border-teal-300/50',
-          statBorder: 'border-teal-200/30',
-          statText: 'text-teal-900',
-          statLabel: 'text-teal-700',
-          statDesc: 'text-teal-600/80'
+          outerBg: 'bg-gradient-to-br from-slate-50 to-blue-100/50',
+          innerBg: 'bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900',
+          border: 'border-blue-300/50',
+          statBorder: 'border-blue-200/30',
+          statText: 'text-blue-900',
+          statLabel: 'text-blue-700',
+          statDesc: 'text-blue-600/80'
         };
       default:
         return {
-          outerBg: 'bg-gradient-to-br from-blue-50 to-indigo-100/50',
-          innerBg: 'bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700',
+          outerBg: 'bg-gradient-to-br from-slate-50 to-blue-100/50',
+          innerBg: 'bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900',
           border: 'border-blue-300/50',
           statBorder: 'border-blue-200/30',
           statText: 'text-blue-900',
@@ -153,7 +153,7 @@ export default function DashboardHeader({
       <div className={`dashboard-header rounded-lg p-2 sm:p-3 lg:p-4 shadow-lg mx-auto ${bgClasses.innerBg} border ${bgClasses.border} max-w-7xl relative`}>
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-center mb-2 sm:mb-3 pt-3 sm:pt-1">
-          <div className="flex-1 min-w-0 mb-1 sm:mb-0 sm:pr-10 text-center sm:text-left md:ml-10 lg:ml-0">
+          <div className="flex-1 min-w-0 mb-1 sm:mb-0 sm:pr-10 text-center">
             <h1 className="text-sm sm:text-base lg:text-lg font-bold mb-0.5 text-white drop-shadow-md leading-tight">
               {config.greeting}, {getUserDisplayName()}! {config.icon}
             </h1>
