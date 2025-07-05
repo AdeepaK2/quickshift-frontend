@@ -5,6 +5,7 @@ import { FaClipboardList, FaClock, FaCheckCircle, FaTimesCircle, FaEye, FaMapMar
 import { gigApplicationService } from '@/services/gigApplicationService';
 import toast from 'react-hot-toast';
 import { formatDistanceToNow } from 'date-fns';
+import JobDetailsModal from './JobDetailsModal';
 
 interface GigRequest {
   _id: string;
@@ -115,6 +116,18 @@ const MyApplications: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected' | 'interview'>('all');
+  const [jobDetailsModal, setJobDetailsModal] = useState<{ isOpen: boolean; jobId: string }>({
+    isOpen: false,
+    jobId: ''
+  });
+
+  const openJobDetailsModal = (jobId: string) => {
+    setJobDetailsModal({ isOpen: true, jobId });
+  };
+
+  const closeJobDetailsModal = () => {
+    setJobDetailsModal({ isOpen: false, jobId: '' });
+  };
   
   useEffect(() => {
     // Fetch all applications from backend (not filtered by status)
@@ -417,7 +430,10 @@ const MyApplications: React.FC = () => {
 
               {/* Action Buttons */}
               <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
-                <button className="text-blue-600 hover:text-blue-800 font-medium text-sm">
+                <button 
+                  onClick={() => openJobDetailsModal(application.jobId)}
+                  className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors"
+                >
                   View Job Details
                 </button>
                 <div className="space-x-2">
@@ -448,6 +464,13 @@ const MyApplications: React.FC = () => {
           ))
         )}
       </div>
+
+      {/* Job Details Modal */}
+      <JobDetailsModal
+        isOpen={jobDetailsModal.isOpen}
+        onClose={closeJobDetailsModal}
+        jobId={jobDetailsModal.jobId}
+      />
     </div>
   );
 };

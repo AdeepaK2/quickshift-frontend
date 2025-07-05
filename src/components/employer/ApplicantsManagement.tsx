@@ -6,6 +6,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { gigApplyService, GigApplication, GigApplicationsFilters } from '@/services/gigApplyService';
 import { gigRequestService } from '@/services/gigRequestService';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 
 // Loading skeleton component
 const ApplicationSkeleton = () => (
@@ -131,10 +132,23 @@ export default function ApplicantsManagement() {
         )
       );
       
+      // Show success toast message
+      const application = applications.find(app => app._id === applicationId);
+      const applicantName = application?.user ? `${application.user.firstName} ${application.user.lastName}` : 'Applicant';
+      
+      if (newStatus === 'accepted') {
+        toast.success(`✅ Application accepted! ${applicantName} has been successfully accepted for this position.`);
+      } else if (newStatus === 'rejected') {
+        toast.error(`❌ Application rejected. ${applicantName}'s application has been declined.`);
+      } else if (newStatus === 'reviewed') {
+        toast.success(`👁️ Application marked as reviewed for ${applicantName}.`);
+      }
+      
       // Close dropdown
       setOpenDropdownId(null);
     } catch (err) {
       console.error('Error updating application status:', err);
+      toast.error('Failed to update application status. Please try again.');
     }
   };
 

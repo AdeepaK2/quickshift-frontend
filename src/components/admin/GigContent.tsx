@@ -99,7 +99,8 @@ interface Gig {
 
 const convertToGig = (gigRequest: GigRequest): Gig => {
   const totalPositions = gigRequest.timeSlots.reduce((sum, slot) => sum + slot.peopleNeeded, 0);
-  const filledPositions = gigRequest.timeSlots.reduce((sum, slot) => sum + (slot.peopleAssigned || 0), 0);
+  // Use the actual filledPositions from the backend instead of calculating from timeSlots
+  const filledPositions = gigRequest.filledPositions || 0;
   
   return {
     ...gigRequest,
@@ -881,21 +882,21 @@ export default function GigContent() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-white">
           <DialogHeader>
-            <DialogTitle>Delete Gig</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-gray-900">Delete Gig</DialogTitle>
+            <DialogDescription className="text-gray-600">
               Are you sure you want to delete this gig? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="outline" className="bg-white text-gray-700 border-gray-300 hover:bg-gray-50">Cancel</Button>
             </DialogClose>
             <Button
               variant="outline"
               onClick={handleDeleteConfirm}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-red-600 text-white hover:bg-red-700 border-red-600"
             >
               Delete
             </Button>

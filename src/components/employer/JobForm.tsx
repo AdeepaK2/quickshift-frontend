@@ -126,8 +126,37 @@ export default function JobForm({ jobId, isEditing = false }: JobFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing, jobId]);
 
+  const handleFormKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && currentSection < sections.length - 1) {
+      e.preventDefault();
+      // Navigate to next section if current section has required data
+      const canProceedToNext = () => {
+        switch (currentSection) {
+          case 0:
+            return formData.title && formData.category && formData.payRate?.amount;
+          case 1:
+            return formData.description && formData.location?.address;
+          default:
+            return true;
+        }
+      };
+      
+      if (canProceedToNext()) {
+        setCurrentSection(currentSection + 1);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Only submit if we're on the last section
+    if (currentSection !== sections.length - 1) {
+      // Navigate to next section instead of submitting
+      setCurrentSection(currentSection + 1);
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -413,7 +442,7 @@ export default function JobForm({ jobId, isEditing = false }: JobFormProps) {
           </div>
         </div>
         
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="p-6">
           {/* Basic Information Section */}
           <motion.section
             variants={containerVariants}

@@ -13,6 +13,7 @@ import {
   ArrowRightIcon,
   ArrowLeftIcon
 } from '@heroicons/react/24/outline';
+import toast from 'react-hot-toast';
 import Button from "@/components/ui/button";
 import Input from "@/components/ui/input";
 import { gigRequestService, CreateGigRequestRequest } from '@/services/gigRequestService';
@@ -49,26 +50,26 @@ interface JobFormData {
 
 export default function JobPostModal({ isOpen, onClose, onSuccess }: JobPostModalProps) {
   const [formData, setFormData] = useState<JobFormData>({
-    title: '',
-    description: '',
-    category: 'General',
+    title: 'Software Engineer',
+    description: 'We are looking for a skilled software engineer to join our development team. You will be responsible for designing, developing, and maintaining web applications using modern technologies. The ideal candidate should have experience with JavaScript, React, and backend development.',
+    category: 'Technology',
     payRate: {
-      amount: 0,
+      amount: 5000,
       rateType: 'hourly'
     },
     location: {
-      address: '',
-      city: '',
-      postalCode: '',
+      address: '123 Galle Road, Colombo 03',
+      city: 'Colombo',
+      postalCode: '00300',
       coordinates: {
         latitude: 6.9271,
         longitude: 79.8612
       }
     },
-    requirements: '',
-    skills: '',
-    experience: '',
-    applicationDeadline: '',
+    requirements: '• Must be 18 years or older\n• Bachelor\'s degree in Computer Science or related field\n• 2+ years of software development experience\n• Strong problem-solving skills\n• Ability to work in a team environment',
+    skills: 'JavaScript, React, Node.js, MongoDB, Git',
+    experience: '2-5 years',
+    applicationDeadline: '2025-07-20',
     totalPositions: 1
   });
 
@@ -121,8 +122,24 @@ export default function JobPostModal({ isOpen, onClose, onSuccess }: JobPostModa
     }
   };
 
+  const handleFormKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && currentStep < steps.length - 1) {
+      e.preventDefault();
+      if (canProceed()) {
+        nextStep();
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Only submit if we're on the last step
+    if (currentStep !== steps.length - 1) {
+      nextStep();
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -156,6 +173,11 @@ export default function JobPostModal({ isOpen, onClose, onSuccess }: JobPostModa
       
       if (response.success) {
         setShowSuccess(true);
+        // Show success toast
+        toast.success('Job posted successfully! Your job is now live and accepting applications.', {
+          duration: 4000,
+        });
+        
         // Call onSuccess immediately to refresh the job list
         onSuccess();
         
@@ -163,15 +185,20 @@ export default function JobPostModal({ isOpen, onClose, onSuccess }: JobPostModa
           setShowSuccess(false);
           setCurrentStep(0);
           setFormData({
-            title: '',
-            description: '',
-            category: 'General',
-            payRate: { amount: 0, rateType: 'hourly' },
-            location: { address: '', city: '', postalCode: '', coordinates: { latitude: 6.9271, longitude: 79.8612 } },
-            requirements: '',
-            skills: '',
-            experience: '',
-            applicationDeadline: '',
+            title: 'Software Engineer',
+            description: 'We are looking for a skilled software engineer to join our development team. You will be responsible for designing, developing, and maintaining web applications using modern technologies. The ideal candidate should have experience with JavaScript, React, and backend development.',
+            category: 'Technology',
+            payRate: { amount: 5000, rateType: 'hourly' },
+            location: { 
+              address: '123 Galle Road, Colombo 03', 
+              city: 'Colombo', 
+              postalCode: '00300', 
+              coordinates: { latitude: 6.9271, longitude: 79.8612 } 
+            },
+            requirements: '• Must be 18 years or older\n• Bachelor\'s degree in Computer Science or related field\n• 2+ years of software development experience\n• Strong problem-solving skills\n• Ability to work in a team environment',
+            skills: 'JavaScript, React, Node.js, MongoDB, Git',
+            experience: '2-5 years',
+            applicationDeadline: '2025-07-20',
             totalPositions: 1
           });
           onClose();
@@ -181,7 +208,10 @@ export default function JobPostModal({ isOpen, onClose, onSuccess }: JobPostModa
       }
     } catch (error) {
       console.error('Error submitting job:', error);
-      alert('Failed to create job. Please try again.');
+      // Show error toast
+      toast.error(error instanceof Error ? error.message : 'Failed to create job. Please try again.', {
+        duration: 4000,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -301,7 +331,7 @@ export default function JobPostModal({ isOpen, onClose, onSuccess }: JobPostModa
             </div>
 
             {/* Form Content */}
-            <form onSubmit={handleSubmit} className="p-6">
+            <form onSubmit={handleSubmit} onKeyDown={handleFormKeyDown} className="p-6">
               {/* Step 1: Basic Info */}
               {currentStep === 0 && (
                 <motion.div
@@ -313,12 +343,13 @@ export default function JobPostModal({ isOpen, onClose, onSuccess }: JobPostModa
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Job Title *
                     </label>
-                    <Input
-                      label="Job Title"
+                    <input
+                      type="text"
                       name="title"
                       value={formData.title}
                       onChange={handleChange}
-                      placeholder="e.g. Event Staff, Customer Service Representative"
+                      placeholder="e.g. software engineer, Event Staff, Customer Service Representative"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       required
                     />
                   </div>

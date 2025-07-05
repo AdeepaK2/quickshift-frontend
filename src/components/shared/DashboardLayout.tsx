@@ -195,6 +195,7 @@ function DashboardLayout({
               if (stat.label === 'Total Applications') acc.totalApplications = parseInt(stat.value.toString());
               if (stat.label === 'Hired') acc.totalHires = parseInt(stat.value.toString());
               if (stat.label === 'Response Rate') acc.responseRate = parseInt(stat.value.toString());
+              if (stat.label === 'Pending Payments') acc.pendingPayments = parseInt(stat.value.toString());
               return acc;
             }, {} as any)}
             onLogout={handleLogout}
