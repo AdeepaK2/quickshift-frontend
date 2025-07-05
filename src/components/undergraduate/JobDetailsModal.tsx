@@ -316,7 +316,7 @@ const JobDetailsModal: React.FC<JobDetailsModalProps> = ({ isOpen, onClose, jobI
                       <div className="grid grid-cols-1 gap-4">
                         <div>
                           <div className="font-medium text-indigo-800">Company</div>
-                          <div className="text-indigo-600">{job.employer.companyName}</div>
+                          <div className="text-indigo-600">{job.employer?.companyName || 'Unknown Company'}</div>
                         </div>
                         {/* Note: email and contactNumber not available in basic employer object */}
                         {/* These fields might be available when the employer is fully populated */}
