@@ -13,8 +13,8 @@ import { userService, UserStats } from '@/services/userService';
 import { gigCompletionService, GigCompletion } from '@/services/gigCompletionService';
 import { gigRequestService } from '@/services/gigRequestService';
 import toast from 'react-hot-toast';
-import Link from 'next/link';
 import { format } from 'date-fns';
+import Link from 'next/link';
 
 // Interface for gig request
 interface JobSummary {
@@ -95,7 +95,7 @@ const ActiveGigs = ({ count }: { count: number }) => {
     // If we had start/end dates for the gig, we could calculate real progress
     // For now, just use a placeholder value based on creation date vs completion date
     const startDate = new Date(gig.createdAt);
-    const endDate = new Date(gig.completionDate);
+    const endDate = gig.completedAt ? new Date(gig.completedAt) : new Date();
     const today = new Date();
     
     const totalDays = Math.max(1, (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -114,7 +114,7 @@ const ActiveGigs = ({ count }: { count: number }) => {
               title: gig.gigRequest.title,
               employer: typeof gig.gigRequest.employer === 'string' 
                 ? 'Unknown Employer' 
-                : gig.gigRequest.employer.companyName
+                : (gig.gigRequest.employer?.companyName || 'Unknown Employer')
             };
             
         return (
@@ -125,7 +125,7 @@ const ActiveGigs = ({ count }: { count: number }) => {
                 <p className="text-xs md:text-sm text-gray-600 mt-1">{gigRequest.employer}</p>
               </div>
               <span className="text-xs text-gray-500">
-                Due: {format(new Date(gig.completionDate), 'MMM d, yyyy')}
+                Due: {gig.completedAt ? format(new Date(gig.completedAt), 'MMM d, yyyy') : 'TBD'}
               </span>
             </div>
             
@@ -144,7 +144,7 @@ const ActiveGigs = ({ count }: { count: number }) => {
             
             <div className="mt-3 flex justify-between items-center">
               <span className="text-xs md:text-sm font-medium text-emerald-600">
-                LKR {gig.paymentAmount.toLocaleString()}
+                LKR {(gig.paymentSummary?.finalAmount || gig.paymentSummary?.totalAmount || 0).toLocaleString()}
               </span>
               <Link href="/undergraduate?tab=gigs">
                 <button className="text-xs px-3 py-1 bg-[#CAF0F8] text-[#0077B6] rounded hover:bg-[#90E0EF] transition-colors">
@@ -255,7 +255,7 @@ const RecommendedJobs = () => {
     <div className="space-y-3">
       {jobs.map((job) => {
         const urgency = getUrgency(job.applicationDeadline);
-        const employerName = typeof job.employer === 'string' ? 'Company' : job.employer.companyName;
+        const employerName = typeof job.employer === 'string' ? 'Company' : (job.employer?.companyName || 'Company');
         const locationText = job.location || 'Remote';
         
         return (

@@ -81,7 +81,7 @@ function UndergraduatePage() {
       
       // The actual submission is now handled by the ApplicationPopup
       // This handler is called after successful application
-      toast.success('Successfully applied for the job!');
+      // Don't show duplicate success message - it's already shown in JobDetails
       
       // Update stats after successful application
       setStats(prev => ({

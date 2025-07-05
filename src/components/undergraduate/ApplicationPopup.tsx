@@ -61,6 +61,8 @@ export default function ApplicationPopup({
     
     try {
       await onSubmit(coverLetter, resume);
+      // Don't automatically close here - let the parent component handle closing
+      // after showing the success toast
     } finally {
       setIsSubmitting(false);
     }

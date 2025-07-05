@@ -184,7 +184,8 @@ const MyGigs: React.FC = (): React.ReactElement => {
       title: gigRequest.title,
       description: gigRequest.description || 'No description provided',
       employer: {
-        name: gigRequest.employer.companyName,
+        name: typeof gigRequest.employer === 'string' ? 'Unknown Employer' : 
+              (gigRequest.employer?.companyName || 'Unknown Employer'),
         rating: 4.5 // Default rating
       },
       location: `${gigRequest.location.city}, ${gigRequest.location.address}`,

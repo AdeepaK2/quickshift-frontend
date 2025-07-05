@@ -38,6 +38,12 @@ const JobDetails: React.FC<JobDetailsProps> = ({ job, onApply, onClose, userId }
   // Add state for popup visibility
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasApplied, setHasApplied] = useState(false);
+
+  // Reset hasApplied when job changes
+  React.useEffect(() => {
+    setHasApplied(false);
+  }, [job?.id]);
 
   if (!job) {
     return (
@@ -95,8 +101,10 @@ const JobDetails: React.FC<JobDetailsProps> = ({ job, onApply, onClose, userId }
       if (response.success) {
         toast.success('Application submitted successfully!');
         setIsPopupOpen(false);
+        setHasApplied(true);
         
         // Call the onApply prop if provided to update parent component
+        // Note: Don't show duplicate success message in parent
         if (onApply) {
           onApply(job.id);
         }
@@ -258,11 +266,18 @@ const JobDetails: React.FC<JobDetailsProps> = ({ job, onApply, onClose, userId }
               toast.error('You must be logged in to apply');
               return;
             }
-            setIsPopupOpen(true);
+            if (!hasApplied) {
+              setIsPopupOpen(true);
+            }
           }}
-          className="px-6 py-2 bg-quickshift-primary text-white rounded-lg hover:bg-quickshift-secondary transition-colors font-medium"
+          disabled={hasApplied}
+          className={`px-6 py-2 rounded-lg transition-colors font-medium ${
+            hasApplied 
+              ? 'bg-green-600 text-white cursor-not-allowed' 
+              : 'bg-quickshift-primary text-white hover:bg-quickshift-secondary'
+          }`}
         >
-          Apply for This Job
+          {hasApplied ? 'Application Submitted ✓' : 'Apply for This Job'}
         </button>
       </div>
 

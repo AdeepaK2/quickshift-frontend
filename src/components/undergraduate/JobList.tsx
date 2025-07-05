@@ -32,7 +32,7 @@ interface JobListProps {
 const convertToJob = (gigRequest: GigRequest): Job => {
   const employer = typeof gigRequest.employer === 'string' 
     ? { name: 'Unknown Employer', rating: 0 } 
-    : { name: gigRequest.employer.companyName, rating: 0 };
+    : { name: gigRequest.employer?.companyName || 'Unknown Employer', rating: 0 };
   
   // Calculate duration from timeSlots if available
   let duration = 'Flexible';
